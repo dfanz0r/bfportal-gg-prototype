@@ -38,11 +38,12 @@ Versions are the latest stable releases on npm as of 2026-10-12.
 | UI | SolidJS | 1.9.17 | Agreed |
 | Build | Vite | 8.3.4 | Comes with the framework |
 | Runtime | Node | 22.12 or newer | Required by the framework |
+| Server | Nitro, Node preset | 3.0 beta | Comes with the scaffold; a pre-release |
 | Package manager | pnpm | 11.28.5 | Agreed |
-| Database | Postgres | 14 in production today | Agreed; version open |
+| Database | Postgres | 18 in development; 14 in production today | Agreed; production version open |
 | Postgres driver | Postgres.js (`postgres`), through `drizzle-orm/postgres-js` | 3.4.9 | Agreed |
 | ORM and migrations | Drizzle (`drizzle-orm`, `drizzle-kit`) | 0.45.4, 0.31.11 | Agreed |
-| Login | Better Auth, Discord provider | 1.7.7 | Proposed |
+| Login | Better Auth, Discord provider | 1.7.7 | Proposed; wired into the scaffold |
 | Validation | Zod | 4.6.7 | Proposed |
 | Styling | Tailwind (current site is on 3.3.2) | 4.3.3 | Proposed |
 | Markdown | `marked` with `sanitize-html`, server side | 18.1.1, 2.18.0 | Proposed |
@@ -449,8 +450,11 @@ Things that will need care:
 
 - **Login continuity.** Sessions do not carry over, so everyone signs in again. The
   import must create each user's Discord account link, or first login makes a duplicate.
-- **Email.** Better Auth appears to require an email per user. This needs confirming,
-  along with how many old users have none.
+- **Email.** Better Auth requires an email per user: `user.email` is non-null and
+  unique, and a Discord sign-in that returns no email is refused. Discord supplies it
+  through the `email` scope, which stays on. Old users with no email need a placeholder
+  address at import, and the same placeholder at login through the provider's
+  `mapProfileToUser`. How many old users have none still needs counting.
 - **Users without Discord.** An earlier bulk import (`import_db.py`) assigned
   experiences to the superuser. They need a system owner, shown at `/users/admin/`.
 - **Status.** "Not live" covers pending, rejected and unpublished; only the revision
@@ -525,7 +529,7 @@ Each has a recommendation; none is settled.
 
 | Decision | Recommendation |
 |---|---|
-| Better Auth for Discord login | Yes. It has a TanStack Start integration with a Solid variant. Confirm the email requirement first |
+| Better Auth for Discord login | Yes. It has a TanStack Start integration with a Solid variant. It requires an email per user; see "Data migration" |
 | How BF2042 and BF6 share the site | One site, BF6 home at `/`, existing `/experiences/` URLs unchanged, a `game` column on experiences |
 | Public API compatibility | Keep the paths and the fields real consumers read; drop Wagtail-specific query features. Needs a list of who calls the API |
 | Old experience ids | Keep them |
@@ -536,7 +540,7 @@ Each has a recommendation; none is settled.
 | Home page content | One markdown block in site settings |
 | `allow_editing` | Keep the column, hide the checkbox until it means something |
 | Gametools data on the experience page | Fetch on the server with a short cache and a timeout, so the page renders complete |
-| Postgres version | Move to a current major during the migration, since the data is reloaded anyway |
+| Postgres version | Move to a current major during the migration, since the data is reloaded anyway. Development runs 18 |
 
 ## What needs production access to answer
 
