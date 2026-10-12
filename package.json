@@ -1,0 +1,32 @@
+{
+  "name": "bfportal-gg",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.5",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/solid-router": "1.170.39",
+    "@tanstack/solid-router-devtools": "1.167.2",
+    "@tanstack/solid-start": "1.168.58",
+    "better-auth": "^1.5.3",
+    "nitro": "3.0.260610-beta",
+    "solid-js": "^1.9.12",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@tanstack/devtools-vite": "0.8.5",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0",
+    "vite-plugin-solid": "^2.11.12"
+  }
+}
