@@ -1,0 +1,22 @@
+services:
+  # Local development database. The old site's compose file publishes 5432, so
+  # this one is published on 5433 and both can run side by side for the import.
+  db:
+    image: docker.io/library/postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bfportal
+      POSTGRES_PASSWORD: bfportal
+      POSTGRES_DB: bfportal
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bfportal -d bfportal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
