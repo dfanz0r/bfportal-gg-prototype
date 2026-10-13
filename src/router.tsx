@@ -1,4 +1,6 @@
 import { createRouter as createTanStackRouter } from '@tanstack/solid-router'
+
+import { NotFound, RouteError } from './components/route-fallbacks'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
@@ -8,6 +10,8 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultNotFoundComponent: NotFound,
+    defaultErrorComponent: RouteError,
   })
 
   return router

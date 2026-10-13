@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: bfportal
+          POSTGRES_PASSWORD: bfportal
+          POSTGRES_DB: bfportal
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U bfportal -d bfportal"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # The tests create and use bfportal_test on this server.
+      DATABASE_URL: postgres://bfportal:bfportal@localhost:5433/bfportal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # The oldest Node the project supports (package.json "engines").
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      # The build fails if client code imports anything under src/server, and
+      # it writes the route tree that type-checking reads.
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
