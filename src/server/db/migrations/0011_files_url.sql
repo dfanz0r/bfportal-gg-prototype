@@ -1,0 +1,1 @@
+ALTER TABLE "experiences" ADD COLUMN "files_url" text;

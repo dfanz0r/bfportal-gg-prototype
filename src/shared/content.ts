@@ -56,7 +56,12 @@ export type ExperienceType = (typeof experienceTypes)[number]
 export const bannerPlacements = ['home', 'everywhere'] as const
 export type BannerPlacement = (typeof bannerPlacements)[number]
 
-export const playtestStatuses = ['active', 'cancelled'] as const
+export const playtestStatuses = [
+  'pending',
+  'approved',
+  'rejected',
+  'cancelled',
+] as const
 export type PlaytestStatus = (typeof playtestStatuses)[number]
 
 /** The regions testers sign up for. Each has a Tester role in Discord. */

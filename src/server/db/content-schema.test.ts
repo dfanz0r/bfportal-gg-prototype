@@ -9,7 +9,6 @@ import {
   experienceLikes,
   experiences,
   experienceTags,
-  playtestReports,
   playtests,
   projectFiles,
   revisions,
@@ -266,7 +265,7 @@ describe('content schema', () => {
     expect(await db.select().from(projectFiles)).toHaveLength(0)
   })
 
-  it('opens a playtest for an experience or a named one, and collects reports', async () => {
+  it('holds a playtest for a moderator, for an experience or a named one', async () => {
     const { experience } = await seed()
     const call = {
       game: 'bf6' as const,
@@ -288,10 +287,11 @@ describe('content schema', () => {
       .values({ ...call, experienceId: experience.id })
       .returning()
     expect(playtest).toMatchObject({
-      status: 'active',
+      status: 'pending',
       regions: ['eu', 'asia'],
       closesAt: null,
       announcedAt: null,
+      discordUrl: null,
     })
 
     const forEurope = await db
@@ -301,19 +301,6 @@ describe('content schema', () => {
         raw`${playtests.regions} @> '{eu}' and ${playtests.experienceId} is not null`,
       )
     expect(forEurope).toEqual([{ id: playtest.id }])
-
-    // A tester may report more than once.
-    const report = {
-      playtestId: playtest.id,
-      userId: 'user-1',
-      bodyMd: 'x',
-      bodyHtml: '<p>x</p>',
-    }
-    await db
-      .insert(playtestReports)
-      .values([report, { ...report, region: 'eu' }])
-    await db.delete(experiences).where(eq(experiences.id, experience.id))
-    expect(await db.select().from(playtestReports)).toHaveLength(0)
   })
 
   it('shows a banner only inside its time window', async () => {
@@ -353,13 +340,16 @@ describe('content schema', () => {
       title: 'Version 1.1',
       bodyMd: 'Shorter rounds.',
       bodyHtml: '<p>Shorter rounds.</p>',
-      status: 'published' as const,
     }
 
     const orphan = await constraintOf(db.insert(updates).values(post))
     expect(orphan).toBe('updates_one_project_check')
 
-    await db.insert(updates).values({ ...post, experienceId: experience.id })
+    const [held] = await db
+      .insert(updates)
+      .values({ ...post, experienceId: experience.id })
+      .returning()
+    expect(held.status).toBe('pending')
     await db.delete(experiences).where(eq(experiences.id, experience.id))
     expect(await db.select().from(updates)).toHaveLength(0)
   })

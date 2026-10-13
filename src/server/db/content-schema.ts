@@ -113,6 +113,9 @@ export const experiences = pgTable(
     vidUrl: text('vid_url'),
     // The project's source repository, if the owner shares one.
     repoUrl: text('repo_url'),
+    // Files too large to upload here, hosted elsewhere: a Dropbox, Google
+    // Drive or GitHub link.
+    filesUrl: text('files_url'),
     maxPlayers: integer('max_players').notNull().default(0),
     maxBots: integer('max_bots').notNull().default(0),
     // What it is built with. Read from an uploaded export, or chosen on the
@@ -393,9 +396,8 @@ export const updates = pgTable(
     title: text('title').notNull(),
     bodyMd: text('body_md').notNull(),
     bodyHtml: text('body_html').notNull(),
-    // No default: whether a post is published at once or waits for a
-    // moderator is the service's decision, not the table's.
-    status: contentStatusEnum('status').notNull(),
+    // Held for a moderator, like a new experience.
+    status: contentStatusEnum('status').notNull().default('pending'),
     publishedAt: timestamptz('published_at'),
     reviewedBy: text('reviewed_by').references(() => user.id),
     reviewedAt: timestamptz('reviewed_at'),
@@ -464,8 +466,9 @@ export const projectFiles = pgTable(
 /**
  * A call for testers: a creator posts a brief (what it is, what to try, what
  * to report) for an experience, picks the regions to call, and testers play
- * it in their own time and report back. Whether one is open follows from
- * `opens_at` and `closes_at`, so only "cancelled" is stored.
+ * it in their own time and report back in a Discord thread. A moderator
+ * approves it before it is shown or posted. Whether an approved one is open
+ * follows from `opens_at` and `closes_at`.
  */
 export const playtests = pgTable(
   'playtests',
@@ -494,12 +497,16 @@ export const playtests = pgTable(
     closesAt: timestamptz('closes_at'),
     // For modes that need a full lobby: when to play it together.
     togetherAt: timestamptz('together_at'),
-    status: playtestStatusEnum('status').notNull().default('active'),
+    status: playtestStatusEnum('status').notNull().default('pending'),
+    reviewedBy: text('reviewed_by').references(() => user.id),
+    reviewedAt: timestamptz('reviewed_at'),
+    reviewNote: text('review_note'),
     // When the site posted it, and its play-together reminder, to Discord.
     // The jobs that post them set these, so neither is ever sent twice.
     announcedAt: timestamptz('announced_at'),
     remindedAt: timestamptz('reminded_at'),
-    // The Discord post or thread, once there is one.
+    // The Discord thread where testers report back. Feedback lives there, not
+    // on the site; the playtest's page links to it.
     discordUrl: text('discord_url'),
     // The update post with what changed, once the host writes one.
     resultUpdateId: integer('result_update_id').references(() => updates.id, {
@@ -522,33 +529,6 @@ export const playtests = pgTable(
     ),
     index('playtests_opens_idx').on(table.opensAt),
     index('playtests_experience_idx').on(table.experienceId),
-  ],
-)
-
-/** What a tester found. The site's version of the Discord feedback thread. */
-export const playtestReports = pgTable(
-  'playtest_reports',
-  {
-    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    playtestId: integer('playtest_id')
-      .notNull()
-      .references(() => playtests.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    region: testerRegionEnum('region'),
-    bodyMd: text('body_md').notNull(),
-    bodyHtml: text('body_html').notNull(),
-    createdAt: timestamptz('created_at').notNull().defaultNow(),
-    // Set when its author or a moderator removes it.
-    deletedAt: timestamptz('deleted_at'),
-  },
-  (table) => [
-    index('playtest_reports_playtest_idx').on(
-      table.playtestId,
-      table.createdAt,
-    ),
-    index('playtest_reports_user_idx').on(table.userId),
   ],
 )
 
