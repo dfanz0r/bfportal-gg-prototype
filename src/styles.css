@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* Design tokens. The reference is the mockup in mockups/site; see "Visual
-   direction" in PLAN.md. Only these colours exist: Tailwind's default palette
-   is switched off so a stray grey or blue cannot creep in. */
+   direction" in PLAN.md. Only these colors exist: Tailwind's default palette
+   is switched off so a stray gray or blue cannot creep in. */
 @theme {
   --color-*: initial;
 
@@ -109,7 +109,7 @@
   }
 }
 
-/* Page content sits in a centred column, about 1360px wide plus gutters. A
+/* Page content sits in a centered column, about 1360px wide plus gutters. A
    layout must never grow with the window: check it on a 2660px display. */
 @utility wrap {
   width: 100%;

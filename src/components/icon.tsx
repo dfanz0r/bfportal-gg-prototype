@@ -1,7 +1,7 @@
 import { For, type JSX, Show } from 'solid-js'
 
 // Line icons are drawn on a 24px grid with a 1.75px stroke (paths from Lucide,
-// ISC licence). Brand marks are filled shapes with their own view box.
+// ISC license). Brand marks are filled shapes with their own view box.
 const LINE = {
   search: () => (
     <>
