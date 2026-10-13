@@ -19,3 +19,18 @@ export const display = 'font-display font-bold uppercase'
 
 /** A paragraph of running text, kept to a readable line length. */
 export const body = 'max-w-[46em] text-[15.5px] text-fg-2'
+
+/** A bordered block on the page's surface. */
+export const panel = 'border border-line bg-surface-1'
+
+/** A small mono label above or beside something. */
+export const label =
+  'font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase'
+
+/** A small bordered word. Add a border color and a text color. */
+export const tag =
+  'inline-flex h-5 items-center gap-[5px] border px-[7px] text-xs leading-none whitespace-nowrap'
+
+/** One choice in a row of filter links. Mark the current one `aria-current`. */
+export const pill =
+  'inline-flex h-[34px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-medium text-fg-2 hover:border-steel hover:text-fg aria-[current=true]:border-accent aria-[current=true]:text-fg'

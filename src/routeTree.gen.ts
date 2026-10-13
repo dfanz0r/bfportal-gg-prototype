@@ -15,16 +15,23 @@ import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as ForumRouteImport } from './routes/forum'
 import { Route as GuidesRouteImport } from './routes/guides'
-import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as MapsRouteImport } from './routes/maps'
-import { Route as ScriptsRouteImport } from './routes/scripts'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as UpdatesRouteImport } from './routes/updates'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ExperiencesSlugRouteImport } from './routes/experiences/$slug'
+import { Route as LibraryIndexRouteImport } from './routes/library/index'
+import { Route as LibraryGameRouteImport } from './routes/library/$game'
+import { Route as PlaytestsIndexRouteImport } from './routes/playtests/index'
+import { Route as PlaytestsIdRouteImport } from './routes/playtests/$id'
+import { Route as ScriptsIndexRouteImport } from './routes/scripts/index'
+import { Route as ScriptsSlugRouteImport } from './routes/scripts/$slug'
+import { Route as UsersDiscordIdRouteImport } from './routes/users/$discordId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiFilesIdRouteImport } from './routes/api/files/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -56,11 +63,6 @@ const GuidesRoute = GuidesRouteImport.update({
   path: '/guides',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -74,11 +76,6 @@ const LogoutRoute = LogoutRouteImport.update({
 const MapsRoute = MapsRouteImport.update({
   id: '/maps',
   path: '/maps',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScriptsRoute = ScriptsRouteImport.update({
-  id: '/scripts',
-  path: '/scripts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubmitRoute = SubmitRouteImport.update({
@@ -101,9 +98,54 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExperiencesSlugRoute = ExperiencesSlugRouteImport.update({
+  id: '/experiences/$slug',
+  path: '/experiences/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryIndexRoute = LibraryIndexRouteImport.update({
+  id: '/library/',
+  path: '/library/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryGameRoute = LibraryGameRouteImport.update({
+  id: '/library/$game',
+  path: '/library/$game',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaytestsIndexRoute = PlaytestsIndexRouteImport.update({
+  id: '/playtests/',
+  path: '/playtests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaytestsIdRoute = PlaytestsIdRouteImport.update({
+  id: '/playtests/$id',
+  path: '/playtests/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScriptsIndexRoute = ScriptsIndexRouteImport.update({
+  id: '/scripts/',
+  path: '/scripts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScriptsSlugRoute = ScriptsSlugRouteImport.update({
+  id: '/scripts/$slug',
+  path: '/scripts/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersDiscordIdRoute = UsersDiscordIdRouteImport.update({
+  id: '/users/$discordId',
+  path: '/users/$discordId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
+  id: '/api/files/$id',
+  path: '/api/files/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -114,16 +156,23 @@ export interface FileRoutesByFullPath {
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
-  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
-  '/scripts': typeof ScriptsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
+  '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/library/$game': typeof LibraryGameRoute
+  '/playtests/$id': typeof PlaytestsIdRoute
+  '/scripts/$slug': typeof ScriptsSlugRoute
+  '/users/$discordId': typeof UsersDiscordIdRoute
+  '/library/': typeof LibraryIndexRoute
+  '/playtests/': typeof PlaytestsIndexRoute
+  '/scripts/': typeof ScriptsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,16 +181,23 @@ export interface FileRoutesByTo {
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
-  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
-  '/scripts': typeof ScriptsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
+  '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/library/$game': typeof LibraryGameRoute
+  '/playtests/$id': typeof PlaytestsIdRoute
+  '/scripts/$slug': typeof ScriptsSlugRoute
+  '/users/$discordId': typeof UsersDiscordIdRoute
+  '/library': typeof LibraryIndexRoute
+  '/playtests': typeof PlaytestsIndexRoute
+  '/scripts': typeof ScriptsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,16 +207,23 @@ export interface FileRoutesById {
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
-  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
-  '/scripts': typeof ScriptsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
+  '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/library/$game': typeof LibraryGameRoute
+  '/playtests/$id': typeof PlaytestsIdRoute
+  '/scripts/$slug': typeof ScriptsSlugRoute
+  '/users/$discordId': typeof UsersDiscordIdRoute
+  '/library/': typeof LibraryIndexRoute
+  '/playtests/': typeof PlaytestsIndexRoute
+  '/scripts/': typeof ScriptsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -171,16 +234,23 @@ export interface FileRouteTypes {
     | '/events'
     | '/forum'
     | '/guides'
-    | '/library'
     | '/login'
     | '/logout'
     | '/maps'
-    | '/scripts'
     | '/submit'
     | '/tools'
     | '/updates'
     | '/api/health'
+    | '/experiences/$slug'
+    | '/library/$game'
+    | '/playtests/$id'
+    | '/scripts/$slug'
+    | '/users/$discordId'
+    | '/library/'
+    | '/playtests/'
+    | '/scripts/'
     | '/api/auth/$'
+    | '/api/files/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -189,16 +259,23 @@ export interface FileRouteTypes {
     | '/events'
     | '/forum'
     | '/guides'
-    | '/library'
     | '/login'
     | '/logout'
     | '/maps'
-    | '/scripts'
     | '/submit'
     | '/tools'
     | '/updates'
     | '/api/health'
+    | '/experiences/$slug'
+    | '/library/$game'
+    | '/playtests/$id'
+    | '/scripts/$slug'
+    | '/users/$discordId'
+    | '/library'
+    | '/playtests'
+    | '/scripts'
     | '/api/auth/$'
+    | '/api/files/$id'
   id:
     | '__root__'
     | '/'
@@ -207,16 +284,23 @@ export interface FileRouteTypes {
     | '/events'
     | '/forum'
     | '/guides'
-    | '/library'
     | '/login'
     | '/logout'
     | '/maps'
-    | '/scripts'
     | '/submit'
     | '/tools'
     | '/updates'
     | '/api/health'
+    | '/experiences/$slug'
+    | '/library/$game'
+    | '/playtests/$id'
+    | '/scripts/$slug'
+    | '/users/$discordId'
+    | '/library/'
+    | '/playtests/'
+    | '/scripts/'
     | '/api/auth/$'
+    | '/api/files/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -226,16 +310,23 @@ export interface RootRouteChildren {
   EventsRoute: typeof EventsRoute
   ForumRoute: typeof ForumRoute
   GuidesRoute: typeof GuidesRoute
-  LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   MapsRoute: typeof MapsRoute
-  ScriptsRoute: typeof ScriptsRoute
   SubmitRoute: typeof SubmitRoute
   ToolsRoute: typeof ToolsRoute
   UpdatesRoute: typeof UpdatesRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ExperiencesSlugRoute: typeof ExperiencesSlugRoute
+  LibraryGameRoute: typeof LibraryGameRoute
+  PlaytestsIdRoute: typeof PlaytestsIdRoute
+  ScriptsSlugRoute: typeof ScriptsSlugRoute
+  UsersDiscordIdRoute: typeof UsersDiscordIdRoute
+  LibraryIndexRoute: typeof LibraryIndexRoute
+  PlaytestsIndexRoute: typeof PlaytestsIndexRoute
+  ScriptsIndexRoute: typeof ScriptsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiFilesIdRoute: typeof ApiFilesIdRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -282,13 +373,6 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GuidesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -308,13 +392,6 @@ declare module '@tanstack/solid-router' {
       path: '/maps'
       fullPath: '/maps'
       preLoaderRoute: typeof MapsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scripts': {
-      id: '/scripts'
-      path: '/scripts'
-      fullPath: '/scripts'
-      preLoaderRoute: typeof ScriptsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/submit': {
@@ -345,11 +422,74 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/experiences/$slug': {
+      id: '/experiences/$slug'
+      path: '/experiences/$slug'
+      fullPath: '/experiences/$slug'
+      preLoaderRoute: typeof ExperiencesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/': {
+      id: '/library/'
+      path: '/library'
+      fullPath: '/library/'
+      preLoaderRoute: typeof LibraryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/$game': {
+      id: '/library/$game'
+      path: '/library/$game'
+      fullPath: '/library/$game'
+      preLoaderRoute: typeof LibraryGameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playtests/': {
+      id: '/playtests/'
+      path: '/playtests'
+      fullPath: '/playtests/'
+      preLoaderRoute: typeof PlaytestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playtests/$id': {
+      id: '/playtests/$id'
+      path: '/playtests/$id'
+      fullPath: '/playtests/$id'
+      preLoaderRoute: typeof PlaytestsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scripts/': {
+      id: '/scripts/'
+      path: '/scripts'
+      fullPath: '/scripts/'
+      preLoaderRoute: typeof ScriptsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scripts/$slug': {
+      id: '/scripts/$slug'
+      path: '/scripts/$slug'
+      fullPath: '/scripts/$slug'
+      preLoaderRoute: typeof ScriptsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/$discordId': {
+      id: '/users/$discordId'
+      path: '/users/$discordId'
+      fullPath: '/users/$discordId'
+      preLoaderRoute: typeof UsersDiscordIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/$id': {
+      id: '/api/files/$id'
+      path: '/api/files/$id'
+      fullPath: '/api/files/$id'
+      preLoaderRoute: typeof ApiFilesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -362,16 +502,23 @@ const rootRouteChildren: RootRouteChildren = {
   EventsRoute: EventsRoute,
   ForumRoute: ForumRoute,
   GuidesRoute: GuidesRoute,
-  LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   MapsRoute: MapsRoute,
-  ScriptsRoute: ScriptsRoute,
   SubmitRoute: SubmitRoute,
   ToolsRoute: ToolsRoute,
   UpdatesRoute: UpdatesRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ExperiencesSlugRoute: ExperiencesSlugRoute,
+  LibraryGameRoute: LibraryGameRoute,
+  PlaytestsIdRoute: PlaytestsIdRoute,
+  ScriptsSlugRoute: ScriptsSlugRoute,
+  UsersDiscordIdRoute: UsersDiscordIdRoute,
+  LibraryIndexRoute: LibraryIndexRoute,
+  PlaytestsIndexRoute: PlaytestsIndexRoute,
+  ScriptsIndexRoute: ScriptsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiFilesIdRoute: ApiFilesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

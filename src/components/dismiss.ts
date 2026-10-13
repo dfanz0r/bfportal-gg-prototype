@@ -8,8 +8,12 @@ import { onCleanup, onMount } from 'solid-js'
  *
  * The header outlives a page change, so without this an open menu would stay
  * open on top of the next page.
+ *
+ * `staysOpen` is for a menu of choices that each change the page, such as a
+ * list of filters: it closes on Escape and on a click outside, and stays open
+ * while someone is still choosing.
  */
-export function createDismiss() {
+export function createDismiss(options: { staysOpen?: boolean } = {}) {
   let details: HTMLDetailsElement | undefined
   const router = useRouter()
 
@@ -26,7 +30,7 @@ export function createDismiss() {
       }
       const inside = details.contains(target)
       // Following a link in the menu closes it; so does a click elsewhere.
-      if (!inside || target?.closest('a')) {
+      if (!inside || (!options.staysOpen && target?.closest('a'))) {
         close()
       }
     }
@@ -40,7 +44,9 @@ export function createDismiss() {
     document.addEventListener('click', onClick)
     document.addEventListener('keydown', onKey)
     // Back and forward change the page without a click.
-    const unsubscribe = router.subscribe('onResolved', close)
+    const unsubscribe = options.staysOpen
+      ? () => {}
+      : router.subscribe('onResolved', close)
     onCleanup(() => {
       document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKey)
