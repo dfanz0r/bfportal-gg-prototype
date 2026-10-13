@@ -3,6 +3,7 @@ import { For, Show } from 'solid-js'
 
 import type { SessionUser } from '../functions/session'
 import { links } from '../shared/links'
+import { isStaff } from '../shared/roles'
 import { sections } from '../shared/sections'
 import { AccountMenu } from './account-menu'
 import { createDismiss } from './dismiss'
@@ -90,6 +91,16 @@ export function SiteHeader(props: { user: SessionUser | null }) {
           >
             {(user) => (
               <>
+                {/* Room for it only on a wide window. The account menu has
+                    it at every width. */}
+                <Show when={isStaff(user().role)}>
+                  <Link
+                    to="/admin"
+                    class={`${buttonGhost} h-9 px-3.5 max-[1420px]:hidden`}
+                  >
+                    Review
+                  </Link>
+                </Show>
                 <Link
                   to="/submit"
                   class={`${buttonAccent} h-9 max-sm:w-9 max-sm:px-0`}

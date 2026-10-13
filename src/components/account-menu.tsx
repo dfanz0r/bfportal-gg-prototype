@@ -1,8 +1,18 @@
+import { Link } from '@tanstack/solid-router'
+import { Show } from 'solid-js'
+
 import type { SessionUser } from '../functions/session'
+import { isStaff } from '../shared/roles'
 import { Avatar } from './avatar'
 import { createDismiss } from './dismiss'
 
-/** The signed-in user's picture, opening a menu with sign out. */
+const menuItem =
+  'block w-full px-2.5 py-2 text-left text-sm text-fg-2 hover:bg-surface-2 hover:text-fg'
+
+/**
+ * The signed-in user's picture, opening a menu with sign out, and the way
+ * into moderation for moderators and admins.
+ */
 export function AccountMenu(props: { user: SessionUser }) {
   const dismiss = createDismiss()
 
@@ -15,11 +25,13 @@ export function AccountMenu(props: { user: SessionUser }) {
         <p class="truncate px-2.5 py-2 text-sm font-semibold">
           {props.user.name}
         </p>
+        <Show when={isStaff(props.user.role)}>
+          <Link to="/admin" class={menuItem}>
+            Review
+          </Link>
+        </Show>
         <form method="post" action="/logout">
-          <button
-            type="submit"
-            class="w-full px-2.5 py-2 text-left text-sm text-fg-2 hover:bg-surface-2 hover:text-fg"
-          >
+          <button type="submit" class={menuItem}>
             Sign out
           </button>
         </form>
