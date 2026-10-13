@@ -1742,6 +1742,21 @@ was settled first, so the screens are built against seed data and the import fol
    submit; and a live card preview.
 6. **Admin:** the review queue and the two review screens first, then reports, the
    experience list, and the rest of the side menu.
+   Built so far, 2026-10-13: the review queue at `/admin`, listing new submissions the
+   longest wait first, and the screen for reviewing one at `/admin/review/<id>`. It
+   shows what was submitted beside its checks: what Portal says about the code right
+   now, whether Portal calls it something else, other pages using the same code,
+   unfamiliar hosts its description loads pictures from, a missing cover, a thin
+   description, and how the submitter's earlier submissions went. Approving publishes
+   it; turning it down needs a note, which its owner then sees on its page. A
+   submission is decided once, even if two moderators press at the same moment.
+
+   These screens are drawn in the browser (`ssr: 'data-only'`), with the guard and
+   the data on the server. The list of familiar picture hosts is a constant in
+   `src/server/services/moderation.ts` until settings exist. Not yet: the queue's
+   other kinds (edits, update posts, playtests, flag clears), the featured and
+   trending switches, the Discord announcement on approval, a count beside the
+   header's Review link, and a record of decisions.
 7. **Edges:** public API, Atom feeds, sitemap, robots, redirects from the old
    addresses, scheduled jobs.
 8. **Cutover:** rehearsals, then the switch.

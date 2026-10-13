@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as ForumRouteImport } from './routes/forum'
@@ -21,6 +21,7 @@ import { Route as MapsRouteImport } from './routes/maps'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as UpdatesRouteImport } from './routes/updates'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ExperiencesSlugRouteImport } from './routes/experiences/$slug'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
@@ -30,6 +31,7 @@ import { Route as PlaytestsIdRouteImport } from './routes/playtests/$id'
 import { Route as ScriptsIndexRouteImport } from './routes/scripts/index'
 import { Route as ScriptsSlugRouteImport } from './routes/scripts/$slug'
 import { Route as UsersDiscordIdRouteImport } from './routes/users/$discordId'
+import { Route as AdminReviewIdRouteImport } from './routes/admin/review.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files/$id'
 
@@ -38,7 +40,7 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
+const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
@@ -93,6 +95,11 @@ const UpdatesRoute = UpdatesRouteImport.update({
   path: '/updates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -138,6 +145,11 @@ const UsersDiscordIdRoute = UsersDiscordIdRouteImport.update({
   path: '/users/$discordId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminReviewIdRoute = AdminReviewIdRouteImport.update({
+  id: '/review/$id',
+  path: '/review/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -151,7 +163,7 @@ const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
@@ -168,15 +180,16 @@ export interface FileRoutesByFullPath {
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/playtests/': typeof PlaytestsIndexRoute
   '/scripts/': typeof ScriptsIndexRoute
+  '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
@@ -193,16 +206,18 @@ export interface FileRoutesByTo {
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
+  '/admin': typeof AdminIndexRoute
   '/library': typeof LibraryIndexRoute
   '/playtests': typeof PlaytestsIndexRoute
   '/scripts': typeof ScriptsIndexRoute
+  '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
@@ -219,9 +234,11 @@ export interface FileRoutesById {
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/playtests/': typeof PlaytestsIndexRoute
   '/scripts/': typeof ScriptsIndexRoute
+  '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
 }
@@ -246,15 +263,16 @@ export interface FileRouteTypes {
     | '/playtests/$id'
     | '/scripts/$slug'
     | '/users/$discordId'
+    | '/admin/'
     | '/library/'
     | '/playtests/'
     | '/scripts/'
+    | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/disclaimer'
     | '/events'
     | '/forum'
@@ -271,9 +289,11 @@ export interface FileRouteTypes {
     | '/playtests/$id'
     | '/scripts/$slug'
     | '/users/$discordId'
+    | '/admin'
     | '/library'
     | '/playtests'
     | '/scripts'
+    | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
   id:
@@ -296,16 +316,18 @@ export interface FileRouteTypes {
     | '/playtests/$id'
     | '/scripts/$slug'
     | '/users/$discordId'
+    | '/admin/'
     | '/library/'
     | '/playtests/'
     | '/scripts/'
+    | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   DisclaimerRoute: typeof DisclaimerRoute
   EventsRoute: typeof EventsRoute
   ForumRoute: typeof ForumRoute
@@ -342,7 +364,7 @@ declare module '@tanstack/solid-router' {
       id: '/admin'
       path: '/admin'
       fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disclaimer': {
@@ -415,6 +437,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof UpdatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -478,6 +507,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof UsersDiscordIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/review/$id': {
+      id: '/admin/review/$id'
+      path: '/review/$id'
+      fullPath: '/admin/review/$id'
+      preLoaderRoute: typeof AdminReviewIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -495,9 +531,23 @@ declare module '@tanstack/solid-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminReviewIdRoute: typeof AdminReviewIdRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminReviewIdRoute: AdminReviewIdRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   DisclaimerRoute: DisclaimerRoute,
   EventsRoute: EventsRoute,
   ForumRoute: ForumRoute,
