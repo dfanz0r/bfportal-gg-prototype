@@ -1,0 +1,797 @@
+// bfportal.gg rewrite: the database schema.
+// Generated from the development database as of migration 0021. It is a
+// snapshot: regenerate it after the schema changes.
+// Paste into https://dbdiagram.io/d
+
+Enum banner_placement {
+  "home"
+  "everywhere"
+}
+
+Enum category_kind {
+  "experience_main"
+  "script_main"
+  "script_sub"
+}
+
+Enum content_status {
+  "pending"
+  "published"
+  "unpublished"
+  "rejected"
+}
+
+Enum experience_type {
+  "script"
+  "blocks"
+  "spatial"
+  "verified"
+}
+
+Enum file_kind {
+  "export"
+  "script"
+  "spatial"
+  "scene"
+  "strings"
+  "other"
+}
+
+Enum game {
+  "bf2042"
+  "bf6"
+}
+
+Enum playtest_status {
+  "pending"
+  "approved"
+  "rejected"
+  "canceled"
+}
+
+Enum portal_state {
+  "unchecked"
+  "published"
+  "unpublished"
+  "missing"
+}
+
+Enum report_type {
+  "bugged"
+  "broken"
+  "xp_farm"
+}
+
+Enum revision_kind {
+  "edit"
+  "clear_flags"
+}
+
+Enum revision_status {
+  "pending"
+  "approved"
+  "rejected"
+}
+
+Enum tag_group_filter {
+  "own"
+  "shared"
+  "none"
+}
+
+Enum tag_group_pick {
+  "any"
+  "one"
+}
+
+Enum tag_source {
+  "creator"
+  "portal"
+  "map"
+}
+
+Enum tester_region {
+  "eu"
+  "na"
+  "sa"
+  "asia"
+  "oce"
+}
+
+Table "user" {
+  "id" text [pk]
+  "name" text [not null]
+  "email" text [not null, unique]
+  "email_verified" boolean [not null, default: false]
+  "image" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "discord_id" text [not null, unique]
+  "discord_username" text [not null]
+  "role" text [not null, default: 'user', note: 'user, moderator or admin.']
+  "hide_username" boolean [not null, default: false]
+  "legacy_id" integer
+
+  Note: '''
+  Better Auth's user, plus the site's own fields: Discord id, role, hide_username.
+  '''
+}
+
+Table "session" {
+  "id" text [pk]
+  "expires_at" timestamp [not null]
+  "token" text [not null, unique]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null]
+  "ip_address" text
+  "user_agent" text
+  "user_id" text [not null]
+
+  Note: '''
+  Better Auth. A signed-in browser.
+  '''
+}
+
+Table "account" {
+  "id" text [pk]
+  "account_id" text [not null]
+  "provider_id" text [not null]
+  "user_id" text [not null]
+  "access_token" text
+  "refresh_token" text
+  "id_token" text
+  "access_token_expires_at" timestamp
+  "refresh_token_expires_at" timestamp
+  "scope" text
+  "password" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null]
+
+  Note: '''
+  Better Auth. The link to a user's Discord account.
+  '''
+}
+
+Table "verification" {
+  "id" text [pk]
+  "identifier" text [not null]
+  "value" text [not null]
+  "expires_at" timestamp [not null]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Note: '''
+  Better Auth. Short-lived tokens for the login round trip.
+  '''
+}
+
+Table "experiences" {
+  "id" integer [pk, increment]
+  "slug" text [not null, unique]
+  "game" game [not null]
+  "status" content_status [not null, default: 'pending']
+  "title" text [not null]
+  "description_md" text [not null, default: '']
+  "description_html" text [not null, default: '']
+  "owner_id" text [not null]
+  "category_id" integer [not null]
+  "code" text
+  "exp_url" text [note: 'The old site\'s link, kept as imported.']
+  "cover_img_url" text
+  "vid_url" text
+  "max_players" integer [not null, default: 0]
+  "max_bots" integer [not null, default: 0]
+  "featured" boolean [not null, default: false]
+  "trending" boolean [not null, default: false]
+  "bugged" boolean [not null, default: false]
+  "broken" boolean [not null, default: false, note: 'Set by people, not by the nightly check.']
+  "xp_farm" boolean [not null, default: false]
+  "allow_editing" boolean [not null, default: false]
+  "submitted_at" timestamptz [not null, default: `now()`]
+  "first_published_at" timestamptz
+  "last_published_at" timestamptz
+  "announced_at" timestamptz
+  "reviewed_by" text
+  "reviewed_at" timestamptz
+  "review_note" text
+  "deleted_at" timestamptz [note: 'The owner\'s delete. The row stays, hidden.']
+  "meta_title" text
+  "meta_description" text
+  "meta_image" text
+  "include_in_sitemap" boolean [not null, default: true]
+  "updated_at" timestamptz [not null, default: `now()`]
+  "repo_url" text
+  "game_mode" text
+  "map_rotation" jsonb
+  "types" "experience_type[]" [not null, default: '{}', note: 'What it is built with (Battlefield 6).']
+  "is_template" boolean [not null, default: false, note: 'Offers its files for others to build on.']
+  "files_url" text
+  "xp_mode" text [note: 'Portal\'s progression mode. portal-default is full XP.']
+  "sdk_version_id" integer [note: 'The SDK release its creators last said it works with.']
+  "portal_state" portal_state [not null, default: 'unchecked', note: 'Whether Portal still has the code. Written only by the nightly check.']
+  "portal_checked_at" timestamptz
+  "portal_state_since" timestamptz
+  "requires_full_game" boolean [note: 'Needs the paid game, or the free version will do. Null when not known.']
+  "playground_id" text [note: 'Portal\'s id. Both of its pages on EA\'s side are built from it.']
+  "copy_allowed" boolean [note: 'Whether others may copy it in the Portal editor.']
+
+  Note: '''
+  One row per experience, for both games. Always holds what the public sees.
+  
+  Checks:
+  - (max_bots >= 0)
+  - (max_players >= 0)
+  '''
+}
+
+Table "experience_creators" {
+  "experience_id" integer [not null]
+  "user_id" text
+  "id" integer [pk, increment]
+  "name" text
+  "position" integer [not null, default: 0]
+  "accepted_at" timestamptz [note: 'Null means invited and not yet shown.']
+  "created_at" timestamptz [not null, default: `now()`]
+  "can_edit" boolean [not null, default: false, note: 'Off unless the owner turns it on.']
+
+  indexes {
+    (experience_id, name) [unique]
+    (experience_id, user_id) [unique]
+  }
+
+  Note: '''
+  Who it is by, besides the owner: a name (credit only) or an account, which can edit only if can_edit is on.
+  
+  Checks:
+  - ((user_id IS NOT NULL) OR (NOT can_edit))
+  - ((user_id IS NULL) <> (name IS NULL))
+  '''
+}
+
+Table "experience_images" {
+  "experience_id" integer [not null]
+  "position" integer [not null]
+  "url" text [not null]
+
+  indexes {
+    (experience_id, position) [pk]
+  }
+
+  Note: '''
+  Gallery pictures, shown after the cover in this order.
+  '''
+}
+
+Table "experience_likes" {
+  "experience_id" integer [not null]
+  "user_id" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  indexes {
+    (experience_id, user_id) [pk]
+  }
+
+  Note: '''
+  One row per like.
+  '''
+}
+
+Table "experience_reports" {
+  "experience_id" integer [not null]
+  "user_id" text [not null]
+  "type" report_type [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  indexes {
+    (experience_id, user_id, type) [pk]
+  }
+
+  Note: '''
+  A user's report that it is bugged, broken or an XP farm.
+  '''
+}
+
+Table "experience_tags" {
+  "experience_id" integer [not null]
+  "tag_id" integer [not null]
+  "source" tag_source [not null, default: 'creator', note: 'creator, portal, or map (taken from a map in the rotation).']
+
+  indexes {
+    (experience_id, tag_id) [pk]
+  }
+
+  Note: '''
+  Tags on an experience, and where each came from.
+  '''
+}
+
+Table "revisions" {
+  "id" integer [pk, increment]
+  "experience_id" integer [not null]
+  "kind" revision_kind [not null]
+  "payload" jsonb [not null]
+  "status" revision_status [not null, default: 'pending']
+  "submitted_by" text [not null]
+  "submitted_at" timestamptz [not null, default: `now()`]
+  "reviewed_by" text
+  "reviewed_at" timestamptz
+  "review_note" text
+
+  Note: '''
+  A proposed edit waiting for a moderator. At most one pending per experience.
+  '''
+}
+
+Table "project_files" {
+  "id" integer [pk, increment]
+  "experience_id" integer
+  "snippet_id" integer
+  "kind" file_kind [not null]
+  "filename" text [not null]
+  "size_bytes" integer [not null]
+  "sha256" text [not null]
+  "body" text [not null]
+  "map_index" integer
+  "from_export" boolean [not null, default: false]
+  "uploaded_by" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Files shared on a project (export, script, spatial layout, scene), stored as text.
+  
+  Checks:
+  - (num_nonnulls(experience_id, snippet_id) = 1)
+  - (size_bytes >= 0)
+  '''
+}
+
+Table "categories" {
+  "id" integer [pk, increment]
+  "kind" category_kind [not null]
+  "name" text [not null]
+  "slug" text [not null]
+  "icon_svg" text
+  "visible" boolean [not null, default: true]
+  "selectable_on_form" boolean [not null, default: true]
+  "not_ready" boolean [not null, default: false]
+  "description_md" text [not null, default: '']
+  "meta_title" text
+  "meta_description" text
+  "meta_image" text
+  "sort_order" integer [not null, default: 0]
+  "game" game
+
+  indexes {
+    (kind, name) [unique]
+    (kind, slug) [unique]
+  }
+
+  Note: '''
+  Main categories for experiences, and main and sub categories for scripts.
+  '''
+}
+
+Table "tag_groups" {
+  "id" integer [pk, increment]
+  "game" game [not null]
+  "name" text [not null]
+  "slug" text [not null]
+  "description" text [not null, default: '']
+  "sort_order" integer [not null, default: 0]
+  "filter" tag_group_filter [not null, default: 'shared', note: 'own: its own Library filter. shared: in the Tags picker. none: not a filter.']
+  "pick" tag_group_pick [not null, default: 'any']
+  "creator_selectable" boolean [not null, default: true]
+  "show_on_card" boolean [not null, default: false]
+
+  indexes {
+    (game, name) [unique]
+    (game, slug) [unique]
+    (id, game) [unique]
+  }
+
+  Note: '''
+  A named set of tags within one game ("Era", "Style", "Rules"). Admins define them; the Library builds its filters from them.
+  '''
+}
+
+Table "tags" {
+  "id" integer [pk, increment]
+  "name" text [not null]
+  "slug" text [not null]
+  "game" game [not null]
+  "group_id" integer [not null]
+  "portal_id" text [note: 'Portal\'s id for the tag. Null for one an admin added.']
+  "portal_name" text
+  "description" text [not null, default: '']
+  "sort_order" integer [not null, default: 0]
+  "visible" boolean [not null, default: true]
+
+  indexes {
+    (game, name) [unique]
+    (game, portal_id) [unique]
+    (game, slug) [unique]
+    (id, game) [unique]
+  }
+
+  Note: '''
+  A tag belongs to one game and one of its groups.
+  '''
+}
+
+Table "tag_aliases" {
+  "game" game [not null]
+  "alias" text [not null]
+  "tag_id" integer [not null]
+
+  indexes {
+    (game, alias) [pk]
+  }
+
+  Note: '''
+  Other names a tag answers to, so merges and old links keep working.
+  
+  Checks:
+  - (alias = lower(alias))
+  '''
+}
+
+Table "maps" {
+  "id" integer [pk, increment]
+  "game" game [not null]
+  "name" text [not null]
+  "level_id" text
+  "image_url" text
+  "sort_order" integer [not null, default: 0]
+  "requires_full_game" boolean [note: 'Whether playing on it needs the paid game.']
+
+  indexes {
+    (game, level_id) [unique]
+    (game, name) [unique]
+  }
+
+  Note: '''
+  Each game's own maps.
+  '''
+}
+
+Table "map_tags" {
+  "map_id" integer [not null]
+  "tag_id" integer [not null]
+
+  indexes {
+    (map_id, tag_id) [pk]
+  }
+
+  Note: '''
+  A map carries tags too, such as the era a 2042 map came from.
+  '''
+}
+
+Table "sdk_versions" {
+  "id" integer [pk, increment]
+  "game" game [not null]
+  "version" text [not null]
+  "season" text [not null, default: '']
+  "sort_order" integer [not null]
+  "released_at" timestamptz
+
+  indexes {
+    (game, sort_order) [unique]
+    (game, version) [unique]
+    (id, game) [unique]
+  }
+
+  Note: '''
+  Releases of a game's Portal SDK.
+  '''
+}
+
+Table "snippets" {
+  "id" integer [pk, increment]
+  "slug" text [not null, unique]
+  "status" content_status [not null, default: 'pending']
+  "title" text [not null]
+  "description_md" text [not null, default: '']
+  "description_html" text [not null, default: '']
+  "owner_id" text [not null]
+  "category_id" integer
+  "exp_json" jsonb
+  "script" text [not null, default: '']
+  "vid_url" text
+  "featured" boolean [not null, default: false]
+  "trending" boolean [not null, default: false]
+  "allow_editing" boolean [not null, default: false]
+  "submitted_at" timestamptz [not null, default: `now()`]
+  "first_published_at" timestamptz
+  "last_published_at" timestamptz
+  "deleted_at" timestamptz
+  "meta_title" text
+  "meta_description" text
+  "meta_image" text
+  "include_in_sitemap" boolean [not null, default: true]
+  "updated_at" timestamptz [not null, default: `now()`]
+  "repo_url" text
+  "sdk_version_id" integer
+
+  Note: '''
+  A Battlefield 6 script.
+  '''
+}
+
+Table "snippet_creators" {
+  "snippet_id" integer [not null]
+  "user_id" text
+  "id" integer [pk, increment]
+  "name" text
+  "position" integer [not null, default: 0]
+  "accepted_at" timestamptz
+  "created_at" timestamptz [not null, default: `now()`]
+  "can_edit" boolean [not null, default: false]
+
+  indexes {
+    (snippet_id, name) [unique]
+    (snippet_id, user_id) [unique]
+  }
+
+  Note: '''
+  The same two kinds of creator as experience_creators.
+  
+  Checks:
+  - ((user_id IS NOT NULL) OR (NOT can_edit))
+  - ((user_id IS NULL) <> (name IS NULL))
+  '''
+}
+
+Table "snippet_likes" {
+  "snippet_id" integer [not null]
+  "user_id" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  indexes {
+    (snippet_id, user_id) [pk]
+  }
+
+  Note: '''
+  One row per like.
+  '''
+}
+
+Table "updates" {
+  "id" integer [pk, increment]
+  "experience_id" integer
+  "snippet_id" integer
+  "author_id" text [not null]
+  "title" text [not null]
+  "body_md" text [not null]
+  "body_html" text [not null]
+  "status" content_status [not null, default: 'pending']
+  "published_at" timestamptz
+  "reviewed_by" text
+  "reviewed_at" timestamptz
+  "review_note" text
+  "deleted_at" timestamptz
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  An update post on exactly one experience or script.
+  
+  Checks:
+  - (num_nonnulls(experience_id, snippet_id) = 1)
+  '''
+}
+
+Table "playtests" {
+  "id" integer [pk, increment]
+  "experience_id" integer
+  "title" text
+  "game" game [not null]
+  "code" text [not null]
+  "summary" text [not null]
+  "brief_md" text [not null, default: '']
+  "brief_html" text [not null, default: '']
+  "host_id" text [not null]
+  "regions" "tester_region[]" [not null, default: '{}']
+  "opens_at" timestamptz [not null, default: `now()`]
+  "closes_at" timestamptz
+  "together_at" timestamptz
+  "status" playtest_status [not null, default: 'pending']
+  "announced_at" timestamptz
+  "reminded_at" timestamptz
+  "discord_url" text [note: 'The thread where testers report back.']
+  "result_update_id" integer
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+  "reviewed_by" text
+  "reviewed_at" timestamptz
+  "review_note" text
+
+  Note: '''
+  A call for testers: a brief, regions and a Discord thread. Held for a moderator.
+  
+  Checks:
+  - ((experience_id IS NOT NULL) OR (title IS NOT NULL))
+  - ((closes_at IS NULL) OR (closes_at > opens_at))
+  '''
+}
+
+Table "events" {
+  "id" integer [pk, increment]
+  "slug" text [not null, unique]
+  "title" text [not null]
+  "summary" text [not null, default: '']
+  "body_md" text [not null, default: '']
+  "body_html" text [not null, default: '']
+  "cover_img_url" text
+  "link_url" text
+  "starts_at" timestamptz [not null]
+  "ends_at" timestamptz [not null]
+  "capacity" integer
+  "host_id" text [not null]
+  "published" boolean [not null, default: false]
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  A community event with a start and an end.
+  
+  Checks:
+  - (ends_at > starts_at)
+  '''
+}
+
+Table "event_interest" {
+  "event_id" integer [not null]
+  "user_id" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  indexes {
+    (event_id, user_id) [pk]
+  }
+
+  Note: '''
+  Who pressed "Interested".
+  '''
+}
+
+Table "banners" {
+  "id" integer [pk, increment]
+  "label" text
+  "message" text [not null]
+  "link_label" text
+  "link_url" text
+  "placement" banner_placement [not null, default: 'home']
+  "dismissible" boolean [not null, default: true]
+  "starts_at" timestamptz [not null]
+  "ends_at" timestamptz [not null]
+  "event_id" integer
+  "created_by" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  A time-limited notice across the site.
+  
+  Checks:
+  - (ends_at > starts_at)
+  '''
+}
+
+Table "site_settings" {
+  "id" boolean [pk, default: true]
+  "need_login_to_view_profile" boolean [not null, default: false]
+  "home_content_md" text [not null, default: '']
+  "updated_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  A single row of site-wide settings.
+  
+  Checks:
+  - id
+  '''
+}
+
+Table "import_quarantine" {
+  "id" integer [pk, increment]
+  "source_table" text [not null]
+  "legacy_id" text [not null]
+  "reason" text [not null]
+  "data" jsonb [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Old-site rows the import could not accept, with the reason.
+  '''
+}
+
+Ref: "session"."user_id" > "user"."id" [delete: cascade]
+Ref: "account"."user_id" > "user"."id" [delete: cascade]
+Ref: "experiences"."category_id" > "categories"."id"
+Ref: "experiences"."owner_id" > "user"."id"
+Ref: "experiences"."reviewed_by" > "user"."id"
+Ref: "experiences".("sdk_version_id", "game") > "sdk_versions".("id", "game")
+Ref: "experience_creators"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "experience_creators"."user_id" > "user"."id" [delete: cascade]
+Ref: "experience_images"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "experience_likes"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "experience_likes"."user_id" > "user"."id" [delete: cascade]
+Ref: "experience_reports"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "experience_reports"."user_id" > "user"."id" [delete: cascade]
+Ref: "experience_tags"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "experience_tags"."tag_id" > "tags"."id" [delete: cascade]
+Ref: "revisions"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "revisions"."reviewed_by" > "user"."id"
+Ref: "revisions"."submitted_by" > "user"."id"
+Ref: "project_files"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "project_files"."snippet_id" > "snippets"."id" [delete: cascade]
+Ref: "project_files"."uploaded_by" > "user"."id"
+Ref: "tags".("group_id", "game") > "tag_groups".("id", "game")
+Ref: "tag_aliases".("tag_id", "game") > "tags".("id", "game") [delete: cascade]
+Ref: "map_tags"."map_id" > "maps"."id" [delete: cascade]
+Ref: "map_tags"."tag_id" > "tags"."id" [delete: cascade]
+Ref: "snippets"."category_id" > "categories"."id"
+Ref: "snippets"."owner_id" > "user"."id"
+Ref: "snippets"."sdk_version_id" > "sdk_versions"."id"
+Ref: "snippet_creators"."snippet_id" > "snippets"."id" [delete: cascade]
+Ref: "snippet_creators"."user_id" > "user"."id" [delete: cascade]
+Ref: "snippet_likes"."snippet_id" > "snippets"."id" [delete: cascade]
+Ref: "snippet_likes"."user_id" > "user"."id" [delete: cascade]
+Ref: "updates"."author_id" > "user"."id"
+Ref: "updates"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "updates"."reviewed_by" > "user"."id"
+Ref: "updates"."snippet_id" > "snippets"."id" [delete: cascade]
+Ref: "playtests"."experience_id" > "experiences"."id" [delete: cascade]
+Ref: "playtests"."host_id" > "user"."id"
+Ref: "playtests"."result_update_id" > "updates"."id" [delete: set null]
+Ref: "playtests"."reviewed_by" > "user"."id"
+Ref: "events"."host_id" > "user"."id"
+Ref: "event_interest"."event_id" > "events"."id" [delete: cascade]
+Ref: "event_interest"."user_id" > "user"."id" [delete: cascade]
+Ref: "banners"."created_by" > "user"."id"
+Ref: "banners"."event_id" > "events"."id" [delete: cascade]
+
+TableGroup accounts {
+  "user"
+  "session"
+  "account"
+  "verification"
+}
+
+TableGroup experiences {
+  "experiences"
+  "experience_creators"
+  "experience_images"
+  "experience_likes"
+  "experience_reports"
+  "experience_tags"
+  "revisions"
+  "project_files"
+}
+
+TableGroup reference {
+  "categories"
+  "tag_groups"
+  "tags"
+  "tag_aliases"
+  "maps"
+  "map_tags"
+  "sdk_versions"
+}
+
+TableGroup scripts {
+  "snippets"
+  "snippet_creators"
+  "snippet_likes"
+}
+
+TableGroup community {
+  "updates"
+  "playtests"
+  "events"
+  "event_interest"
+  "banners"
+}
+
+TableGroup site {
+  "site_settings"
+  "import_quarantine"
+}

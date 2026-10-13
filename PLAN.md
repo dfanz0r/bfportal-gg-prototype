@@ -108,8 +108,8 @@ Rules worth holding from day one:
 - **Every mutating server function checks the caller's role.** A separate bundle keeps
   the public site light; it is not access control.
 - **One set of field definitions per entity, one schema per operation.** The rules for
-  a field (a code is six alphanumeric characters, a Portal URL is on
-  `portal.battlefield.com`) are written once and shared by the forms, the server
+  a field (how long a game's code is, what a Portal link must look like) are written
+  once and shared by the forms, the server
   functions, the API and the import. Each operation then builds its own schema from
   them, listing exactly the fields that caller may send. The owner's edit schema has no
   `featured`, `owner_id` or `role`; the admin's does. Ownership and privileged values
@@ -316,7 +316,10 @@ tables use `timestamptz` throughout.
 | `title`, `description_md`, `description_html` | Markdown is stored; HTML is rendered and sanitized on write |
 | `owner_id` | The submitter. One per experience; the only one who can delete it or change who else works on it |
 | `category_id` | Main category |
-| `code`, `exp_url` | Six characters in 2042, four or five in Battlefield 6; URL must be on `portal.battlefield.com` |
+| `code` | Six characters in 2042, four or five in Battlefield 6 |
+| `playground_id` | New. Portal's own id for the experience. Both of its pages on EA's side are addressed by it; see "The two Portal pages of an experience" |
+| `copy_allowed` | New. Whether its creator lets others copy it in the Portal editor. Empty when nobody has said |
+| `exp_url` | The link the old site stored, kept as imported. New experiences store the playground id instead, and the column goes once the import has shown every old link carries one |
 | `cover_img_url`, `vid_url` | External URLs, as today |
 | `repo_url` | New. The project's source repository; owner-editable, so it goes through moderation like any edit |
 | `files_url` | New. A link to files too large to upload: Dropbox, Google Drive or GitHub |
@@ -325,6 +328,7 @@ tables use `timestamptz` throughout.
 | `bugged`, `broken`, `xp_farm` | Health flags, set by people: the owner, an admin, or a moderator acting on reports. The nightly check no longer writes `broken` |
 | `portal_state`, `portal_checked_at`, `portal_state_since` | New. What the nightly check last saw on Portal, when it looked, and since when the answer has been what it is. See "Whether a code is still published" |
 | `xp_mode` | New. The progression mode gametools reports, stored by the nightly check: `portal-default` earns full XP |
+| `requires_full_game` | New. Whether playing it needs the paid game or the free version will do. Empty when not known, and for 2042, which has no free version. See "Whether a code is still published" for the check that fills it |
 | `sdk_version_id` | New, Battlefield 6 only. The SDK release its creators last said it works with; see "SDK versions" |
 | `is_template` | New. The community's word for what the old site called a prefab: the creator offers the files so others can publish their own version with their own changes. Set on creation; shows a Template tag and makes the files downloadable. The import sets it for every experience in the old Prefab category |
 | `allow_editing` | Stored and exposed by the API today but never enforced; keep the column, decide its meaning later |
@@ -559,6 +563,7 @@ The rest of each tab's filter row, which is not tags:
 | Players | Yes | Yes |
 | XP | Full XP only. The Battlefield 6 lookup reports a progression mode too (`portal-unranked` for `1264G`) | Full XP only |
 | SDK version | By season, and current season only | No |
+| Free or full game | Works on the free version | No. 2042 has no free version |
 | Health | Hide bugged or unavailable | Hide ones that no longer load, on by default |
 | Default sort | Trending this week | Most liked, all time |
 
@@ -572,11 +577,14 @@ through the code. `src/shared/games.ts` holds one entry per game:
 | Name, short name, order of the Library tabs | | |
 | Code format | Six letters and digits | Four or five |
 | gametools path | `bf2042` | `bf6` |
+| Public page of an experience | None | `www.ea.com/games/battlefield/battlefield-6/portal/buy/creation/<playground id>` |
+| Editor link of an experience | `portal.battlefield.com/experience/rules?playgroundId=<playground id>` | `portal.battlefield.com/bf6/experience?id=<playground id>` |
 | Accent | Teal | The site's orange |
 | Open for submissions | Yes | Yes |
 | Takes an export, and has "built with" | No | Yes |
 | Maps have eras | Yes | No |
 | Reports an XP mode | Yes | Yes |
+| Has a free version | No | Yes, so maps and experiences say whether they need the paid game |
 | Has SDK releases, and where the latest is published | No | Yes, `download.portal.battlefield.com/versions.json` |
 | Default sort and health filter | See above | See above |
 
@@ -775,7 +783,7 @@ status, featured, trending, publish dates, embed overrides) and adds:
 |---|---|
 | `category_id` | A `script_main` category |
 | `exp_json` | The Portal export, validated against a Zod port of `bf6/models/bf_experience_export.py` |
-| `code` | The decoded `Script.ts` attachment, extracted from `exp_json` on save |
+| `script` | The decoded `Script.ts` attachment, extracted from `exp_json` on save. The old site calls this column `code`; it is renamed because `code` on an experience and a playtest is the Portal share code |
 | `vid_url` | |
 | `sdk_version_id` | New. The SDK release the script works with |
 
@@ -878,6 +886,48 @@ Rules:
 Snippets already keep their export in `snippets.exp_json`. They can move to this table
 later so there is one way to store a project's files.
 
+### The two Portal pages of an experience
+
+Clarified 2026-10-13. An experience has two pages on EA's side, for two different
+people, and the site links to both. Both are addressed by the same playground id.
+
+| | The public page | The editor link |
+|---|---|---|
+| What it is | The experience's page on EA's Battlefield website, in its public browser of published experiences | The experience opened in the Portal editor |
+| Who it is for | Someone who wants to play it | A creator who wants to see how it is built, or start their own from it |
+| When it works | Whenever the experience is published | Only when its creator has allowed copying |
+| Where | `www.ea.com`, Battlefield 6 only | `portal.battlefield.com`, both games. It is what the old site calls the "Experience URL (for editing and copying)" |
+| On the site | "View on Battlefield" | "Open in the Portal editor", shown only when copying is allowed |
+
+What follows:
+
+- **The site stores the id, not the links.** `experiences.playground_id` holds it, and
+  each game's entry in the registry says how its two addresses are built. A changed
+  address on EA's side is then one line to fix, not a column to rewrite.
+- **The id comes with the code.** The lookup returns it, so a creator who gives a code
+  types nothing more. A creator who pastes either link gives it too: the form reads
+  the id out of the link and looks the experience up by it.
+- **A pasted editor link comes in many forms.** The editor has a page per step, and a
+  creator copies whichever one is open. For Battlefield 6 they all sit under
+  `/bf6/experience` and end in `?id=<playground id>`:
+  `/bf6/experience?id=…`, `/bf6/experience/settings/mode?id=…`,
+  `/bf6/experience/choose-maps?id=…`, `/bf6/experience/teams?id=…` and more. For 2042
+  they sit under `/experience` and the parameter is `playgroundId`. So the form does
+  not match a whole address. It checks the host, checks the path starts with the
+  game's editor prefix, and reads the one parameter. The link the site shows is
+  always the plain first form, whatever was pasted.
+- **Copying is the creator's to declare.** `copy_allowed` is a box on the form, "others
+  can copy this in the Portal editor". It may also be detectable: one seed experience
+  of 34 came back from the lookup with its rules, script and spatial data, and "its
+  creator allows copying" is the likeliest reason. That is a guess until it is checked
+  against an experience whose setting is known.
+- **Copying on Portal and a template here are two routes to the same thing,** starting
+  your own version from someone's work. An experience can offer either or both: the
+  editor link copies it inside Portal, and a template's files can be taken without
+  Portal at all. The experience page puts the two side by side under "Build on this".
+- **The old site's links are editor links.** The import reads the playground id out of
+  each `exp_url`, keeps the link as it was, and reports any with no id in it.
+
 ### What gametools.network returns for a code
 
 Checked on 2026-10-12 against `https://api.gametools.network/bf6/playground/` with real
@@ -912,9 +962,9 @@ Also learned from those 34:
 | Field | What was seen |
 |---|---|
 | Progression mode | `portal-default`, `portal-default-backfillai`, `portal-unranked` and `official-progression`. EA's own website labels only `portal-default` as full XP and the other three as limited, which is the rule the XP badge uses |
-| `licenseRequirements` | `multiplayer` alone, or with `premium_san` and `premium_subscription`. It matches the `isPremium` flag on EA's browse listing exactly. Read as: the experience needs the paid game. Not confirmed |
+| `licenseRequirements` | `multiplayer` alone, or with `premium_san` and `premium_subscription`. It matches the `isPremium` flag on EA's browse listing exactly: the experience needs the paid game. Confirmed 2026-10-13, and it follows from the maps; see below |
 | Creator | `playerCreator` or `trustedCreator`. The seven trusted ones are the standing official playlists such as "Hardcore Conquest" |
-| Maps | 22 level ids with display names and pictures, kept in `seed/bf6-experiences.json`. Two came back with no display name or picture, `MP_DryLake` (Area 51) and `MP_Paradise` (Vegas Strip): they had not been released when the data was gathered, and their names were entered by hand. So a map can be in a rotation before the lookups know its name, and a page falls back to the level id |
+| Maps | 30 level ids in `seed/reference.ts`. 27 are the scenes the Portal SDK ships, one `.tscn` per level id, which is the full list of maps a Portal experience can use; the other three are Fort Lyndon and the two maps released on 2026-10-13, Area 51 (`MP_DryLake`) and Vegas Strip (`MP_Paradise`), whose names were entered by hand. All 30 have a display name, checked against the Portal SDK's own list for version 1.4.3.0. A page still falls back to the level id for a map that turns up before it is named. Pictures are the optimized ones from Portal's own map picker |
 | Modes | Conquest large, Breakthrough Large, Rush, Domination, Team deathmatch, Squad deathmatch, Custom, and three Redsec modes |
 | Publish state | Every one `PUBLISHED`, and every compile status `OK`, so there is still no example of either going wrong |
 
@@ -936,6 +986,23 @@ pictures. For one of the twelve creators gametools had named, EA's name was diff
 so gametools' player lookup is not reliable for this. The site itself does not call
 this service: a personal token expires and is not the site's to use. Token files are
 git-ignored (`.auth.*`).
+
+Free or full game, asked for on 2026-10-13: the site says whether an experience needs
+the paid game or works on the free version. It follows from the maps: one paid map in
+the rotation is enough. gametools publishes the requirement per map at
+`/bf6/licenserequirements/`, 22 maps on that day, of which Fort Lyndon, Portal Sandbox
+and two Portal variants of Fort Lyndon's areas are free. Worked out that way, the
+answer matched EA's own flag for all 30 seed experiences whose maps are in the list.
+
+- `maps.requires_full_game` holds it per map, and `experiences.requires_full_game` the
+  answer for the experience, stored so a listing can filter on it.
+- The nightly check sets it from the lookup's `licenseRequirements`. Before there is a
+  code, and on the submit form's preview, it is worked out from the chosen maps.
+- It is unknown, not "free", when a map is not in the list yet, as with a map released
+  that day.
+- Cards and the experience page show "Free to play" or "Full game"; the Battlefield 6
+  Library has a filter for experiences the free version can play.
+- The nightly job refreshes the per-map list along with the tags.
 
 `/bf6/shared_playground/` answers by code as well, and adds two things the playground
 lookup lacks: when the design was last updated, and each tag's English name ("Custom
@@ -1157,7 +1224,8 @@ What "feature complete" means, by area.
 
 **Experience page**
 
-- Markdown description, tags, link to the Portal URL, the owner, credited accounts with Discord avatars and named
+- Markdown description, tags, "View on Battlefield" and, when copying is allowed,
+  "Open in the Portal editor", the owner, credited accounts with Discord avatars and named
   credits,
   player and bot counts, video embed.
 - The code in a panel that stays in view, with a copy button and whether the code still
@@ -1199,7 +1267,8 @@ What "feature complete" means, by area.
 - The submit form asks for the game first, because that decides what can be supplied.
   Both games can start from the experience code, which gametools.network looks up.
   Battlefield 6 can also add the export; Battlefield 2042 has almost nothing to export.
-- Submit form: category, Portal URL or code, title, markdown description (the markdownx
+- Submit form: category, the code or either of the experience's Portal links, whether
+  others may copy it in the Portal editor, title, markdown description (the markdownx
   editor today), named credits for people without an account, accounts to credit (user autocomplete)
   each with an edit access switch that starts off, tags (autocomplete), players,
   bots, style, the SDK release it works with (Battlefield 6, latest preselected), cover
@@ -1213,8 +1282,9 @@ What "feature complete" means, by area.
   (`bfportal/static/js/bfportal.js:46`).
 - Validation: a code is required unless the experience is a template (the old Prefab
   category). Battlefield 6 has no such category: its form asks what the experience is
-  built with, and whether to offer it as a template; URL host must be `portal.battlefield.com`; code is alphanumeric; cover image
-  must be an image.
+  built with, and whether to offer it as a template. A pasted link must be one of the
+  game's two Portal addresses and carry a playground id; code is alphanumeric; cover
+  image must be an image.
 
 **BF6**
 
@@ -1310,8 +1380,8 @@ What "feature complete" means, by area.
 - Scheduled job: ask Portal for the latest SDK release and record it when it is new.
 - Scheduled job: sync each game's tag list from gametools.network and purge the Cloudflare cache
   for the autocomplete endpoints, then check every published experience against
-  gametools.network: record whether its code is still published, its XP mode and its
-  rotation, and add Portal's tags for it.
+  gametools.network: record whether its code is still published, its XP mode, whether
+  it needs the paid game and its rotation, and add Portal's tags for it.
 
 **Not carried over because nothing uses them**
 
@@ -1360,7 +1430,7 @@ every rehearsal.
 | Data | Source | Note |
 |---|---|---|
 | Users | `auth_user`, `socialaccount_socialaccount`, `core_profile` | Keyed on Discord id; roles from the superuser flag and the Moderators group |
-| Experiences | `wagtailcore_page` + `core_experiencepage` | Slug, ids and publish dates kept |
+| Experiences | `wagtailcore_page` + `core_experiencepage` | Slug, ids and publish dates kept. The playground id is read out of each stored link |
 | Pending submissions and edits | Latest `wagtailcore_revision` flagged for moderation | Becomes status `pending` or a revision row |
 | Subcategories | The subcategory table and its join | Each becomes a tag in 2042's Style group, and each assignment a tag on the experience |
 | Creators | The creators join table | Each becomes a credited account, already accepted, with edit access off. They keep exactly what they have today: a credit that links to their profile. An owner who wants one of them to edit turns it on |
@@ -1572,8 +1642,13 @@ was settled first, so the screens are built against seed data and the import fol
 1. **Foundations.** Done: the app skeleton, schema, Discord login, the theme and the
    site shell with every section's route. Not done: the deploy pipeline and a staging
    host. CI has not run yet, because nothing has been pushed.
-2. **Seed data.** A script that fills the development database with the experiences,
-   scripts, updates, playtests and events the mockups show.
+2. **Seed data.** Done: `pnpm db:seed` fills the development database with the
+   reference rows (categories, tag groups, tags, maps, SDK releases), 34 real
+   Battlefield 6 experiences, and made-up content after the mockups that covers the
+   awkward states: pending, rejected, deleted, flagged, no longer published, a
+   template with no code, an unaccepted invitation. Still to add when their pages are
+   built: the four Battlefield 6 tag names that were guessed, and real 2042
+   experiences once the import exists.
 3. **Read-only site:** the home page, library, experience page, scripts, updates,
    events, playtests and profiles, built from the mockups against the seed data. Each page arrives
    with its head tags, its server-HTML test and working links without script; see

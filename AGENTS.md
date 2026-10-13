@@ -41,7 +41,7 @@ and before type-checking. The route tree is committed; never edit it by hand.
 | `src/shared` | Constants, types and text used on both sides |
 | `src/styles.css` | Design tokens and the few custom utilities |
 | `tests` | Test database setup. Tests sit beside the code they cover |
-| `seed` | Sample data for local development |
+| `seed` | Sample data for local development and the script that loads it, `pnpm db:seed` |
 | `mockups` | The design reference. Git-ignored; its images are not ours to publish |
 
 Rules that hold the structure together:
@@ -157,6 +157,12 @@ change the mockup or the plan in the same piece of work so the two do not drift.
 - **Let the database refuse what it can.** Constraints first, a check in the service
   for what a constraint cannot say, and a test for each.
 - **Timestamps carry a time zone.**
+- **Name a column that points at a user by what the user is to the row.** `user_id`
+  when the row is simply that user's like, report or membership. A role when they
+  hold one: `owner_id`, `author_id`, `host_id`. `<action>_by` when the column records
+  who did something to the row: `submitted_by`, `reviewed_by`, `uploaded_by`.
+- **One name, one meaning.** `code` is always the Portal share code. Do not reuse a
+  column name for something else in another table.
 - **Stored text is Markdown;** the HTML shown is rendered and sanitized on write.
 - **What users submit is held for a moderator,** with the exceptions the plan lists.
 
