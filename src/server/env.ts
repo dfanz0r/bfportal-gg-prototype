@@ -16,6 +16,10 @@ const discordCredential = isProduction
 const schema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
+  // The address the public reaches the site at, for canonical links and
+  // previews. Defaults to the sign-in address, which is the same one unless
+  // sign-in is ever hosted apart.
+  SITE_URL: z.url({ protocol: /^https?$/ }).optional(),
   BETTER_AUTH_SECRET: z.string().min(32),
   DISCORD_CLIENT_ID: discordCredential,
   DISCORD_CLIENT_SECRET: discordCredential,
@@ -34,3 +38,6 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data
+
+/** The site's public address, with no slash on the end. */
+export const siteUrl = (env.SITE_URL ?? env.BETTER_AUTH_URL).replace(/\/+$/, '')

@@ -10,8 +10,9 @@ import {
 } from 'vitest'
 
 import { db, sql } from '../db'
-import { account, user } from '../db/schema'
+import { account, session, user } from '../db/schema'
 import { auth } from '.'
+import { signOutAndRedirect } from './sign-out'
 
 const BASE_URL = 'http://localhost:3000'
 
@@ -179,6 +180,44 @@ describe('signing in with Discord', () => {
       role: 'moderator',
       hideUsername: true,
     })
+  })
+
+  it('signs out a request from the site, and ends the session', async () => {
+    const cookie = await signIn(discordUser())
+
+    const response = await signOutAndRedirect(
+      new Request(`${BASE_URL}/logout`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          origin: BASE_URL,
+          cookie,
+        },
+      }),
+    )
+
+    expect(response.status).toBe(303)
+    expect(response.headers.get('location')).toBe('/')
+    expect(response.headers.getSetCookie().join(';')).toMatch(/session_token=;/)
+    expect(await db.select().from(session)).toHaveLength(0)
+  })
+
+  it('will not sign someone out for another site', async () => {
+    const cookie = await signIn(discordUser())
+
+    const response = await signOutAndRedirect(
+      new Request(`${BASE_URL}/logout`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          origin: 'https://evil.example',
+          cookie,
+        },
+      }),
+    )
+
+    expect(response.status).toBe(403)
+    expect(await db.select().from(session)).toHaveLength(1)
   })
 
   it('does not let a signed-in user rewrite their own profile fields', async () => {

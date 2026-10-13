@@ -10,3 +10,13 @@ export function loadLocalEnv() {
     process.loadEnvFile('.env.local')
   }
 }
+
+const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1']
+
+/**
+ * Whether a database host is this machine. The seed and the tests empty or
+ * drop databases, and check this before they connect.
+ */
+export function isLocalHost(hostname: string) {
+  return LOCAL_HOSTS.includes(hostname)
+}

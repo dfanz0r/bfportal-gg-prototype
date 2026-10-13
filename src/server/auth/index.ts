@@ -49,5 +49,9 @@ export const auth = betterAuth({
       legacyId: { type: 'number', required: false, input: false },
     },
   },
+  // Better Auth checks where a request came from, and switches that check off
+  // by itself when it detects a test run. Saying so here keeps it on there
+  // too, so the tests see what production does.
+  advanced: { disableOriginCheck: false },
   plugins: [tanstackStartCookies()],
 })
