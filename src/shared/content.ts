@@ -13,7 +13,6 @@ export type ContentStatus = (typeof contentStatuses)[number]
 
 export const categoryKinds = [
   'experience_main',
-  'experience_sub',
   'script_main',
   'script_sub',
 ] as const
@@ -60,10 +59,42 @@ export const playtestStatuses = [
   'pending',
   'approved',
   'rejected',
-  'cancelled',
+  'canceled',
 ] as const
 export type PlaytestStatus = (typeof playtestStatuses)[number]
 
 /** The regions testers sign up for. Each has a Tester role in Discord. */
 export const testerRegions = ['eu', 'na', 'sa', 'asia', 'oce'] as const
 export type TesterRegion = (typeof testerRegions)[number]
+
+/**
+ * How a tag group appears in a game's Library. `own` gives it a filter of its
+ * own, `shared` puts its tags in the general tag picker, and `none` keeps it
+ * off the filter row.
+ */
+export const tagGroupFilters = ['own', 'shared', 'none'] as const
+export type TagGroupFilter = (typeof tagGroupFilters)[number]
+
+/** Whether an experience may carry several tags from one group. */
+export const tagGroupPicks = ['any', 'one'] as const
+export type TagGroupPick = (typeof tagGroupPicks)[number]
+
+/**
+ * Where a tag on an experience came from: its creator, Portal's own tags for
+ * the code, or the maps in its rotation.
+ */
+export const tagSources = ['creator', 'portal', 'map'] as const
+export type TagSource = (typeof tagSources)[number]
+
+/**
+ * Whether Portal still has an experience's code, as the nightly check last saw
+ * it. `unpublished` means Portal knows the code but no longer offers it;
+ * `missing` means it does not know the code at all.
+ */
+export const portalStates = [
+  'unchecked',
+  'published',
+  'unpublished',
+  'missing',
+] as const
+export type PortalState = (typeof portalStates)[number]

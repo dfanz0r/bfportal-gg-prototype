@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -22,9 +23,13 @@ import {
   fileKinds,
   games,
   playtestStatuses,
+  portalStates,
   reportTypes,
   revisionKinds,
   revisionStatuses,
+  tagGroupFilters,
+  tagGroupPicks,
+  tagSources,
   testerRegions,
 } from '../../shared/content'
 import { user } from './auth-schema'
@@ -47,11 +52,18 @@ export const experienceTypeEnum = pgEnum('experience_type', experienceTypes)
 export const bannerPlacementEnum = pgEnum('banner_placement', bannerPlacements)
 export const playtestStatusEnum = pgEnum('playtest_status', playtestStatuses)
 export const testerRegionEnum = pgEnum('tester_region', testerRegions)
+export const tagGroupFilterEnum = pgEnum('tag_group_filter', tagGroupFilters)
+export const tagGroupPickEnum = pgEnum('tag_group_pick', tagGroupPicks)
+export const tagSourceEnum = pgEnum('tag_source', tagSources)
+export const portalStateEnum = pgEnum('portal_state', portalStates)
 
 /**
- * Main categories and subcategories for experiences and scripts, in one table.
- * A foreign key cannot say "a category of kind experience_main", so the
- * services check the kind when they assign one.
+ * Main categories for experiences, and main categories and subcategories for
+ * scripts, in one table. A foreign key cannot say "a category of kind
+ * experience_main", so the services check the kind when they assign one.
+ *
+ * What the old site called an experience's subcategories, and the form calls
+ * its style, is a tag group. See `tagGroups`.
  */
 export const categories = pgTable(
   'categories',
@@ -64,7 +76,7 @@ export const categories = pgTable(
     game: gameEnum('game'),
     name: text('name').notNull(),
     slug: text('slug').notNull(),
-    // Sanitised SVG markup, stored in the row so the site needs no file storage.
+    // Sanitized SVG markup, stored in the row so the site needs no file storage.
     iconSvg: text('icon_svg'),
     visible: boolean('visible').notNull().default(true),
     selectableOnForm: boolean('selectable_on_form').notNull().default(true),
@@ -81,11 +93,169 @@ export const categories = pgTable(
   ],
 )
 
-export const tags = pgTable('tags', {
-  id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
-  name: text('name').notNull().unique(),
-  slug: text('slug').notNull().unique(),
-})
+/**
+ * A named set of tags within one game: "Era" for Battlefield 2042, "Style",
+ * "Rules". Admins create and order them, and a game's Library builds its
+ * filters from them, so nothing about one game's tags is written in code.
+ */
+export const tagGroups = pgTable(
+  'tag_groups',
+  {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+    game: gameEnum('game').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    description: text('description').notNull().default(''),
+    sortOrder: integer('sort_order').notNull().default(0),
+    filter: tagGroupFilterEnum('filter').notNull().default('shared'),
+    pick: tagGroupPickEnum('pick').notNull().default('any'),
+    // Off for a group only Portal or an admin sets.
+    creatorSelectable: boolean('creator_selectable').notNull().default(true),
+    showOnCard: boolean('show_on_card').notNull().default(false),
+  },
+  (table) => [
+    unique('tag_groups_game_name_unique').on(table.game, table.name),
+    unique('tag_groups_game_slug_unique').on(table.game, table.slug),
+    // Lets a tag's foreign key name the game as well as the group.
+    unique('tag_groups_id_game_unique').on(table.id, table.game),
+  ],
+)
+
+/**
+ * A tag belongs to one game and to one of that game's groups. The same name
+ * can exist in two games and mean different things.
+ *
+ * A foreign key cannot say "a tag of this experience's game", so the services
+ * check that when they tag one.
+ */
+export const tags = pgTable(
+  'tags',
+  {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+    game: gameEnum('game').notNull(),
+    groupId: integer('group_id').notNull(),
+    // What the site shows. Admins edit it.
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    // Portal's id and its own name for the tag, which the nightly sync and the
+    // code lookup match on. Null for a tag an admin added.
+    portalId: text('portal_id'),
+    portalName: text('portal_name'),
+    description: text('description').notNull().default(''),
+    sortOrder: integer('sort_order').notNull().default(0),
+    // A hidden tag stays on experiences but leaves the filters and the form.
+    visible: boolean('visible').notNull().default(true),
+  },
+  (table) => [
+    // A group cannot be deleted while it holds tags.
+    foreignKey({
+      name: 'tags_group_fk',
+      columns: [table.groupId, table.game],
+      foreignColumns: [tagGroups.id, tagGroups.game],
+    }),
+    unique('tags_game_name_unique').on(table.game, table.name),
+    unique('tags_game_slug_unique').on(table.game, table.slug),
+    unique('tags_game_portal_id_unique').on(table.game, table.portalId),
+    unique('tags_id_game_unique').on(table.id, table.game),
+    index('tags_group_idx').on(table.groupId),
+  ],
+)
+
+/**
+ * Other names a tag answers to, stored in lower case. Merging one tag into
+ * another leaves the old name here, so old links keep finding the filter.
+ */
+export const tagAliases = pgTable(
+  'tag_aliases',
+  {
+    game: gameEnum('game').notNull(),
+    alias: text('alias').notNull(),
+    tagId: integer('tag_id').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.game, table.alias] }),
+    foreignKey({
+      name: 'tag_aliases_tag_fk',
+      columns: [table.tagId, table.game],
+      foreignColumns: [tags.id, tags.game],
+    }).onDelete('cascade'),
+    index('tag_aliases_tag_idx').on(table.tagId),
+    check(
+      'tag_aliases_lower_check',
+      sql`${table.alias} = lower(${table.alias})`,
+    ),
+  ],
+)
+
+/**
+ * The maps a game's rotations draw from. Gametools names a Battlefield 2042
+ * map without its level id, so a map is matched by level id when there is one
+ * and by name otherwise.
+ */
+export const maps = pgTable(
+  'maps',
+  {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+    game: gameEnum('game').notNull(),
+    name: text('name').notNull(),
+    levelId: text('level_id'),
+    imageUrl: text('image_url'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (table) => [
+    unique('maps_game_name_unique').on(table.game, table.name),
+    unique('maps_game_level_id_unique').on(table.game, table.levelId),
+  ],
+)
+
+/**
+ * A map carries tags too. A Battlefield 2042 map is tagged with the era it
+ * came from, and an experience takes on the tags of the maps in its rotation.
+ */
+export const mapTags = pgTable(
+  'map_tags',
+  {
+    mapId: integer('map_id')
+      .notNull()
+      .references(() => maps.id, { onDelete: 'cascade' }),
+    tagId: integer('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.mapId, table.tagId] }),
+    index('map_tags_tag_idx').on(table.tagId),
+  ],
+)
+
+/**
+ * The releases of a game's Portal SDK, which scripts and custom maps are built
+ * against. Portal's download service names only the latest, so the list grows
+ * a row at a time as the nightly job sees a new one.
+ */
+export const sdkVersions = pgTable(
+  'sdk_versions',
+  {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+    game: gameEnum('game').notNull(),
+    version: text('version').notNull(),
+    // "Season 4", "Launch". Shown beside the version and used to filter.
+    season: text('season').notNull().default(''),
+    // Newer releases sort higher. Version strings do not sort as text.
+    sortOrder: integer('sort_order').notNull(),
+    // Unknown for releases from before the site started watching.
+    releasedAt: timestamptz('released_at'),
+  },
+  (table) => [
+    unique('sdk_versions_game_version_unique').on(table.game, table.version),
+    unique('sdk_versions_game_sort_order_unique').on(
+      table.game,
+      table.sortOrder,
+    ),
+    // Lets an experience's foreign key name the game as well as the version.
+    unique('sdk_versions_id_game_unique').on(table.id, table.game),
+  ],
+)
 
 export const experiences = pgTable(
   'experiences',
@@ -96,7 +266,7 @@ export const experiences = pgTable(
     game: gameEnum('game').notNull(),
     status: contentStatusEnum('status').notNull().default('pending'),
     title: text('title').notNull(),
-    // Markdown is what the owner wrote. The HTML is rendered and sanitised
+    // Markdown is what the owner wrote. The HTML is rendered and sanitized
     // from it on every write, and is what pages show.
     descriptionMd: text('description_md').notNull().default(''),
     descriptionHtml: text('description_html').notNull().default(''),
@@ -127,8 +297,20 @@ export const experiences = pgTable(
     // Read from an uploaded export, or fetched from gametools.network by code.
     gameMode: text('game_mode'),
     mapRotation: jsonb('map_rotation'),
+    // The progression mode gametools reports, as Portal names it:
+    // "portal-default" earns full XP, anything else is restricted.
+    xpMode: text('xp_mode'),
+    // The SDK release its creators last said it works with. Neither the
+    // export nor the code lookup carries one, so it is chosen on the form.
+    sdkVersionId: integer('sdk_version_id'),
     featured: boolean('featured').notNull().default(false),
     trending: boolean('trending').notNull().default(false),
+    // What the nightly check last saw on Portal, when it looked, and since
+    // when the answer has been what it is. Only the check writes these.
+    portalState: portalStateEnum('portal_state').notNull().default('unchecked'),
+    portalCheckedAt: timestamptz('portal_checked_at'),
+    portalStateSince: timestamptz('portal_state_since'),
+    // Set by people: the owner, an admin, or a moderator acting on reports.
     bugged: boolean('bugged').notNull().default(false),
     broken: boolean('broken').notNull().default(false),
     xpFarm: boolean('xp_farm').notNull().default(false),
@@ -164,6 +346,11 @@ export const experiences = pgTable(
     index('experiences_owner_idx').on(table.ownerId),
     index('experiences_category_idx').on(table.categoryId),
     index('experiences_code_idx').on(table.code),
+    foreignKey({
+      name: 'experiences_sdk_version_fk',
+      columns: [table.sdkVersionId, table.game],
+      foreignColumns: [sdkVersions.id, sdkVersions.game],
+    }),
     check('experiences_max_players_check', sql`${table.maxPlayers} >= 0`),
     check('experiences_max_bots_check', sql`${table.maxBots} >= 0`),
   ],
@@ -185,35 +372,51 @@ export const experienceImages = pgTable(
   (table) => [primaryKey({ columns: [table.experienceId, table.position] })],
 )
 
+/**
+ * The people an experience is by, besides its owner. Each row is either a
+ * name, for someone with no account here, or an account. Both are credits.
+ *
+ * An account can also be given edit access, which makes it a collaborator.
+ * That is always the owner's explicit choice: it is off unless they turn it
+ * on, and the import leaves it off for everyone the old site credited.
+ *
+ * An account the owner adds is not shown, and cannot edit, until that user
+ * accepts.
+ */
 export const experienceCreators = pgTable(
   'experience_creators',
   {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
     experienceId: integer('experience_id')
       .notNull()
       .references(() => experiences.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name'),
+    // The order they are shown in, after the owner.
+    position: integer('position').notNull().default(0),
+    canEdit: boolean('can_edit').notNull().default(false),
+    acceptedAt: timestamptz('accepted_at'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
   },
   (table) => [
-    primaryKey({ columns: [table.experienceId, table.userId] }),
+    unique('experience_creators_user_unique').on(
+      table.experienceId,
+      table.userId,
+    ),
+    unique('experience_creators_name_unique').on(
+      table.experienceId,
+      table.name,
+    ),
     index('experience_creators_user_idx').on(table.userId),
-  ],
-)
-
-export const experienceSubcategories = pgTable(
-  'experience_subcategories',
-  {
-    experienceId: integer('experience_id')
-      .notNull()
-      .references(() => experiences.id, { onDelete: 'cascade' }),
-    categoryId: integer('category_id')
-      .notNull()
-      .references(() => categories.id, { onDelete: 'cascade' }),
-  },
-  (table) => [
-    primaryKey({ columns: [table.experienceId, table.categoryId] }),
-    index('experience_subcategories_category_idx').on(table.categoryId),
+    check(
+      'experience_creators_one_kind_check',
+      sql`(${table.userId} is null) <> (${table.name} is null)`,
+    ),
+    // Only an account can edit.
+    check(
+      'experience_creators_edit_check',
+      sql`${table.userId} is not null or not ${table.canEdit}`,
+    ),
   ],
 )
 
@@ -226,6 +429,9 @@ export const experienceTags = pgTable(
     tagId: integer('tag_id')
       .notNull()
       .references(() => tags.id, { onDelete: 'cascade' }),
+    // Tags that came from Portal or from the rotation's maps are refreshed by
+    // the nightly check. The ones a creator chose are left alone.
+    source: tagSourceEnum('source').notNull().default('creator'),
   },
   (table) => [
     primaryKey({ columns: [table.experienceId, table.tagId] }),
@@ -323,6 +529,8 @@ export const snippets = pgTable(
     code: text('code').notNull().default(''),
     vidUrl: text('vid_url'),
     repoUrl: text('repo_url'),
+    // The SDK release the script was last said to work with.
+    sdkVersionId: integer('sdk_version_id').references(() => sdkVersions.id),
     featured: boolean('featured').notNull().default(false),
     trending: boolean('trending').notNull().default(false),
     allowEditing: boolean('allow_editing').notNull().default(false),
@@ -345,17 +553,34 @@ export const snippets = pgTable(
   ],
 )
 
+/** The same two kinds of creator as `experienceCreators`, for a script. */
 export const snippetCreators = pgTable(
   'snippet_creators',
   {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
     snippetId: integer('snippet_id')
       .notNull()
       .references(() => snippets.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name'),
+    position: integer('position').notNull().default(0),
+    canEdit: boolean('can_edit').notNull().default(false),
+    acceptedAt: timestamptz('accepted_at'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.snippetId, table.userId] })],
+  (table) => [
+    unique('snippet_creators_user_unique').on(table.snippetId, table.userId),
+    unique('snippet_creators_name_unique').on(table.snippetId, table.name),
+    index('snippet_creators_user_idx').on(table.userId),
+    check(
+      'snippet_creators_one_kind_check',
+      sql`(${table.userId} is null) <> (${table.name} is null)`,
+    ),
+    check(
+      'snippet_creators_edit_check',
+      sql`${table.userId} is not null or not ${table.canEdit}`,
+    ),
+  ],
 )
 
 export const snippetLikes = pgTable(

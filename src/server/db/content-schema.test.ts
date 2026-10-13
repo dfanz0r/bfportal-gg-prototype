@@ -5,14 +5,20 @@ import { db, sql } from '.'
 import {
   banners,
   categories,
+  experienceCreators,
   experienceImages,
   experienceLikes,
   experiences,
   experienceTags,
+  maps,
+  mapTags,
   playtests,
   projectFiles,
   revisions,
+  sdkVersions,
   siteSettings,
+  tagAliases,
+  tagGroups,
   tags,
   updates,
   user,
@@ -30,6 +36,14 @@ async function constraintOf(query: Promise<unknown>) {
     return current?.constraint_name
   }
   return undefined
+}
+
+async function tagGroup(game: 'bf2042' | 'bf6', name: string) {
+  const [group] = await db
+    .insert(tagGroups)
+    .values({ game, name, slug: name.toLowerCase() })
+    .returning()
+  return group
 }
 
 async function seed() {
@@ -64,7 +78,7 @@ async function seed() {
 describe('content schema', () => {
   beforeEach(async () => {
     await db.execute(
-      raw`truncate ${experiences}, ${categories}, ${tags}, ${siteSettings}, ${banners}, ${user} restart identity cascade`,
+      raw`truncate ${experiences}, ${categories}, ${tagGroups}, ${maps}, ${sdkVersions}, ${siteSettings}, ${banners}, ${user} restart identity cascade`,
     )
   })
 
@@ -83,6 +97,10 @@ describe('content schema', () => {
       featured: false,
       isTemplate: false,
       types: [],
+      // Nothing has looked it up on Portal yet, and nobody has flagged it.
+      portalState: 'unchecked',
+      portalCheckedAt: null,
+      broken: false,
     })
     expect(experience.submittedAt).toBeInstanceOf(Date)
   })
@@ -183,9 +201,15 @@ describe('content schema', () => {
 
   it('removes likes, tags and revisions with their experience', async () => {
     const { experience } = await seed()
+    const topic = await tagGroup('bf6', 'Topic')
     const [tag] = await db
       .insert(tags)
-      .values({ name: 'Gun Game', slug: 'gun-game' })
+      .values({
+        game: 'bf6',
+        groupId: topic.id,
+        name: 'Gun Game',
+        slug: 'gun-game',
+      })
       .returning()
     await db
       .insert(experienceLikes)
@@ -206,6 +230,178 @@ describe('content schema', () => {
     expect(await db.select().from(experienceTags)).toHaveLength(0)
     expect(await db.select().from(revisions)).toHaveLength(0)
     expect(await db.select().from(tags)).toHaveLength(1)
+  })
+
+  it("keeps a tag inside one game and one of that game's groups", async () => {
+    const rules = await tagGroup('bf6', 'Rules')
+    const oldRules = await tagGroup('bf2042', 'Rules')
+    const scripted = { name: 'Custom scripted', slug: 'custom-scripted' }
+    await db
+      .insert(tags)
+      .values({ game: 'bf6', groupId: rules.id, ...scripted })
+
+    // The same name means something else in the other game.
+    await db
+      .insert(tags)
+      .values({ game: 'bf2042', groupId: oldRules.id, ...scripted })
+
+    expect(
+      await constraintOf(
+        db.insert(tags).values({ game: 'bf6', groupId: rules.id, ...scripted }),
+      ),
+    ).toBe('tags_game_name_unique')
+    expect(
+      await constraintOf(
+        db.insert(tags).values({
+          game: 'bf6',
+          groupId: oldRules.id,
+          name: 'Hardcore',
+          slug: 'hardcore',
+        }),
+      ),
+    ).toBe('tags_group_fk')
+    expect(
+      await constraintOf(
+        db.delete(tagGroups).where(eq(tagGroups.id, rules.id)),
+      ),
+    ).toBe('tags_group_fk')
+  })
+
+  it('finds a tag by an old name, within its game', async () => {
+    const era = await tagGroup('bf2042', 'Era')
+    const [bc2] = await db
+      .insert(tags)
+      .values({ game: 'bf2042', groupId: era.id, name: 'BC2', slug: 'bc2' })
+      .returning()
+    await db
+      .insert(tagAliases)
+      .values({ game: 'bf2042', alias: 'bfbc2', tagId: bc2.id })
+
+    expect(
+      await constraintOf(
+        db
+          .insert(tagAliases)
+          .values({ game: 'bf2042', alias: 'BFBC2', tagId: bc2.id }),
+      ),
+    ).toBe('tag_aliases_lower_check')
+    // An alias cannot point at another game's tag.
+    expect(
+      await constraintOf(
+        db
+          .insert(tagAliases)
+          .values({ game: 'bf6', alias: 'bc2', tagId: bc2.id }),
+      ),
+    ).toBe('tag_aliases_tag_fk')
+
+    await db.delete(tags).where(eq(tags.id, bc2.id))
+    expect(await db.select().from(tagAliases)).toHaveLength(0)
+  })
+
+  it("tags a map, and records where an experience's tag came from", async () => {
+    const { experience } = await seed()
+    const era = await tagGroup('bf6', 'Era')
+    const [tag] = await db
+      .insert(tags)
+      .values({ game: 'bf6', groupId: era.id, name: 'BF3', slug: 'bf3' })
+      .returning()
+    const [map] = await db
+      .insert(maps)
+      .values({ game: 'bf6', name: 'Caspian Border' })
+      .returning()
+    await db.insert(mapTags).values({ mapId: map.id, tagId: tag.id })
+
+    const [chosen] = await db
+      .insert(experienceTags)
+      .values({ experienceId: experience.id, tagId: tag.id })
+      .returning()
+    expect(chosen.source).toBe('creator')
+
+    // Gametools gives a 2042 map no level id, so several maps may lack one.
+    await db.insert(maps).values({ game: 'bf6', name: 'Arica Harbor' })
+    expect(
+      await constraintOf(
+        db.insert(maps).values({ game: 'bf6', name: 'Caspian Border' }),
+      ),
+    ).toBe('maps_game_name_unique')
+  })
+
+  it('records the SDK release an experience works with, for its own game', async () => {
+    const { experience } = await seed()
+    const [current, old2042] = await db
+      .insert(sdkVersions)
+      .values([
+        { game: 'bf6', version: '1.4.3.0', season: 'Season 4', sortOrder: 14 },
+        { game: 'bf2042', version: '1.4.3.0', sortOrder: 1 },
+      ])
+      .returning()
+
+    await db
+      .update(experiences)
+      .set({ sdkVersionId: current.id })
+      .where(eq(experiences.id, experience.id))
+
+    expect(
+      await constraintOf(
+        db
+          .update(experiences)
+          .set({ sdkVersionId: old2042.id })
+          .where(eq(experiences.id, experience.id)),
+      ),
+    ).toBe('experiences_sdk_version_fk')
+    // A release in use cannot be removed from under the experiences on it.
+    expect(
+      await constraintOf(
+        db.delete(sdkVersions).where(eq(sdkVersions.id, current.id)),
+      ),
+    ).toBe('experiences_sdk_version_fk')
+  })
+
+  it('credits a creator by name or by account, never both', async () => {
+    const { experience } = await seed()
+    await db.insert(user).values({
+      id: 'user-2',
+      name: 'Gala',
+      email: '2@discord.invalid',
+      discordId: '2',
+      discordUsername: 'gala',
+    })
+    const on = { experienceId: experience.id }
+
+    const [credit, invite] = await db
+      .insert(experienceCreators)
+      .values([
+        { ...on, name: 'someone without an account' },
+        { ...on, userId: 'user-2' },
+      ])
+      .returning()
+    // An added account is a credit. It waits to be accepted, and it cannot
+    // edit unless the owner says so.
+    expect(invite).toMatchObject({ acceptedAt: null, canEdit: false })
+    expect(credit.userId).toBeNull()
+    expect(
+      await constraintOf(
+        db
+          .update(experienceCreators)
+          .set({ canEdit: true })
+          .where(eq(experienceCreators.id, credit.id)),
+      ),
+    ).toBe('experience_creators_edit_check')
+
+    expect(
+      await constraintOf(
+        db.insert(experienceCreators).values({ ...on, userId: 'user-2' }),
+      ),
+    ).toBe('experience_creators_user_unique')
+    expect(
+      await constraintOf(
+        db
+          .insert(experienceCreators)
+          .values({ ...on, userId: 'user-1', name: 'Recruit' }),
+      ),
+    ).toBe('experience_creators_one_kind_check')
+    expect(await constraintOf(db.insert(experienceCreators).values(on))).toBe(
+      'experience_creators_one_kind_check',
+    )
   })
 
   it('will not delete a user who owns an experience', async () => {
@@ -270,7 +466,7 @@ describe('content schema', () => {
     const call = {
       game: 'bf6' as const,
       code: '1V4MX',
-      summary: 'Practise on moving targets',
+      summary: 'Practice on moving targets',
       hostId: 'user-1',
       regions: ['eu', 'asia'] as ('eu' | 'asia')[],
     }
@@ -327,10 +523,10 @@ describe('content schema', () => {
       .where(raw`now() >= ${banners.startsAt} and now() < ${banners.endsAt}`)
     expect(showing).toEqual([{ message: 'showing' }])
 
-    const backwards = await constraintOf(
+    const backward = await constraintOf(
       db.insert(banners).values(banner('ends before it starts', 2, 1)),
     )
-    expect(backwards).toBe('banners_window_check')
+    expect(backward).toBe('banners_window_check')
   })
 
   it('ties an update post to exactly one project', async () => {

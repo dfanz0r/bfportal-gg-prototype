@@ -85,6 +85,55 @@
       "when": 1791863224886,
       "tag": "0011_files_url",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791870718267,
+      "tag": "0012_drop_experience_subcategories",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791870744872,
+      "tag": "0013_tag_groups_and_maps",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791871331744,
+      "tag": "0014_sdk_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791871519741,
+      "tag": "0015_portal_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791872062071,
+      "tag": "0016_creators_by_name_or_account",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791872622802,
+      "tag": "0017_american_spelling",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791872787220,
+      "tag": "0018_creator_edit_access",
+      "breakpoints": true
     }
   ]
 }
