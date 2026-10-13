@@ -29,7 +29,8 @@ Not goals:
 
 ## Stack
 
-Versions are the latest stable releases on npm as of 2026-10-12.
+Versions are the latest stable releases on npm as of 2026-10-12. Once a package is
+installed, `package.json` and the lockfile are the record of its version, not this table.
 
 | Concern | Choice | Version | Status |
 |---|---|---|---|
@@ -44,11 +45,12 @@ Versions are the latest stable releases on npm as of 2026-10-12.
 | Postgres driver | Postgres.js (`postgres`), through `drizzle-orm/postgres-js` | 3.4.9 | Agreed |
 | ORM and migrations | Drizzle (`drizzle-orm`, `drizzle-kit`) | 0.45.4, 0.31.11 | Agreed |
 | Login | Better Auth, Discord provider | 1.7.7 | Proposed; wired into the scaffold |
-| Validation | Zod | 4.6.7 | Proposed |
+| Validation | Zod | 4.6.7 | In use for the environment; proposed for forms and the API |
 | Styling | Tailwind (current site is on 3.3.2) | 4.3.3 | Proposed |
 | Markdown | `marked` with `sanitize-html`, server side | 18.1.1, 2.18.0 | Proposed |
 | Admin tables and forms | TanStack Table, Form, Query (Solid adapters) | 9.3.1, 1.33.5, 5.104.2 | Proposed, admin routes only |
-| Tests | Vitest, Playwright | 5.0.4, 1.64.0 | Proposed |
+| Tests | Vitest, Playwright | 5.0.4, 1.64.0 | Vitest in use; Playwright proposed |
+| Lint and format | Biome | 2.5.15 | Agreed |
 
 What was measured on a throwaway TanStack Start + Solid app:
 
@@ -90,12 +92,21 @@ Rules worth holding from day one:
 
 - **Server-only code stays in server functions.** Route loaders can run in the browser,
   so database access and markdown rendering must never be imported by a loader directly.
+  The build enforces this: client code that imports anything under `src/server` fails
+  it. Client code reaches the server through the server functions in `src/functions`,
+  or through a route's own server handlers.
 - **Admin-only libraries are imported only from admin routes.** Anything the root layout
   or a public route imports lands in the shared bundle.
 - **Every mutating server function checks the caller's role.** A separate bundle keeps
   the public site light; it is not access control.
-- **One Zod schema per entity.** The submit form, the edit form, the server function,
-  the API and the import validate against the same definition.
+- **One set of field definitions per entity, one schema per operation.** The rules for
+  a field (a code is six alphanumeric characters, a Portal URL is on
+  `portal.battlefield.com`) are written once and shared by the forms, the server
+  functions, the API and the import. Each operation then builds its own schema from
+  them, listing exactly the fields that caller may send. The owner's edit schema has no
+  `featured`, `owner_id` or `role`; the admin's does. Ownership and privileged values
+  are set by the server, never read from the request. Checking the caller's role is not
+  enough if the schema would have accepted the field.
 
 Suggested layout:
 
@@ -106,7 +117,8 @@ src/
     admin/           moderation queue, experiences, snippets, categories, tags, users, settings
     api/             public JSON API, sitemap.xml, robots.txt, auth callback
   components/        shared Solid components (cards, filters, markdown view, layout)
-  server/
+  functions/         server functions: the only way client code calls into server/
+  server/            never imported by client code; the build fails if it is
     services/        experiences, snippets, moderation, likes, reports, users, categories
     db/              schema, queries, migrations
     integrations/    discord, gametools, cloudflare
@@ -131,7 +143,7 @@ Public URLs are kept so existing links, embeds and search results keep working.
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
 | `/scripts/`, `/scripts/snippets/`, `/scripts/experiences/`, `/scripts/featured/`, `/scripts/<slug>/` | BF6 scripts section |
 | `/events/`, `/tutorials/` | "Coming soon" placeholders |
-| `/login/`, logout | Straight to Discord; no password or email flows |
+| `/login/`, `/logout/` | Straight to Discord; no password or email flows. Logout is a POST |
 | `/sitemap.xml`, `/robots.txt` | Generated from the database |
 | `/api/experiences/`, `/api/users/` | Public read API |
 | `/api/tags/`, `/api/categories/` | Autocomplete sources |
@@ -152,8 +164,10 @@ Flat tables, one row per thing, no inheritance. Names are suggestions.
 
 ### Users
 
-Better Auth owns `user`, `session`, `account` and `verification`. The site's own fields
-sit on the user row:
+Better Auth owns `user`, `session`, `account` and `verification`. Their Drizzle schema
+is generated from the auth configuration, so the site's own fields are declared there
+as Better Auth additional fields and survive regeneration. They sit on the user row,
+which also puts the role on every session without a second query:
 
 | Field | Note |
 |---|---|
@@ -168,6 +182,17 @@ group and the "self edit" group that every user is added to. Regular users no lo
 enter the admin at all; what they did there (see their own experiences, toggle
 `hide_username`) moves to an account page on the public site. The `OWNERS` environment
 variable, a list of Discord ids shown with an owner badge on profiles, stays as it is.
+
+Who may write these fields:
+
+- `discord_id`, `discord_username`, the display name and the avatar come from the
+  Discord profile and are refreshed on each login. Better Auth only accepts provider
+  values for fields it also accepts as client input, so its profile-update endpoint is
+  disabled; nothing lets a user edit them.
+- `role`, `hide_username` and `legacy_id` are written by server code only.
+
+Better Auth's generated tables use timestamps without a time zone. The site's own
+tables use `timestamptz` throughout.
 
 ### Experiences
 
@@ -393,8 +418,13 @@ every rehearsal.
 - A production dump is restored into a separate `legacy` database, never the live one.
 - The old tables are introspected once with Drizzle so reads are typed.
 - Each row is transformed in TypeScript and validated with the same Zod schemas the
-  application uses. Rows that fail are imported and flagged, not dropped.
-- The run ends with a report of everything flagged.
+  application uses.
+- A row that fails validation is not dropped, and is not published either. Its original
+  data goes to a quarantine table with the reason, and the experience is imported as
+  `unpublished` with only the fields that passed. Publishing it means fixing it through
+  the normal edit path, so the import cannot put a rejected URL or a malformed export on
+  a public page.
+- The run ends with a report of everything quarantined.
 
 | Data | Source | Note |
 |---|---|---|
@@ -436,7 +466,7 @@ the old admin or a production dump arrives:
 - Reports, subcategory assignments, `hide_username`, category icons, site settings.
 - Snippets. `mock_snippets` needs a BF6 home page and a scripts listing page, and no
   command creates either.
-- Like mismatches between the two tables, users with no email, redirects.
+- Like mismatches between the two tables, redirects.
 
 Seeding needs network access (tags come from gametools.network) and `DEBUG` set. Only
 the Faker text is seeded, so ids, tags and likes differ on every run; keep one generated
@@ -450,11 +480,13 @@ Things that will need care:
 
 - **Login continuity.** Sessions do not carry over, so everyone signs in again. The
   import must create each user's Discord account link, or first login makes a duplicate.
-- **Email.** Better Auth requires an email per user: `user.email` is non-null and
-  unique, and a Discord sign-in that returns no email is refused. Discord supplies it
-  through the `email` scope, which stays on. Old users with no email need a placeholder
-  address at import, and the same placeholder at login through the provider's
-  `mapProfileToUser`. How many old users have none still needs counting.
+- **Email.** The old site stores each user's Discord email and never uses it: no view
+  reads it, no mail is sent, and the public API strips it. Better Auth still requires
+  one: `user.email` is non-null and unique, and a sign-in with no email is refused. So
+  the site does not ask Discord for the address, and every user gets the placeholder
+  `<discord_id>@discord.invalid`, at login and in the import alike. Old emails are not
+  carried over, which also removes the problem of empty and duplicate ones. See
+  "Account email" under "Open decisions".
 - **Users without Discord.** An earlier bulk import (`import_db.py`) assigned
   experiences to the superuser. They need a system owner, shown at `/users/admin/`.
 - **Status.** "Not live" covers pending, rejected and unpublished; only the revision
@@ -480,6 +512,7 @@ The same shape as today, so nothing about hosting has to change at once:
   current repository does not show how `validate` is scheduled today.
 - Configuration stays in environment variables: Discord client id and secret, the two
   webhook id and token pairs, `OWNERS`, the Cloudflare credentials, the database URL.
+  One module validates them, and the server refuses to start if any is missing.
 - HTML is not cached at Cloudflare to begin with, because pages vary by login. The API
   keeps its five-minute cache headers.
 
@@ -494,6 +527,11 @@ tests where a mistake is expensive:
 - **Import:** the checks listed under "Data migration", run on every rehearsal.
 - **Browser:** a handful of Playwright flows (browse and filter, submit, approve, like).
 - **Bundle:** a build check that the admin's libraries are absent from the shared chunk.
+
+Tests that need a database run against a real Postgres, in a `bfportal_test` database
+that each run recreates from the migrations. Login is covered this way already: the
+tests run the whole Discord round trip with Discord's two endpoints faked. CI runs
+lint, the build, type-checking and the tests on Node 22, the oldest supported version.
 
 ## Visual direction
 
@@ -540,6 +578,7 @@ Each has a recommendation; none is settled.
 | Home page content | One markdown block in site settings |
 | `allow_editing` | Keep the column, hide the checkbox until it means something |
 | Gametools data on the experience page | Fetch on the server with a short cache and a timeout, so the page renders complete |
+| Account email | Not collected for now. The site may want to require a real email later, for example to tell a user about a moderation decision. That means requesting Discord's `email` scope again, asking existing users to consent again at their next login, and deciding what happens to Discord accounts that have no email. The old addresses are in the legacy dump if they are ever wanted |
 | Postgres version | Move to a current major during the migration, since the data is reloaded anyway. Development runs 18 |
 
 ## What needs production access to answer
@@ -547,6 +586,6 @@ Each has a recommendation; none is settled.
 - The permissions of the "Moderators" group.
 - Whether any redirects exist.
 - How the two home pages are mounted (one site or two hostnames).
-- Row counts, users without Discord or email, pending revisions, like mismatches.
+- Row counts, users without Discord, pending revisions, like mismatches.
 - Who consumes the public API.
 - How the validation job is scheduled.
