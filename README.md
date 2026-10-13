@@ -44,12 +44,6 @@ login is not configured.
 | `pnpm db:migrate` | Apply pending migrations |
 | `pnpm auth:generate` | Regenerate Better Auth's tables after changing the auth configuration |
 
-## Language
-
-American English everywhere: code, comments, names in the database, documentation and
-the site's own text. `color`, `behavior`, `center`, `sanitize`, `canceled`, `license`.
-Dates in prose are month first: "October 3", "Oct 16, 2026".
-
 ## Layout
 
 | Path | Contents |
