@@ -9,7 +9,7 @@ export const buttonAccent = `${button} bg-accent text-accent-ink hover:bg-accent
 /** A secondary action that should still stand out. */
 export const buttonSteel = `${button} bg-steel text-steel-ink hover:bg-steel-hi`
 
-export const buttonGhost = `${button} border border-line-strong text-fg hover:border-steel`
+export const buttonGhost = `${button} border border-line-strong text-fg hover:border-steel hover:bg-steel/6`
 
 export const iconButton =
   'grid size-9 shrink-0 place-items-center border border-line text-fg-2 transition-colors hover:border-line-strong hover:bg-surface-2 hover:text-fg'

@@ -6,6 +6,8 @@ import { links } from '../shared/links'
 import { Icon } from './icon'
 import { buttonAccent, buttonGhost, iconButton } from './ui'
 
+// Eight items and the tools do not fit beside the logo below about 1240px, so
+// the navigation collapses into the menu below Tailwind's `xl` (1280px).
 const NAV = [
   { to: '/scripts', label: 'Scripts' },
   { to: '/maps', label: 'Maps' },
@@ -17,9 +19,10 @@ const NAV = [
   { to: '/forum', label: 'Forum' },
 ] as const
 
-// The bar under the current section is drawn on the header's bottom border.
+// The bar under the current section is drawn on the header's bottom border,
+// with a small notch above it.
 const navLink =
-  "relative flex items-center px-2.5 text-[13px] font-semibold tracking-[0.09em] whitespace-nowrap text-fg-2 uppercase transition-colors hover:text-fg data-[status=active]:text-fg data-[status=active]:after:absolute data-[status=active]:after:inset-x-2.5 data-[status=active]:after:-bottom-px data-[status=active]:after:h-0.5 data-[status=active]:after:bg-accent data-[status=active]:after:content-['']"
+  "relative flex items-center px-2.5 text-[13px] font-semibold tracking-[0.09em] whitespace-nowrap text-fg-2 uppercase transition-colors hover:text-fg data-[status=active]:text-fg data-[status=active]:after:absolute data-[status=active]:after:inset-x-2.5 data-[status=active]:after:-bottom-px data-[status=active]:after:h-0.5 data-[status=active]:after:bg-accent data-[status=active]:after:content-[''] data-[status=active]:before:absolute data-[status=active]:before:bottom-px data-[status=active]:before:left-1/2 data-[status=active]:before:-translate-x-1/2 data-[status=active]:before:border-4 data-[status=active]:before:border-transparent data-[status=active]:before:border-b-accent data-[status=active]:before:content-['']"
 
 function initials(name: string) {
   return (
@@ -74,7 +77,7 @@ export function SiteHeader(props: { user: SessionUser | null }) {
           />
         </Link>
 
-        <nav class="flex self-stretch max-[1099px]:hidden" aria-label="Main">
+        <nav class="flex gap-1 self-stretch max-xl:hidden" aria-label="Main">
           <For each={NAV}>
             {(item) => (
               <Link to={item.to} class={navLink}>
@@ -122,7 +125,7 @@ export function SiteHeader(props: { user: SessionUser | null }) {
             )}
           </Show>
 
-          <details class="min-[1100px]:hidden">
+          <details class="xl:hidden">
             <summary class={iconButton} aria-label="Menu">
               <Icon name="menu" />
             </summary>

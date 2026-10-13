@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
-import { For } from 'solid-js'
+import { For, onCleanup, onMount } from 'solid-js'
 
 import { Icon } from '../components/icon'
 import { buttonSteel, display } from '../components/ui'
@@ -30,6 +30,23 @@ const SECTIONS = [
 ] as const
 
 function Home() {
+  let search: HTMLInputElement | undefined
+
+  // "/" jumps to the search field, unless something is already being typed.
+  onMount(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const typing =
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      if (event.key === '/' && !typing) {
+        event.preventDefault()
+        search?.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    onCleanup(() => document.removeEventListener('keydown', onKey))
+  })
+
   return (
     <main id="content">
       <section class="relative overflow-hidden border-b border-line">
@@ -48,17 +65,26 @@ function Home() {
           <search>
             <form
               action="/library"
-              class="mt-5 flex h-[50px] max-w-[560px] items-center border border-line-strong bg-surface-1/90 focus-within:border-steel"
+              class="frame mt-5 flex h-[50px] max-w-[560px] items-center border border-line-strong bg-surface-1/90 focus-within:border-steel"
             >
               <Icon name="search" class="ml-4 size-5 text-steel" />
               <input
                 type="search"
                 name="q"
-                placeholder="Search experiences, scripts and maps"
+                ref={(element) => {
+                  search = element
+                }}
+                placeholder="Search experiences, scripts, maps and guides"
                 aria-label="Search bfportal.gg"
                 autocomplete="off"
                 class="h-full min-w-0 flex-1 bg-transparent px-3.5 text-[15.5px] text-fg outline-none placeholder:text-fg-3"
               />
+              <span
+                class="mr-3 border border-line-strong px-1.5 py-px font-mono text-[10.5px] text-fg-3 max-sm:hidden"
+                aria-hidden="true"
+              >
+                /
+              </span>
               <button
                 type="submit"
                 class={`${buttonSteel} -my-px -mr-px h-[50px]`}
@@ -75,7 +101,7 @@ function Home() {
           {(section) => (
             <Link
               to={section.to}
-              class="group border border-line bg-surface-1 p-5 transition-colors hover:border-line-strong hover:bg-surface-2"
+              class="card-hover group border border-line bg-surface-1 p-5"
             >
               <h2
                 class={`${display} flex items-center justify-between gap-3 text-2xl leading-none`}

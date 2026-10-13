@@ -18,13 +18,14 @@ const columnLink = 'text-sm text-fg-2 hover:text-fg'
 
 export function SiteFooter() {
   return (
-    <footer class="mt-24 border-t border-line bg-surface-1">
+    <footer class="mt-24 bg-surface-1">
       <div class="wrap grid gap-10 py-12 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div class="sm:col-span-3 lg:col-span-1">
           <img src="/logo.svg" alt="bfportal.gg" width="148" height="28" />
           <p class="mt-4 max-w-[340px] text-sm text-fg-2">
-            Made by the Battlefield Portal Community. Run by volunteers and paid
-            for by supporters.
+            Made with <span class="text-accent">♥</span>
+            <span class="sr-only">love</span> by the Battlefield Portal
+            Community. Run by volunteers and paid for by supporters.
           </p>
           <div class="mt-5 flex gap-2">
             <For each={SOCIAL}>
@@ -39,7 +40,7 @@ export function SiteFooter() {
 
         <div>
           <h2 class={columnTitle}>Browse</h2>
-          <ul class="grid gap-2">
+          <ul class="grid gap-[9px]">
             <li>
               <Link to="/library" class={columnLink}>
                 Experience library
@@ -65,7 +66,7 @@ export function SiteFooter() {
 
         <div>
           <h2 class={columnTitle}>Create</h2>
-          <ul class="grid gap-2">
+          <ul class="grid gap-[9px]">
             <li>
               <Link to="/submit" class={columnLink}>
                 Submit an experience
@@ -86,7 +87,7 @@ export function SiteFooter() {
 
         <div>
           <h2 class={columnTitle}>Community</h2>
-          <ul class="grid gap-2">
+          <ul class="grid gap-[9px]">
             <li>
               <a href={links.discord} class={columnLink}>
                 Discord server

@@ -3,7 +3,7 @@ import { For, Show } from 'solid-js'
 import { links } from '../shared/links'
 import { Icon } from './icon'
 import { PageHead } from './page-head'
-import { buttonSteel, display } from './ui'
+import { buttonSteel } from './ui'
 
 /** A section of the site that has a place in the navigation but no pages yet. */
 export function SectionPlaceholder(props: {
@@ -15,7 +15,7 @@ export function SectionPlaceholder(props: {
     <main id="content">
       <PageHead title={props.title} lead={props.lead} />
       <div class="wrap py-8">
-        <h2 class={`${display} text-3xl leading-none`}>
+        <h2 class="font-display text-3xl leading-none font-bold uppercase">
           This section is not open yet
         </h2>
         <Show when={props.planned}>
