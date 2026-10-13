@@ -21,6 +21,8 @@ interface FakeDiscordUser {
   global_name: string | null
   avatar: string | null
   discriminator: string
+  email: string | null
+  verified: boolean
 }
 
 function discordUser(
@@ -32,6 +34,8 @@ function discordUser(
     global_name: 'Recruit',
     avatar: 'a1b2c3',
     discriminator: '0',
+    email: 'recruit@example.com',
+    verified: true,
     ...overrides,
   }
 }
@@ -48,7 +52,7 @@ function stubDiscord(profile: FakeDiscordUser) {
         token_type: 'Bearer',
         expires_in: 3600,
         refresh_token: 'test-refresh-token',
-        scope: 'identify',
+        scope: 'identify email',
       })
     }
     if (url.host === 'discord.com' && path === '/api/users/@me') {
@@ -79,8 +83,7 @@ async function signIn(profile: FakeDiscordUser) {
   expect(start.status).toBe(200)
   const { url } = (await start.json()) as { url: string }
   const authorizeUrl = new URL(url)
-  // The site asks Discord for the profile only, never the email.
-  expect(authorizeUrl.searchParams.get('scope')).toBe('identify')
+  expect(authorizeUrl.searchParams.get('scope')).toBe('identify email')
   const state = authorizeUrl.searchParams.get('state')
 
   const callback = await auth.handler(
@@ -121,8 +124,8 @@ describe('signing in with Discord', () => {
     const row = await storedUser('236802771381125120')
     expect(row).toMatchObject({
       name: 'Recruit',
-      email: '236802771381125120@discord.invalid',
-      emailVerified: false,
+      email: 'recruit@example.com',
+      emailVerified: true,
       image: 'https://cdn.discordapp.com/avatars/236802771381125120/a1b2c3.png',
       discordId: '236802771381125120',
       discordUsername: 'recruit',
@@ -138,6 +141,18 @@ describe('signing in with Discord', () => {
     expect(accounts).toMatchObject([
       { providerId: 'discord', accountId: '236802771381125120' },
     ])
+  })
+
+  it('accepts a Discord account that has no email', async () => {
+    await signIn(
+      discordUser({ id: '338947895665360898', email: null, verified: false }),
+    )
+
+    const row = await storedUser('338947895665360898')
+    expect(row).toMatchObject({
+      email: '338947895665360898@discord.invalid',
+      emailVerified: false,
+    })
   })
 
   it('refreshes the profile on the next sign-in and keeps the role', async () => {

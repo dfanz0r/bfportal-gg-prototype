@@ -12,9 +12,6 @@ const discord =
     ? {
         clientId: env.DISCORD_CLIENT_ID,
         clientSecret: env.DISCORD_CLIENT_SECRET,
-        // Ask for the profile only, not the email. See discord-profile.ts.
-        disableDefaultScope: true,
-        scope: ['identify'],
         mapProfileToUser: mapDiscordProfile,
         // Refresh the name, avatar and Discord username on every sign-in.
         overrideUserInfoOnSignIn: true,

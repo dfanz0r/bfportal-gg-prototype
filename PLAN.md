@@ -466,7 +466,7 @@ the old admin or a production dump arrives:
 - Reports, subcategory assignments, `hide_username`, category icons, site settings.
 - Snippets. `mock_snippets` needs a BF6 home page and a scripts listing page, and no
   command creates either.
-- Like mismatches between the two tables, redirects.
+- Like mismatches between the two tables, users with no email, redirects.
 
 Seeding needs network access (tags come from gametools.network) and `DEBUG` set. Only
 the Faker text is seeded, so ids, tags and likes differ on every run; keep one generated
@@ -481,12 +481,14 @@ Things that will need care:
 - **Login continuity.** Sessions do not carry over, so everyone signs in again. The
   import must create each user's Discord account link, or first login makes a duplicate.
 - **Email.** The old site stores each user's Discord email and never uses it: no view
-  reads it, no mail is sent, and the public API strips it. Better Auth still requires
-  one: `user.email` is non-null and unique, and a sign-in with no email is refused. So
-  the site does not ask Discord for the address, and every user gets the placeholder
-  `<discord_id>@discord.invalid`, at login and in the import alike. Old emails are not
-  carried over, which also removes the problem of empty and duplicate ones. See
-  "Account email" under "Open decisions".
+  reads it, no mail is sent, and the public API strips it. The rewrite keeps collecting
+  it the same way, because Better Auth requires one: `user.email` is non-null and
+  unique, and a sign-in with no email is refused. Discord accounts registered with a
+  phone number have none, so login gives those users the placeholder
+  `<discord_id>@discord.invalid`, and the import uses the same address for old users
+  whose email is empty. Old emails are not unique in Django either, so the import needs
+  a rule for duplicates. Both need counting. See "Account email" under "Open
+  decisions".
 - **Users without Discord.** An earlier bulk import (`import_db.py`) assigned
   experiences to the superuser. They need a system owner, shown at `/users/admin/`.
 - **Status.** "Not live" covers pending, rejected and unpublished; only the revision
@@ -578,7 +580,7 @@ Each has a recommendation; none is settled.
 | Home page content | One markdown block in site settings |
 | `allow_editing` | Keep the column, hide the checkbox until it means something |
 | Gametools data on the experience page | Fetch on the server with a short cache and a timeout, so the page renders complete |
-| Account email | Not collected for now. The site may want to require a real email later, for example to tell a user about a moderation decision. That means requesting Discord's `email` scope again, asking existing users to consent again at their next login, and deciding what happens to Discord accounts that have no email. The old addresses are in the legacy dump if they are ever wanted |
+| Account email | Optional for now: stored when Discord provides one, a placeholder otherwise, and not used for anything. The site may want to require a real email later, for example to tell a user about a moderation decision. That means deciding what happens to Discord accounts that have none, and to existing users who signed up without one |
 | Postgres version | Move to a current major during the migration, since the data is reloaded anyway. Development runs 18 |
 
 ## What needs production access to answer
@@ -586,6 +588,6 @@ Each has a recommendation; none is settled.
 - The permissions of the "Moderators" group.
 - Whether any redirects exist.
 - How the two home pages are mounted (one site or two hostnames).
-- Row counts, users without Discord, pending revisions, like mismatches.
+- Row counts, users without Discord or email, duplicate emails, pending revisions, like mismatches.
 - Who consumes the public API.
 - How the validation job is scheduled.
