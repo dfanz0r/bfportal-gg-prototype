@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: bfportal
       POSTGRES_DB: bfportal
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - db_data:/var/lib/postgresql
     healthcheck:
