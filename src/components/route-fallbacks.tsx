@@ -1,21 +1,31 @@
+import { Link } from '@tanstack/solid-router'
+
+import { PageHead } from './page-head'
+import { buttonGhost } from './ui'
+
 export function NotFound() {
   return (
-    <main class="p-8">
-      <h1 class="text-4xl font-bold">Page not found</h1>
-      <p class="mt-4 text-lg">
-        <a href="/" class="underline">
+    <main id="content">
+      <PageHead
+        title="Page not found"
+        lead="Nothing lives at this address. It may have moved, or the link may be wrong."
+      />
+      <div class="wrap py-8">
+        <Link to="/" class={buttonGhost}>
           Back to the home page
-        </a>
-      </p>
+        </Link>
+      </div>
     </main>
   )
 }
 
 export function RouteError() {
   return (
-    <main class="p-8">
-      <h1 class="text-4xl font-bold">Something went wrong</h1>
-      <p class="mt-4 text-lg">Try again in a moment.</p>
+    <main id="content">
+      <PageHead
+        title="Something went wrong"
+        lead="The page could not be shown. Try again in a moment."
+      />
     </main>
   )
 }

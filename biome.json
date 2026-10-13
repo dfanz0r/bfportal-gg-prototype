@@ -10,7 +10,8 @@
       "**",
       "!src/routeTree.gen.ts",
       "!src/server/db/migrations",
-      "!mockups"
+      "!mockups",
+      "!public"
     ]
   },
   "formatter": {
@@ -20,6 +21,11 @@
     "formatter": {
       "quoteStyle": "single",
       "semicolons": "asNeeded"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }
