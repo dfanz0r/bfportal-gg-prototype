@@ -51,6 +51,14 @@ export const experienceTypes = [
 ] as const
 export type ExperienceType = (typeof experienceTypes)[number]
 
+/** How the site names each of them. */
+export const experienceTypeLabels: Record<ExperienceType, string> = {
+  script: 'Script',
+  blocks: 'Blocks',
+  spatial: 'Custom map',
+  verified: 'Verified mode',
+}
+
 /** Where a banner shows. */
 export const bannerPlacements = ['home', 'everywhere'] as const
 export type BannerPlacement = (typeof bannerPlacements)[number]
