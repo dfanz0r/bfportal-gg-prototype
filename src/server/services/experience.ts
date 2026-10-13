@@ -1,11 +1,14 @@
 import { and, asc, desc, eq, gt, isNull, lte, ne, or } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { isStaff as isStaffRole } from '../../shared/roles'
+import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import {
   categories,
   experienceCreators,
   experienceImages,
+  experienceLikes,
   experiences,
   experienceTags,
   maps,
@@ -41,8 +44,17 @@ const rotationSchema = z.array(
 /** Someone credited on an experience. Only an account has a profile. */
 type Credit = { name: string; image: string | null; discordId: string | null }
 
-/** Null unless the experience is published and not deleted. */
-export async function getExperience(slug: string, now = new Date()) {
+/**
+ * An experience's page, or null if whoever is looking may not see it. The
+ * public sees what is published. Its owner and the moderators also see it
+ * while it waits for review or after it was turned down. Nobody sees one its
+ * owner deleted.
+ */
+export async function getExperience(
+  slug: string,
+  now = new Date(),
+  viewer: Actor | null = null,
+) {
   const [found] = await db
     .select({
       experience: experiences,
@@ -59,10 +71,13 @@ export async function getExperience(slug: string, now = new Date()) {
     .innerJoin(user, eq(user.id, experiences.ownerId))
     .innerJoin(categories, eq(categories.id, experiences.categoryId))
     .leftJoin(sdkVersions, eq(sdkVersions.id, experiences.sdkVersionId))
-    .where(and(eq(experiences.slug, slug), visible))
+    .where(and(eq(experiences.slug, slug), isNull(experiences.deletedAt)))
     .limit(1)
   if (!found) return null
   const { experience } = found
+  const isOwner = viewer?.id === found.owner.id
+  const isStaff = viewer !== null && isStaffRole(viewer.role)
+  if (experience.status !== 'published' && !isOwner && !isStaff) return null
   const read = rotationSchema.safeParse(experience.mapRotation ?? [])
   if (!read.success) {
     // The page still shows; a rotation that will not read is left off it.
@@ -82,6 +97,7 @@ export async function getExperience(slug: string, now = new Date()) {
     files,
     [latestSdk],
     more,
+    [ownLike],
   ] = await Promise.all([
     db
       .select({ url: experienceImages.url })
@@ -188,6 +204,18 @@ export async function getExperience(slug: string, now = new Date()) {
       orderBy: [desc(likes), desc(experiences.id)],
       limit: 3,
     }),
+    viewer
+      ? db
+          .select({ one: experienceLikes.userId })
+          .from(experienceLikes)
+          .where(
+            and(
+              eq(experienceLikes.experienceId, experience.id),
+              eq(experienceLikes.userId, viewer.id),
+            ),
+          )
+          .limit(1)
+      : [],
   ])
 
   const mapOf = new Map(mapRows.map((map) => [map.levelId, map]))
@@ -227,6 +255,15 @@ export async function getExperience(slug: string, now = new Date()) {
     publishedAt: experience.firstPublishedAt,
     updatedAt: experience.lastPublishedAt,
     likes: found.likes,
+    status: experience.status,
+    // Shown to its owner when a moderator turned it down.
+    reviewNote: isOwner || isStaff ? experience.reviewNote : null,
+    viewer: {
+      signedIn: viewer !== null,
+      liked: ownLike !== undefined,
+      isOwner,
+      isStaff,
+    },
     owner: publicPerson(found.owner),
     // An invitation not yet accepted shows nowhere.
     // A name with no account is a credit with nothing to link to. An account

@@ -145,6 +145,23 @@ which pages get what. The rules when writing a page:
 - **Admin routes use `ssr: 'data-only'`:** the guard and data run on the server, the
   screens draw in the browser.
 
+## Writes
+
+Anything that changes something follows `src/functions/likes.ts` and
+`src/server/services/likes.ts`, the first one written:
+
+- **The rule lives in a service** that takes an `Actor` (who is acting, or null) and
+  returns a result: `{ ok: true, … }` or a `Refusal` with a reason. It never reads the
+  request. A refusal the site expects is a value, not an error thrown.
+- **Each service has a test that everyone it should refuse is refused:** a visitor who
+  is not signed in, and every role below the one it needs.
+- **The server function is thin and POST.** It calls `assertFromThisSite()` first,
+  then `currentActor()`, then the service. The session cookie alone does not show
+  that the visitor meant to do it.
+- **It takes a form as well as an object,** with `formOr(schema)`, and answers a form
+  with `formAnswer`. The page's `<form>` posts to the function's `.url`, so the
+  action works before the script loads; the script then calls the same function.
+
 ## Design
 
 The mockups in `mockups/site` are the reference, and "Visual direction" in `PLAN.md`

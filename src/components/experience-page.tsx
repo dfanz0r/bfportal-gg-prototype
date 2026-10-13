@@ -8,8 +8,8 @@ import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
 import { ExperienceSide } from './experience-side'
 import { Gallery } from './gallery'
-import { Icon } from './icon'
 import { LibraryLink } from './library-link'
+import { LikeButton } from './like-button'
 import { PersonLink } from './person-link'
 import { Section } from './section'
 import { buttonGhost, panel } from './ui'
@@ -135,11 +135,12 @@ export function ExperiencePage(props: { data: Experience }) {
                 </Show>
               </p>
             </div>
-            <p class="inline-flex h-[38px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-semibold">
-              <Icon name="heart" />
-              {data().likes}
-              <span class="sr-only"> likes</span>
-            </p>
+            <LikeButton
+              slug={data().slug}
+              likes={data().likes}
+              liked={data().viewer.liked}
+              signedIn={data().viewer.signedIn}
+            />
           </div>
         </div>
       </section>

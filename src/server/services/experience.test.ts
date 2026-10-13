@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
 import { db, sql } from '../db'
-import { projectFiles } from '../db/schema'
+import { experienceLikes, experiences, projectFiles } from '../db/schema'
 import { getExperience, getProjectFile } from './experience'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
@@ -25,6 +25,52 @@ describe('experience', () => {
     // Gone from Portal, but its page stays.
     const gone = await getExperience('rooftop-gun-game', NOW)
     expect(gone).toMatchObject({ unavailable: true, portalState: 'missing' })
+  })
+
+  it('lets its owner and the moderators see it before it is published', async () => {
+    const pending = 'bridge-parkour-trials'
+    const owner = { id: 'seed-gala', role: 'user' } as const
+    const stranger = { id: 'seed-vantage', role: 'user' } as const
+    const moderator = { id: 'seed-kestrel', role: 'moderator' } as const
+
+    expect(await getExperience(pending, NOW, stranger)).toBeNull()
+    expect(await getExperience(pending, NOW, owner)).toMatchObject({
+      status: 'pending',
+      viewer: { isOwner: true, isStaff: false },
+    })
+    expect(await getExperience(pending, NOW, moderator)).toMatchObject({
+      viewer: { isOwner: false, isStaff: true },
+    })
+    // Its owner is told why it was turned down; nobody else can open it.
+    const rejected = await getExperience('free-xp-24-7', NOW, {
+      id: 'seed-north-sector',
+      role: 'user',
+    })
+    expect(rejected?.reviewNote).toMatch(/duplicate/)
+    // Deleted by its owner: gone for everyone.
+    expect(await getExperience('old-test-mode', NOW, moderator)).toBeNull()
+  })
+
+  it('knows whether whoever is looking has liked it', async () => {
+    const slug = 'capture-the-flag-siege-of-cairo'
+    const anonymous = await getExperience(slug, NOW)
+    expect(anonymous?.viewer).toEqual({
+      signedIn: false,
+      liked: false,
+      isOwner: false,
+      isStaff: false,
+    })
+    const [liker] = await db
+      .select({ userId: experienceLikes.userId })
+      .from(experienceLikes)
+      .innerJoin(experiences, eq(experiences.id, experienceLikes.experienceId))
+      .where(eq(experiences.slug, slug))
+      .limit(1)
+    const theirs = await getExperience(slug, NOW, {
+      id: liker.userId,
+      role: 'user',
+    })
+    expect(theirs?.viewer.liked).toBe(true)
   })
 
   it('gives the page what it shows', async () => {

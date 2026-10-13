@@ -1722,7 +1722,9 @@ was settled first, so the screens are built against seed data and the import fol
    counts against the seed, which will need loosening as the seed grows, and there
    are still no browser tests.
 4. **The import,** against the test legacy database, then the same screens on imported
-   data. This is where migration problems surface, so it must not slip behind stage 5.
+   data. This is where migration problems surface. Put off on 2026-10-13 until after
+   writes, by choice; the risk taken is that a migration problem is found later, with
+   more built on top of the schema.
 5. **Writes:** like, report, submit with the code lookup and the export upload, edit,
    update posts, starting a playtest, and the Discord webhooks.
 6. **Admin:** the review queue and the two review screens first, then reports, the
