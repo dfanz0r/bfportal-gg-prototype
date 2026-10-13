@@ -141,6 +141,92 @@ jobs/                validate experiences, sync tags, post playtests and reminde
 tools/import/        the one-off legacy data import
 ```
 
+## Rendering
+
+Planned 2026-10-13, while there are few pages to change. The site is a hybrid: the
+server renders a page's first load so search engines and link previews see real
+content, and from then on the browser takes over and moves between pages without full
+reloads.
+
+What the framework gives, checked against the installed TanStack Start (1.168):
+
+| Need | Mechanism |
+|---|---|
+| Server-rendered first load, then client navigation | The default. Every route is rendered on the server and hydrated today |
+| Choosing per route | `ssr` on a route: `true`, `false`, or `'data-only'`, which runs the guard and the loader on the server and leaves the drawing to the browser. `defaultSsr` sets it for the whole router |
+| A part of a page that cannot be drawn on the server | `ClientOnly` with a fallback, and `useHydrated` |
+| Data that should not hold up the page | A promise returned from the loader and shown with `Await`; the server streams it in |
+| Response headers per route | `headers` on a route |
+| Pages built ahead of time | `prerender` in the Vite plugin |
+
+Solid hydrates the whole page, not islands, but hydration there attaches to the
+server's markup without drawing it again, so its cost is the script a page ships. "Only
+hydrate what needs it" therefore means: ship little script to pages people only read.
+
+Which pages get what:
+
+| Pages | Rendering | Indexed | Why |
+|---|---|---|---|
+| Home, Library, an experience, the scripts list, a script, updates and one update post, events, playtests and one playtest, a profile, the disclaimer and other static pages | Server, then hydrated | Yes | These are what search engines and Discord link previews land on. Everything a visitor reads is in the server's HTML |
+| Submit, edit, start a playtest, account settings | Server, then hydrated | No | They are forms and must work before any script loads. Signed-out visitors are redirected |
+| Admin | `'data-only'` | No | No search value. The guard and the data run on the server, so a refused request gets a real status; the screens draw in the browser and their code stays out of every public page |
+| The API, Atom feeds, sitemap, robots | Server routes | | Nothing to hydrate |
+
+Rules that make this work, to hold from the first real page:
+
+- **A page's content comes from its route loader,** which calls a server function. The
+  same loader runs on the server for a first load and through a request for a client
+  navigation, so there is one code path. A component does not fetch what the page is
+  about.
+- **Loader data is public.** It is written into the HTML for hydration. A server
+  function returns only what the page shows; emails and admin-only fields never leave
+  the server.
+- **The address is the state.** Filters, sort, tab and page number are search
+  parameters, validated with a Zod schema on the route. A filtered listing can be
+  linked, reloaded and rendered on the server.
+- **Server and browser must draw the same thing.** No clock, time zone, locale,
+  random value, window size or browser storage in what is rendered. Specifically:
+  - a date is rendered as a fixed American form in UTC inside `<time datetime>`, and
+    switches to the visitor's time zone after hydration;
+  - "5 hours ago" is worked out from a time the loader supplies, not from the clock;
+  - what a visitor dismissed or chose (a banner, a tab) is kept in a cookie the server
+    can read, not in browser storage.
+- **Links and forms work without script.** Paging is a real link to `?page=2` that the
+  browser turns into "show more"; filters are a GET form; like, report and submit are
+  forms that post. Search engines follow links, not buttons.
+- **Only what is needed up front holds up the page.** The title, description and main
+  content are awaited. Side panels such as "More from this creator" may stream in.
+  Nothing a page shows waits on gametools at request time: what it reports is stored
+  by the nightly check.
+- **Heavy code loads when used.** The Markdown editor, the admin screens and anything
+  like them are separate chunks. Routes are split automatically; a large widget inside
+  a public page is loaded on interaction.
+- **Each indexed page sets its own head:** title, description, a canonical address, and
+  Open Graph and Twitter tags with the cover image. A filtered or paged listing points
+  its canonical at the unfiltered first page.
+- **Statuses are real.** A missing, pending, rejected or deleted experience answers
+  404 from the server, an old address answers 301, and pages that are not for search
+  carry `noindex`.
+
+Session and caching. The root loader reads the signed-in user on the server, so the
+header is right on first paint. That makes HTML differ per visitor, which is why the
+plan had no HTML caching. Deferred on 2026-10-13, as a reasonable thing to do later:
+a response to a request with no session cookie is
+the same for everyone, so it could be sent with a short shared cache lifetime and
+Cloudflare would serve it to the next anonymous visitor and to crawlers; a request
+with a session cookie would skip the cache. That is one rule at Cloudflare and one
+`headers` function, and nothing in the pages changes. It needs purging, or a short
+lifetime, when a page is approved or edited. Until it is picked up, HTML is not
+cached.
+
+Checks:
+
+- A test for each indexed page asks the server for it and reads the HTML without
+  running any script: the title, description, canonical address and the main content
+  must be there.
+- A hydration mismatch warning fails the browser tests.
+- One browser flow runs with scripts off: browse, filter, page, open an experience.
+
 ## URLs
 
 Addresses of existing pages are kept so links, embeds and search results keep working.
@@ -150,7 +236,7 @@ listing, the old address redirects.
 | Path | Purpose |
 |---|---|
 | `/` | Home: see "Feature inventory" |
-| `/library/` | New. The experience listing, with a tab per game. Proposed: `?game=bf2042` selects the 2042 tab |
+| `/library/`, `/library/bf2042/` | New. The experience listing, with a tab per game. Agreed 2026-10-13: each game's tab has its own path, so search engines see two pages and not one page with a parameter. Filters, sort and page number are search parameters |
 | `/experiences/`, `/experiences/featured/` | Old listing. Redirect to `/library/` with the matching filter. The old query parameters are honored, `?tag=<name>` above all, since every tag chip on the old site is such a link |
 | `/experiences/<slug>/`, `/experiences/<slug>/edit/` | Detail page; owner's edit form |
 | `/category/<name>/` | Old category listing; `_` stands for a space. Redirects to `/library/` with that category selected |
@@ -180,7 +266,7 @@ Changes to the URL surface:
 - The repository does not show how the BF2042 home page and the BF6 home page are
   mounted in production (both are Wagtail root pages). The rewrite has one home page;
   2042 is a tab of the Library. Whatever address the 2042 home has today needs a
-  redirect to `/library/?game=bf2042`.
+  redirect to `/library/bf2042/`.
 
 ## Data model
 
@@ -1326,8 +1412,8 @@ The same shape as today, so nothing about hosting has to change at once:
 - Configuration stays in environment variables: Discord client id and secret, the two
   webhook id and token pairs, `OWNERS`, the Cloudflare credentials, the database URL.
   One module validates them, and the server refuses to start if any is missing.
-- HTML is not cached at Cloudflare to begin with, because pages vary by login. The API
-  keeps its five-minute cache headers.
+- HTML is not cached at Cloudflare for now. Caching it for requests with no session
+  cookie is deferred; see "Rendering". The API keeps its five-minute cache headers.
 
 ## Testing
 
@@ -1338,7 +1424,10 @@ tests where a mistake is expensive:
 - **Moderation:** every transition in the table above, against a real Postgres.
 - **Permissions:** each mutating server function refuses each role it should refuse.
 - **Import:** the checks listed under "Data migration", run on every rehearsal.
-- **Browser:** a handful of Playwright flows (browse and filter, submit, approve, like).
+- **Browser:** a handful of Playwright flows (browse and filter, submit, approve, like),
+  one of them with scripts off, and none may log a hydration mismatch.
+- **Server HTML:** each indexed page's title, description, canonical address and main
+  content, read without running scripts.
 - **Bundle:** a build check that the admin's libraries are absent from the shared chunk.
 
 Tests that need a database run against a real Postgres, in a `bfportal_test` database
@@ -1382,10 +1471,11 @@ Layout:
 Words:
 
 - American English in the site's text, as in the code and these documents: "color",
-  "canceled", "practice". The README states the rule.
-- Dates and times are formatted for the visitor's locale and time zone, falling back to
-  American forms: "Oct 16, 2026", "8:30 PM". The mockups show dates month first; their
-  times are still on a 24-hour clock.
+  "canceled", "practice". `AGENTS.md` states the rule.
+- Dates and times are rendered by the server in American forms, "Oct 16, 2026" and
+  "8:30 PM", in UTC, and switch to the visitor's time zone once the page has hydrated;
+  see "Rendering". The mockups show dates month first; their times are still on a
+  24-hour clock.
 
 Look:
 
@@ -1446,7 +1536,9 @@ was settled first, so the screens are built against seed data and the import fol
 2. **Seed data.** A script that fills the development database with the experiences,
    scripts, updates, playtests and events the mockups show.
 3. **Read-only site:** the home page, library, experience page, scripts, updates,
-   events, playtests and profiles, built from the mockups against the seed data.
+   events, playtests and profiles, built from the mockups against the seed data. Each page arrives
+   with its head tags, its server-HTML test and working links without script; see
+   "Rendering".
 4. **The import,** against the test legacy database, then the same screens on imported
    data. This is where migration problems surface, so it must not slip behind stage 5.
 5. **Writes:** like, report, submit with the code lookup and the export upload, edit,
@@ -1464,7 +1556,7 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Decision | Recommendation |
 |---|---|
 | Better Auth for Discord login | Yes. It has a TanStack Start integration with a Solid variant. It requires an email per user; see "Data migration" |
-| How BF2042 and BF6 share the site | **Agreed 2026-10-12:** one site, BF6 home at `/`, a `game` column on experiences, and one Library with a tab per game. 2042 has no home page of its own. 2042 submissions stay open. Still open: the address of each game's tab. Proposed: `/library/` and `/library/?game=bf2042`, with existing `/experiences/<slug>/` links kept |
+| How BF2042 and BF6 share the site | **Agreed 2026-10-12:** one site, BF6 home at `/`, a `game` column on experiences, and one Library with a tab per game. 2042 has no home page of its own. 2042 submissions stay open. **Agreed 2026-10-13:** each game's tab has its own path, `/library/` and `/library/bf2042/`, not a parameter, for search engines' sake. Existing `/experiences/<slug>/` links are kept |
 | Public API compatibility | **Agreed 2026-10-12:** keep the general shape, not full compatibility. The four main paths, the `meta`/`items` envelope, `limit`/`offset`, the field names and the `code`, `search`, `uid` and `username` filters stay. The list returns experiences only, the page size is capped, `liked_by` becomes a like count, the Discord object is trimmed to id, username, display name and avatar, and `hide_username` is honored. Wagtail-only parts (`type=`, the `find` endpoints, `meta.parent`) go. A list of who calls the API would still be useful |
 | Old experience ids | Keep them. The schema is built this way |
 | Revision history | Import only the live version and any pending one; archive the rest as a dump |
@@ -1496,6 +1588,7 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Checking projects against an SDK release | Out of scope for now, noted 2026-10-13. For templates and snippets, where the site has the files: three separate checks, for the script, the blocks and the spatial objects, each against what a release offers. See the end of "SDK versions" |
 | Creators and collaborators | **Asked for 2026-10-13,** and the schema is built this way: a creator is a name with no account or an account, both credited, and an account can be given edit access by the owner. **Agreed 2026-10-13:** edit access is always explicit and off by default. Proposed, not yet agreed: a newly added account must accept before it is shown; a collaborator cannot delete the experience or manage other creators; ownership changes hands only through an admin |
 | Old "additional creators" on import | **Agreed 2026-10-13:** they are imported as credited accounts without edit access. Edit access is opt-in, per person, by the owner |
+| Rendering | **Planned 2026-10-13:** server-rendered first load and client navigation for every public page, forms that work without script, and the admin drawn in the browser. See "Rendering". **Agreed 2026-10-13:** a path per game for the Library. Deferred: caching HTML at Cloudflare for requests with no session cookie |
 | Battlefield 6 categories | Open. The mockups use Multiplayer, Co-op and Solo as the main categories, with Style (Casual, Competitive, Showcase, Example) as a second label. Not confirmed: whether those three are right for Battlefield 6, and whether Style sits beside them or replaces them |
 | Who may create events and banners | Moderators and admins, in the admin. Not confirmed |
 | Artwork | Open. The mockups use crops of EA artwork as placeholders. The old site runs under Electronic Arts' Fansite Agreement, carries its disclaimer and links EA's map artwork directly; the rewrite's disclaimer now names both games. The agreement's own text was not found online, so what it permits is still to be checked against the copy the project holds |
