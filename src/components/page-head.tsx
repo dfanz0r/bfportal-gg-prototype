@@ -1,5 +1,7 @@
 import { type JSX, Show } from 'solid-js'
 
+import { body } from './ui'
+
 /** The band at the top of every page except the home page. */
 export function PageHead(props: {
   title: string
@@ -14,9 +16,7 @@ export function PageHead(props: {
             {props.title}
           </h1>
           <Show when={props.lead}>
-            <p class="mt-2.5 max-w-[44em] text-[15.5px] text-fg-2">
-              {props.lead}
-            </p>
+            <p class={`${body} mt-2.5`}>{props.lead}</p>
           </Show>
         </div>
         <Show when={props.actions}>

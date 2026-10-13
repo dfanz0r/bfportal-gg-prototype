@@ -1,4 +1,4 @@
-import type { JSX } from 'solid-js'
+import { For, type JSX, Show } from 'solid-js'
 
 // Line icons are drawn on a 24px grid with a 1.75px stroke (paths from Lucide,
 // ISC licence). Brand marks are filled shapes with their own view box.
@@ -63,35 +63,43 @@ const BRAND = {
   },
 } satisfies Record<string, { viewBox: string; paths: string[] }>
 
-export type IconName = keyof typeof LINE | keyof typeof BRAND
+type LineName = keyof typeof LINE
+type BrandName = keyof typeof BRAND
+export type IconName = LineName | BrandName
 
 /** A decorative icon. Give the control it sits in an accessible name. */
 export function Icon(props: { name: IconName; class?: string }) {
   const size = () => props.class ?? 'size-4'
-  if (props.name in BRAND) {
-    const mark = BRAND[props.name as keyof typeof BRAND]
-    return (
-      <svg
-        class={`shrink-0 fill-current ${size()}`}
-        viewBox={mark.viewBox}
-        aria-hidden="true"
-      >
-        {mark.paths.map((d) => (
-          <path d={d} />
-        ))}
-      </svg>
-    )
-  }
+  // Read through accessors so the icon follows a `name` that changes.
+  const brand = () =>
+    props.name in BRAND ? BRAND[props.name as BrandName] : undefined
+  const line = () => LINE[props.name as LineName]
+
   return (
-    <svg
-      class={`shrink-0 fill-none stroke-current ${size()}`}
-      viewBox="0 0 24 24"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
+    <Show
+      when={brand()}
+      fallback={
+        <svg
+          class={`shrink-0 fill-none stroke-current ${size()}`}
+          viewBox="0 0 24 24"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          {line()?.()}
+        </svg>
+      }
     >
-      {LINE[props.name as keyof typeof LINE]()}
-    </svg>
+      {(mark) => (
+        <svg
+          class={`shrink-0 fill-current ${size()}`}
+          viewBox={mark().viewBox}
+          aria-hidden="true"
+        >
+          <For each={mark().paths}>{(d) => <path d={d} />}</For>
+        </svg>
+      )}
+    </Show>
   )
 }

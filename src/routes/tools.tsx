@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/solid-router'
 
 import { SectionPlaceholder } from '../components/section-placeholder'
+import { pageTitle } from '../shared/page-title'
 
 export const Route = createFileRoute('/tools')({
-  head: () => ({ meta: [{ title: 'Tools and plugins · bfportal.gg' }] }),
+  head: () => pageTitle('Tools and plugins'),
   component: ToolsPage,
 })
 

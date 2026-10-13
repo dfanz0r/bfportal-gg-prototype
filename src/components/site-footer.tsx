@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/solid-router'
-import { For } from 'solid-js'
+import { For, Show } from 'solid-js'
 
 import { links } from '../shared/links'
+import { type SectionPath, section } from '../shared/sections'
 import { Icon, type IconName } from './icon'
+import { Logo } from './logo'
 import { iconButton } from './ui'
 
 const SOCIAL: { name: IconName; label: string; href: string }[] = [
@@ -12,16 +14,64 @@ const SOCIAL: { name: IconName; label: string; href: string }[] = [
   { name: 'patreon', label: 'Patreon', href: links.patreon },
 ]
 
-const columnTitle =
-  'mb-3.5 font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase'
+// A footer link is a page of the site or somewhere else.
+type FooterLink =
+  | { to: SectionPath | '/submit'; label: string }
+  | { href: string; label: string }
+
+const page = (to: SectionPath): FooterLink => ({ to, label: section(to).title })
+
+const COLUMNS: { title: string; links: FooterLink[] }[] = [
+  {
+    title: 'Browse',
+    links: [page('/library'), page('/scripts'), page('/maps'), page('/tools')],
+  },
+  {
+    title: 'Create',
+    links: [
+      { to: '/submit', label: 'Submit an experience' },
+      page('/guides'),
+      page('/updates'),
+    ],
+  },
+  {
+    title: 'Community',
+    links: [
+      { href: links.discord, label: 'Discord server' },
+      page('/events'),
+      page('/forum'),
+      { href: links.patreon, label: 'Support us on Patreon' },
+    ],
+  },
+]
+
 const columnLink = 'text-sm text-fg-2 hover:text-fg'
+
+function FooterItem(props: { link: FooterLink }) {
+  return (
+    <Show
+      when={'to' in props.link && props.link}
+      fallback={
+        <a href={(props.link as { href: string }).href} class={columnLink}>
+          {props.link.label}
+        </a>
+      }
+    >
+      {(internal) => (
+        <Link to={internal().to} class={columnLink}>
+          {internal().label}
+        </Link>
+      )}
+    </Show>
+  )
+}
 
 export function SiteFooter() {
   return (
     <footer class="mt-24 bg-surface-1">
       <div class="wrap grid gap-10 py-12 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div class="sm:col-span-3 lg:col-span-1">
-          <img src="/logo.svg" alt="bfportal.gg" width="148" height="28" />
+          <Logo label="bfportal.gg" />
           <p class="mt-4 max-w-[340px] text-sm text-fg-2">
             Made with <span class="text-accent">♥</span>
             <span class="sr-only">love</span> by the Battlefield Portal
@@ -38,78 +88,24 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div>
-          <h2 class={columnTitle}>Browse</h2>
-          <ul class="grid gap-[9px]">
-            <li>
-              <Link to="/library" class={columnLink}>
-                Experience library
-              </Link>
-            </li>
-            <li>
-              <Link to="/scripts" class={columnLink}>
-                Scripts
-              </Link>
-            </li>
-            <li>
-              <Link to="/maps" class={columnLink}>
-                Maps
-              </Link>
-            </li>
-            <li>
-              <Link to="/tools" class={columnLink}>
-                Tools and plugins
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h2 class={columnTitle}>Create</h2>
-          <ul class="grid gap-[9px]">
-            <li>
-              <Link to="/submit" class={columnLink}>
-                Submit an experience
-              </Link>
-            </li>
-            <li>
-              <Link to="/guides" class={columnLink}>
-                Guides and docs
-              </Link>
-            </li>
-            <li>
-              <Link to="/updates" class={columnLink}>
-                Recent updates
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h2 class={columnTitle}>Community</h2>
-          <ul class="grid gap-[9px]">
-            <li>
-              <a href={links.discord} class={columnLink}>
-                Discord server
-              </a>
-            </li>
-            <li>
-              <Link to="/events" class={columnLink}>
-                Events and playtests
-              </Link>
-            </li>
-            <li>
-              <Link to="/forum" class={columnLink}>
-                Forum
-              </Link>
-            </li>
-            <li>
-              <a href={links.patreon} class={columnLink}>
-                Support us on Patreon
-              </a>
-            </li>
-          </ul>
-        </div>
+        <For each={COLUMNS}>
+          {(column) => (
+            <div>
+              <h2 class="mb-3.5 font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase">
+                {column.title}
+              </h2>
+              <ul class="grid gap-[9px]">
+                <For each={column.links}>
+                  {(link) => (
+                    <li>
+                      <FooterItem link={link} />
+                    </li>
+                  )}
+                </For>
+              </ul>
+            </div>
+          )}
+        </For>
       </div>
 
       <div class="border-t border-line">

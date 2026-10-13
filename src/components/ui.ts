@@ -14,5 +14,8 @@ export const buttonGhost = `${button} border border-line-strong text-fg hover:bo
 export const iconButton =
   'grid size-9 shrink-0 place-items-center border border-line text-fg-2 transition-colors hover:border-line-strong hover:bg-surface-2 hover:text-fg'
 
-/** Condensed uppercase display type, for headings. */
-export const display = 'font-display font-bold tracking-[0.015em] uppercase'
+/** Condensed uppercase display type, for headings. Add a size. */
+export const display = 'font-display font-bold uppercase'
+
+/** A paragraph of running text, kept to a readable line length. */
+export const body = 'max-w-[46em] text-[15.5px] text-fg-2'
