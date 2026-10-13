@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { lookupExperience } from './gametools'
+import { forgetLookups, lookupExperience } from './gametools'
 
 const fixture = (name: string) =>
   readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8')
@@ -21,6 +21,7 @@ describe('looking an experience up on gametools', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+    forgetLookups()
   })
 
   it('reads a Battlefield 6 experience', async () => {
@@ -35,6 +36,7 @@ describe('looking an experience up on gametools', () => {
       status: 'found',
       experience: {
         playgroundId: '2a5ea060-9aa2-11f1-89bb-9e77d3f592d2',
+        code: '1264g',
         title: 'Air Vehicle Sandbox',
         description: 'Test every air vehicle in an open sandbox',
         thumbnailUrl: expect.stringMatching(
@@ -92,18 +94,72 @@ describe('looking an experience up on gametools', () => {
     expect(asked[0]).toMatch(/experienceid=abc$/)
   })
 
-  it('says an experience is missing only when Portal says so', async () => {
-    stubGametools(
-      () => new Response('{"errors":["not found"]}', { status: 404 }),
-    )
-    expect(await lookupExperience('bf6', { code: 'zzzz9' })).toEqual({
-      status: 'missing',
-    })
+  it.each([
+    '{"errors":["could not find a experience based on the requested experience code"]}',
+    '{"errors":["Playground not found"]}',
+  ])(
+    'says an experience is missing when gametools says so: %s',
+    async (body) => {
+      stubGametools(() => new Response(body, { status: 404 }))
+      expect(await lookupExperience('bf6', { code: 'zzzz9' })).toEqual({
+        status: 'missing',
+      })
+    },
+  )
+
+  it('escapes what it is asked about', async () => {
+    const asked = stubGametools(() => new Response('{}', { status: 500 }))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await lookupExperience('bf6', { code: 'a&b=c d' })
+    expect(asked[0]).toMatch(/experiencecode=a%26b%3Dc%20d$/)
+  })
+
+  it('asks once for the same thing within a minute', async () => {
+    const asked = stubGametools(() => new Response(fixture('bf6-1264g')))
+    await lookupExperience('bf6', { code: '1264g' })
+    await lookupExperience('bf6', { code: '1264g' })
+    await lookupExperience('bf6', { code: 'other' })
+    expect(asked).toHaveLength(2)
+  })
+
+  it('asks again after gametools failed to answer', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const asked = stubGametools(() => new Response('down', { status: 503 }))
+    await lookupExperience('bf6', { code: '1264g' })
+    await lookupExperience('bf6', { code: '1264g' })
+    expect(asked).toHaveLength(2)
+  })
+
+  it('does not call an empty list of licenses free to play', async () => {
+    const reply = JSON.parse(fixture('bf6-1264g'))
+    reply.playElementDesign.licenseRequirements = []
+    stubGametools(() => new Response(JSON.stringify(reply)))
+    const result = await lookupExperience('bf6', { code: '1264g' })
+    expect(
+      result.status === 'found' && result.experience.requiresFullGame,
+    ).toBeNull()
   })
 
   it.each([
     ['is down', () => new Response('bad gateway', { status: 502 })],
     ['answers with something else', () => new Response('{"unexpected":true}')],
+    // A 404 that is not gametools' own, as from a proxy or a moved address.
+    [
+      'answers 404 with a web page',
+      () => new Response('<html>Not Found</html>', { status: 404 }),
+    ],
+    [
+      'answers 404 with other JSON',
+      () => new Response('{"detail":"no route"}', { status: 404 }),
+    ],
+    [
+      'leaves out whether it is published',
+      () => {
+        const reply = JSON.parse(fixture('bf6-1264g'))
+        delete reply.playElement.publishStateType
+        return new Response(JSON.stringify(reply))
+      },
+    ],
     ['answers with nonsense', () => new Response('<html>')],
     [
       'cannot be reached',

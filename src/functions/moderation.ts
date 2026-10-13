@@ -8,6 +8,7 @@ import {
   listQueue,
 } from '../server/services/moderation'
 import { formBoolean, formOr } from '../shared/form-input'
+import { refuse } from '../shared/results'
 import { redirectTo } from './answer'
 
 // The moderators' screens. The services refuse anyone who is not a moderator
@@ -38,16 +39,22 @@ export const decide = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     assertFromThisSite()
-    const { id, approve, note } = data.input
-    const result = await decideSubmission(await currentActor(), id, {
-      approve,
-      note,
-    })
+    const { input } = data
+    const result = input
+      ? await decideSubmission(await currentActor(), input.id, {
+          approve: input.approve,
+          note: input.note,
+        })
+      : refuse('invalid', data.errors)
     if (data.viaForm) {
       if (result.ok) throw redirectTo('/admin')
       if (result.reason === 'signed-out') throw redirectTo('/login')
+      // Back to the submission, which says what was missing. The address
+      // names the problem; the page has the words for it.
       throw redirectTo(
-        result.reason === 'invalid' ? `/admin/review/${id}` : '/admin',
+        input && result.reason === 'invalid'
+          ? `/admin/review/${input.id}?problem=note`
+          : '/admin',
       )
     }
     return result

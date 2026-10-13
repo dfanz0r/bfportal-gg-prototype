@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { assertFromThisSite, currentActor } from '../server/auth/actor'
 import { setLike } from '../server/services/likes'
 import { formBoolean, formOr } from '../shared/form-input'
+import { refuse } from '../shared/results'
 import { formAnswer } from './answer'
 
 // The shape every write follows: check the request came from the site, find
@@ -17,11 +18,9 @@ export const likeExperience = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     assertFromThisSite()
-    const result = await setLike(
-      await currentActor(),
-      data.input.slug,
-      data.input.liked,
-    )
+    const result = data.input
+      ? await setLike(await currentActor(), data.input.slug, data.input.liked)
+      : refuse('invalid', data.errors)
     if (data.viaForm) throw formAnswer(result, data.back)
     return result
   })

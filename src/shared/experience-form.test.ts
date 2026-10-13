@@ -77,4 +77,15 @@ describe('the submit form', () => {
     expect(ok.repoUrl).toBe('https://github.com/someone/project')
     expect(ok.filesUrl).toMatch(/dropbox/)
   })
+
+  it('takes a video only from the hosts it knows', () => {
+    const video = (vidUrl: string) =>
+      experienceFormSchema.safeParse({ ...base, vidUrl }).success
+    expect(video('https://www.youtube.com/watch?v=abc')).toBe(true)
+    expect(video('https://youtu.be/abc')).toBe(true)
+    expect(video('https://clips.twitch.tv/abc')).toBe(true)
+    expect(video('https://youtube.com.evil.example/watch')).toBe(false)
+    expect(video('https://evil.example/?youtube.com')).toBe(false)
+    expect(video('http://youtube.com/watch?v=abc')).toBe(false)
+  })
 })

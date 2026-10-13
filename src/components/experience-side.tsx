@@ -115,7 +115,9 @@ export function ExperienceSide(props: { data: Experience }) {
           when={data().code}
           fallback={
             <p class="text-sm text-fg-2">
-              This template has no code. Take its files instead.
+              {data().isTemplate
+                ? 'This template has no code. Take its files instead.'
+                : 'No code is recorded for this one.'}
             </p>
           }
         >

@@ -17,8 +17,9 @@ const searchSchema = z.object({
   game: z.enum(games).optional().catch(undefined),
   code: text(20),
   link: text(500),
-  // What was wrong, when a form posted without script was refused.
-  error: text(300),
+  // Set when a form posted without script was refused: the page comes back
+  // with what was sent and what was wrong with it.
+  draft: z.literal(true).optional().catch(undefined),
 })
 
 export const Route = createFileRoute('/submit')({
@@ -27,6 +28,7 @@ export const Route = createFileRoute('/submit')({
     game: search.game,
     code: search.code || undefined,
     link: search.link || undefined,
+    draft: search.draft,
   }),
   loader: async ({ deps }) => {
     const page = await fetchSubmitPage({ data: deps })
@@ -47,6 +49,5 @@ export const Route = createFileRoute('/submit')({
 
 function Page() {
   const data = Route.useLoaderData()
-  const search = Route.useSearch()
-  return <SubmitPage data={data()} error={search().error} />
+  return <SubmitPage data={data()} />
 }

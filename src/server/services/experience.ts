@@ -9,6 +9,7 @@ import {
   experienceCreators,
   experienceImages,
   experienceLikes,
+  experienceReports,
   experiences,
   experienceTags,
   maps,
@@ -98,6 +99,7 @@ export async function getExperience(
     [latestSdk],
     more,
     [ownLike],
+    ownReports,
   ] = await Promise.all([
     db
       .select({ url: experienceImages.url })
@@ -216,6 +218,17 @@ export async function getExperience(
           )
           .limit(1)
       : [],
+    viewer
+      ? db
+          .select({ type: experienceReports.type })
+          .from(experienceReports)
+          .where(
+            and(
+              eq(experienceReports.experienceId, experience.id),
+              eq(experienceReports.userId, viewer.id),
+            ),
+          )
+      : [],
   ])
 
   const mapOf = new Map(mapRows.map((map) => [map.levelId, map]))
@@ -261,6 +274,7 @@ export async function getExperience(
     viewer: {
       signedIn: viewer !== null,
       liked: ownLike !== undefined,
+      reported: ownReports.map((report) => report.type),
       isOwner,
       isStaff,
     },

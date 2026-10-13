@@ -20,12 +20,18 @@ export function LikeButton(props: {
     likes: props.likes,
   })
   createEffect(() => setState({ liked: props.liked, likes: props.likes }))
+  const [sending, setSending] = createSignal(false)
   const back = () => `/experiences/${props.slug}`
 
   const submit = async (event: SubmitEvent) => {
     // Signing in is a full page load; let the form go there.
     if (!props.signedIn) return
     event.preventDefault()
+    // One at a time. A second press before the first is answered would start
+    // from a count that is only a guess, and the answers can arrive in either
+    // order.
+    if (sending()) return
+    setSending(true)
     const before = state()
     const liked = !before.liked
     // Show it at once, and put it back if the server says otherwise.
@@ -37,6 +43,8 @@ export function LikeButton(props: {
       )
     } catch {
       setState(before)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -48,6 +56,7 @@ export function LikeButton(props: {
       <button
         type="submit"
         aria-pressed={state().liked}
+        aria-busy={sending()}
         class="inline-flex h-[38px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-semibold transition-colors hover:border-steel hover:bg-steel/6 aria-pressed:border-accent aria-pressed:text-accent"
       >
         <Icon

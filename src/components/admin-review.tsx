@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/solid-router'
-import { createSignal, For, type JSX, Show } from 'solid-js'
+import { createEffect, createSignal, For, type JSX, Show } from 'solid-js'
 
 import { decide, type SubmissionReview } from '../functions/moderation'
 import { experienceTypeLabels } from '../shared/content'
@@ -8,6 +8,7 @@ import { Avatar } from './avatar'
 import { DateText } from './date-text'
 import { Fact } from './fact'
 import { Facts } from './facts'
+import { FieldError } from './field-error'
 import { Icon } from './icon'
 import { PageLayout } from './page-layout'
 import { buttonAccent, buttonGhost, field, label, panel } from './ui'
@@ -25,41 +26,74 @@ function Check(props: { warn?: boolean; children: JSX.Element }) {
   )
 }
 
+/** Notes a moderator writes often, to start one from. */
+const QUICK_NOTES = [
+  'The code does not load on Portal.',
+  'This code is already on another page.',
+  'The description needs to say what the mode is and how it plays.',
+  'It needs a cover picture.',
+]
+
+const NOTE_NEEDED =
+  'Turning it down needs a note, so its creator knows what to change.'
+
 /** Reviewing one submission: what it is, what to check, and the decision. */
-export function AdminReview(props: { data: SubmissionReview }) {
+export function AdminReview(props: {
+  data: SubmissionReview
+  /** What was wrong with a decision posted with no script, by name. */
+  problem?: 'note'
+}) {
   const data = () => props.data
   const submission = () => data().submission
   const checks = () => data().checks
   const navigate = useNavigate()
+  const [note, setNote] = createSignal('')
   const [error, setError] = createSignal<string>()
+  createEffect(() => setError(props.problem ? NOTE_NEEDED : undefined))
   const [sending, setSending] = createSignal(false)
 
   const submit = async (event: SubmitEvent) => {
     event.preventDefault()
-    const form = event.currentTarget as HTMLFormElement
+    if (sending()) return
     const button = event.submitter as HTMLButtonElement | null
     setSending(true)
+    let result: Awaited<ReturnType<typeof decide>>
     try {
-      const result = await decide({
+      result = await decide({
         data: {
           id: submission().id,
           approve: button?.value === 'true',
-          note: String(new FormData(form).get('note') ?? ''),
+          note: note(),
         },
       })
-      if (result.ok) {
-        await navigate({ to: '/admin' })
-      } else if (result.reason === 'invalid') {
-        setError(result.errors?.note ?? 'That could not be decided.')
-      } else {
-        setError(
-          'This is no longer waiting. Someone may have decided it already.',
-        )
-      }
     } catch {
-      setError('Something went wrong. Nothing was decided.')
-    } finally {
+      // No answer came back, which does not say the request never arrived.
+      setError(
+        'Something went wrong before an answer came back, so this may or may not have been decided. Look at the queue: if it is still there, it was not.',
+      )
       setSending(false)
+      return
+    }
+    if (result.ok) {
+      // It is decided. Whatever happens now, it must not read as a failure.
+      try {
+        await navigate({ to: '/admin' })
+      } catch {
+        window.location.assign('/admin')
+      }
+      return
+    }
+    setSending(false)
+    if (result.reason === 'signed-out') {
+      window.location.assign('/login')
+    } else if (result.reason === 'invalid') {
+      setError(result.errors?.note ?? 'That could not be decided.')
+    } else if (result.reason === 'forbidden') {
+      setError('Your account may no longer decide submissions.')
+    } else {
+      setError(
+        'This is no longer waiting. Someone may have decided it already.',
+      )
     }
   }
 
@@ -232,15 +266,30 @@ export function AdminReview(props: { data: SubmissionReview }) {
               name="note"
               rows={3}
               maxlength={1000}
+              value={note()}
+              onInput={(event) => setNote(event.currentTarget.value)}
               class={field}
             />
-            <Show when={error()}>
-              {(message) => (
-                <p class="text-[13px] text-danger" role="alert">
-                  {message()}
-                </p>
-              )}
-            </Show>
+            <ul class="flex flex-wrap gap-1.5">
+              <For each={QUICK_NOTES}>
+                {(quick) => (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNote((written) =>
+                          written.trim() ? `${written.trim()} ${quick}` : quick,
+                        )
+                      }
+                      class="border border-line px-2 py-1 text-left text-xs text-fg-2 hover:border-steel hover:text-fg"
+                    >
+                      {quick}
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+            <FieldError message={error()} />
             <div class="flex flex-wrap gap-2">
               <button
                 type="submit"

@@ -5,6 +5,7 @@ import { seed } from '../../../seed/seed'
 import { db, sql } from '../db'
 import { experienceLikes, experiences, projectFiles } from '../db/schema'
 import { getExperience, getProjectFile } from './experience'
+import { reportExperience } from './reports'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 
@@ -57,6 +58,7 @@ describe('experience', () => {
     expect(anonymous?.viewer).toEqual({
       signedIn: false,
       liked: false,
+      reported: [],
       isOwner: false,
       isStaff: false,
     })
@@ -71,6 +73,21 @@ describe('experience', () => {
       role: 'user',
     })
     expect(theirs?.viewer.liked).toBe(true)
+  })
+
+  it('knows what whoever is looking has already reported', async () => {
+    const slug = 'capture-the-flag-siege-of-cairo'
+    const reporter = { id: 'seed-vantage', role: 'user' } as const
+    await reportExperience(reporter, slug, 'bugged')
+
+    const theirs = await getExperience(slug, NOW, reporter)
+    expect(theirs?.viewer.reported).toEqual(['bugged'])
+    // Someone else's report is not theirs.
+    const other = await getExperience(slug, NOW, {
+      id: 'seed-kestrel',
+      role: 'moderator',
+    })
+    expect(other?.viewer.reported).toEqual([])
   })
 
   it('gives the page what it shows', async () => {

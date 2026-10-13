@@ -92,6 +92,7 @@ Reach for what exists before writing markup:
 | Something that may only differ from the server's HTML once the page runs | `createHydrated()` |
 | Text someone wrote, as HTML | the `prose` class |
 | A link to a game's Library tab, with filters | `LibraryLink` |
+| A field of a form, with its label, hint and error | `FormField`; a checkbox or radio is `Check`; an error with no field of its own is `FieldError` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |
 
 How we write them:
@@ -161,6 +162,18 @@ Anything that changes something follows `src/functions/likes.ts` and
 - **It takes a form as well as an object,** with `formOr(schema)`, and answers a form
   with `formAnswer`. The page's `<form>` posts to the function's `.url`, so the
   action works before the script loads; the script then calls the same function.
+- **Bad input is a refusal, not an error thrown.** `formOr` hands the handler
+  `input: null` and the errors by field; answer `refuse('invalid', data.errors)`.
+- **A form that takes typing gets it back when it is refused,** script or not. With
+  no script the page is gone by then, so keep what was sent and draw it again;
+  `submitForReview` and `/submit?draft=true` are the example.
+- **In the page's script, tell three endings apart:** the server said no (show
+  why), the server said yes (never show an error after this, whatever the
+  navigation does), and no answer came back (say it may or may not have gone
+  through; do not say nothing happened). Ignore a second press while one is out.
+- **What costs someone else is limited per account:** a count in the database, in
+  the service, for what must hold across restarts; `allow()` from
+  `src/server/rate-limit.ts` for calls to a third party.
 
 ## Design
 
@@ -236,3 +249,8 @@ that is not on this machine; keep it that way.
 - Ask before starting a browser or a local server to check something. Say when a
   change has not been looked at in a browser.
 - Say what you verified and what you did not.
+- Change files with the editor's own edit and write tools, one visible change at a
+  time. Do not create or rewrite files from the command line: no scripts that patch
+  source, no `sed -i`, no heredocs or redirects into files. The command line is for
+  running things: the checks, the tests, git, the seed, and tools that generate files
+  such as `pnpm db:generate` and the formatter.

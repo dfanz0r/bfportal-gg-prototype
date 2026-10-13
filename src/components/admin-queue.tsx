@@ -45,6 +45,11 @@ export function AdminQueue(props: { data: Queue }) {
                     .
                   </p>
                 </div>
+                <Show when={item.sameCode}>
+                  <span class={`${tag} border-warn/50 text-warn`}>
+                    Code already listed
+                  </span>
+                </Show>
                 <span class="inline-flex items-center gap-2 text-[13px] text-fg-2">
                   <Avatar
                     name={item.ownerName}
@@ -67,6 +72,15 @@ export function AdminQueue(props: { data: Queue }) {
             )}
           </For>
         </ul>
+        <p class="mt-3 text-[13px] text-fg-3">
+          <Show
+            when={data().total > data().items.length}
+            fallback={`${data().total} waiting.`}
+          >
+            The {data().items.length} that have waited longest, of{' '}
+            {data().total}. The rest appear as these are decided.
+          </Show>
+        </p>
       </Show>
     </PageLayout>
   )

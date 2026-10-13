@@ -141,21 +141,24 @@ export function ExperiencePage(props: { data: Experience }) {
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <LikeButton
-                slug={data().slug}
-                likes={data().likes}
-                liked={data().viewer.liked}
-                signedIn={data().viewer.signedIn}
-              />
-              {/* Its owner marks problems another way; reporting is for
-                  everyone else. */}
-              <Show
-                when={!data().viewer.isOwner && data().status === 'published'}
-              >
-                <ReportMenu
+              {/* Nothing can be liked or reported until it is published; the
+                  server refuses both. */}
+              <Show when={data().status === 'published'}>
+                <LikeButton
                   slug={data().slug}
+                  likes={data().likes}
+                  liked={data().viewer.liked}
                   signedIn={data().viewer.signedIn}
                 />
+                {/* Its owner marks problems another way; reporting is for
+                    everyone else. */}
+                <Show when={!data().viewer.isOwner}>
+                  <ReportMenu
+                    slug={data().slug}
+                    signedIn={data().viewer.signedIn}
+                    reported={data().viewer.reported}
+                  />
+                </Show>
               </Show>
             </div>
           </div>

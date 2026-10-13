@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { experienceTypes, games } from './content'
 import { formBoolean } from './form-input'
 
+export { fieldErrors as formErrors } from './form-input'
+
 // What someone submits when they share an experience. The form, the server
 // function and the service all read this one schema. It checks shape and
 // size; what depends on the database or on Portal (is this a real category,
@@ -52,6 +54,7 @@ const count = (max: number) => z.coerce.number().int().min(0).max(max)
 export const MAX_IMAGES = 8
 export const MAX_CREDITS = 10
 export const REPO_HOSTS = ['github.com', 'gitlab.com', 'codeberg.org']
+export const VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'twitch.tv', 'vimeo.com']
 export const FILE_HOSTS = [
   'github.com',
   'dropbox.com',
@@ -86,7 +89,9 @@ export const experienceFormSchema = z.object({
     MAX_IMAGES,
     httpsUrl('Each picture must be an https:// address.'),
   ).default([]),
-  vidUrl: optional(httpsUrl('The video must be an https:// address.')),
+  vidUrl: optional(
+    onHosts(VIDEO_HOSTS, `The video must be on ${VIDEO_HOSTS.join(', ')}.`),
+  ),
   repoUrl: optional(
     onHosts(REPO_HOSTS, `The repository must be on ${REPO_HOSTS.join(', ')}.`),
   ),
@@ -100,13 +105,3 @@ export const experienceFormSchema = z.object({
 })
 
 export type ExperienceForm = z.infer<typeof experienceFormSchema>
-
-/** What is wrong with a form, by field, in words to show beside it. */
-export function formErrors(error: z.ZodError) {
-  const errors: Record<string, string> = {}
-  for (const issue of error.issues) {
-    const field = String(issue.path[0] ?? 'form')
-    errors[field] ??= issue.message
-  }
-  return errors
-}

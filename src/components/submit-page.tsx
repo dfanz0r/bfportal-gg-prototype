@@ -1,13 +1,14 @@
 import { useNavigate } from '@tanstack/solid-router'
-import { createSignal, For, Show } from 'solid-js'
+import { createEffect, createSignal, For, Show } from 'solid-js'
 
 import type { SubmitPageData } from '../functions/submit'
 import { submitForReview } from '../functions/submit'
 import { experienceTypeLabels } from '../shared/content'
-import { MAX_CREDITS, MAX_IMAGES } from '../shared/experience-form'
+import { MAX_CREDITS, MAX_IMAGES, VIDEO_HOSTS } from '../shared/experience-form'
 import { formFields } from '../shared/form-input'
 import { gameInfo, gameList } from '../shared/games'
 import { Check } from './check'
+import { FieldError } from './field-error'
 import { FormField } from './form-field'
 import { PageLayout } from './page-layout'
 import { Section } from './section'
@@ -16,23 +17,37 @@ import { body, buttonAccent, buttonSteel, field, label, panel } from './ui'
 const LEAD =
   'Share something you built in Portal. A moderator looks at every submission before it appears.'
 
+/** What to say when a lookup did not come back with an experience. */
+const LOOKUP_NOTES: Partial<
+  Record<NonNullable<SubmitPageData['lookup']>, string>
+> = {
+  missing: 'Portal has no experience with this code. Check it and try again.',
+  unavailable:
+    'Portal could not be asked about this code just now. You can still fill in the form and submit it.',
+  limited:
+    'That is a lot of lookups in a short time. Wait a minute, then fetch it again.',
+}
+
 /** What Portal said about the code, in a sentence. */
 function LookupNote(props: { data: SubmitPageData }) {
   const data = () => props.data
+  const note = () => {
+    if (data().unreadable) {
+      return `That does not look like a ${gameInfo(data().game).name} experience code or a link to one.`
+    }
+    const lookup = data().lookup
+    return lookup ? LOOKUP_NOTES[lookup] : undefined
+  }
   return (
     <Show
       when={data().found}
       fallback={
-        <Show when={data().lookup === 'missing' || data().unreadable}>
-          <p class="border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
-            <Show
-              when={data().unreadable}
-              fallback="Portal has no experience with this code. Check it and try again."
-            >
-              That does not look like a {gameInfo(data().game).name} experience
-              code or a link to one.
-            </Show>
-          </p>
+        <Show when={note()}>
+          {(text) => (
+            <p class="border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
+              {text()}
+            </p>
+          )}
         </Show>
       }
     >
@@ -71,36 +86,68 @@ function LookupNote(props: { data: SubmitPageData }) {
 }
 
 /** The page for sharing an experience. */
-export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
+export function SubmitPage(props: { data: SubmitPageData }) {
   const data = () => props.data
   const info = () => gameInfo(data().game)
   const navigate = useNavigate()
-  const [errors, setErrors] = createSignal<Record<string, string>>({})
+  // A form that was posted with no script and refused comes back as a draft:
+  // what was sent, and what was wrong with it.
+  const draft = () => data().draft
+  const [errors, setErrors] = createSignal<Record<string, string>>(
+    // Read once on purpose, so the server's HTML carries them too.
+    props.data.draft?.errors ?? {},
+  )
+  createEffect(() => setErrors(draft()?.errors ?? {}))
   const [sending, setSending] = createSignal(false)
   const portalTags = () => data().found?.tags ?? []
 
+  /** What a field starts with: what was sent last time, or else `otherwise`. */
+  const start = (name: string, otherwise: string | number = '') => {
+    const value = draft()?.fields[name]
+    return typeof value === 'string' ? value : otherwise
+  }
+  /** Whether a box starts ticked. A draft knows every box that was. */
+  const ticked = (name: string, value: string, otherwise = false) => {
+    const kept = draft()
+    return kept ? [kept.fields[name] ?? []].flat().includes(value) : otherwise
+  }
+  const fromPortal = (tag: { portalId: string | null }) =>
+    tag.portalId !== null && portalTags().includes(tag.portalId)
+
+  const fail = (form: HTMLFormElement, problems: Record<string, string>) => {
+    setErrors(problems)
+    setSending(false)
+    form.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center' })
+  }
+
   const submit = async (event: SubmitEvent) => {
     event.preventDefault()
+    if (sending()) return
     const form = event.currentTarget as HTMLFormElement
     setSending(true)
+    let result: Awaited<ReturnType<typeof submitForReview>>
     try {
-      const result = await submitForReview({
-        data: formFields(new FormData(form)),
-      })
-      if (result.ok) {
-        await navigate({ href: `/experiences/${result.slug}` })
-      } else if (result.reason === 'signed-out') {
-        window.location.assign('/login')
-      } else {
-        setErrors(result.errors ?? { form: 'That could not be submitted.' })
-        form
-          .querySelector('[role="alert"]')
-          ?.scrollIntoView({ block: 'center' })
-      }
+      result = await submitForReview({ data: formFields(new FormData(form)) })
     } catch {
-      setErrors({ form: 'Something went wrong. Nothing was submitted.' })
-    } finally {
-      setSending(false)
+      // No answer came back, which does not say the request never arrived.
+      fail(form, {
+        form: 'Something went wrong before an answer came back, so this may or may not have been submitted. You can send it again: if both went through, a moderator will see they are the same.',
+      })
+      return
+    }
+    if (result.ok) {
+      // It is in. Whatever happens now, it must not read as a failure, and
+      // the button stays off so it is not sent twice.
+      const page = `/experiences/${result.slug}`
+      try {
+        await navigate({ href: page })
+      } catch {
+        window.location.assign(page)
+      }
+    } else if (result.reason === 'signed-out') {
+      window.location.assign('/login')
+    } else {
+      fail(form, result.errors ?? { form: 'That could not be submitted.' })
     }
   }
 
@@ -171,9 +218,10 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
           <input type="hidden" name="code" value={data().code ?? ''} />
           <input type="hidden" name="link" value={data().link ?? ''} />
 
+          {/* What is wrong with no field of its own to sit under. */}
           <Show
             when={
-              errors().form ?? errors().code ?? errors().link ?? props.error
+              errors().form ?? errors().code ?? errors().link ?? errors().game
             }
           >
             {(message) => (
@@ -199,7 +247,7 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
               required
               minlength={3}
               maxlength={80}
-              value={data().found?.title ?? ''}
+              value={start('title', data().found?.title)}
               class={field}
             />
           </FormField>
@@ -213,20 +261,14 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                     radio
                     name="category"
                     value={category.slug}
-                    checked={index() === 0}
+                    checked={ticked('category', category.slug, index() === 0)}
                   >
                     {category.name}
                   </Check>
                 )}
               </For>
             </div>
-            <Show when={errors().category}>
-              {(message) => (
-                <p class="text-[13px] text-danger" role="alert">
-                  {message()}
-                </p>
-              )}
-            </Show>
+            <FieldError message={errors().category} />
           </fieldset>
 
           <FormField
@@ -242,7 +284,7 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
               maxlength={10000}
               class={field}
             >
-              {data().found?.description ?? ''}
+              {start('description', data().found?.description)}
             </textarea>
           </FormField>
 
@@ -260,7 +302,7 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 required
                 min={1}
                 max={256}
-                value={data().found?.players || ''}
+                value={start('maxPlayers', data().found?.players || '')}
                 class={field}
               />
             </FormField>
@@ -271,7 +313,7 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 type="number"
                 min={0}
                 max={256}
-                value={0}
+                value={start('maxBots', 0)}
                 class={field}
               />
             </FormField>
@@ -283,19 +325,17 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
               <div class="flex flex-wrap gap-x-6">
                 <For each={info().builtWith}>
                   {(type) => (
-                    <Check name="built" value={type}>
+                    <Check
+                      name="built"
+                      value={type}
+                      checked={ticked('built', type)}
+                    >
                       {experienceTypeLabels[type]}
                     </Check>
                   )}
                 </For>
               </div>
-              <Show when={errors().built}>
-                {(message) => (
-                  <p class="text-[13px] text-danger" role="alert">
-                    {message()}
-                  </p>
-                )}
-              </Show>
+              <FieldError message={errors().built} />
             </fieldset>
           </Show>
 
@@ -306,34 +346,65 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 <Show when={group.description}>
                   <p class="mb-1 text-[13px] text-fg-3">{group.description}</p>
                 </Show>
-                <div class="flex flex-wrap gap-x-6">
-                  <For each={group.tags}>
-                    {(tag) => (
-                      <Check
-                        name="tags"
-                        value={tag.slug}
-                        // Portal's own tags for the code start ticked.
-                        checked={
-                          tag.portalId !== null &&
-                          portalTags().includes(tag.portalId)
-                        }
-                      >
-                        {tag.name}
-                      </Check>
-                    )}
-                  </For>
-                </div>
+                {/* Portal's own tags for the code start chosen. A group that
+                    takes one choice is a list to pick from, which a browser
+                    holds to one without any script. */}
+                <Show
+                  when={group.pick === 'one'}
+                  fallback={
+                    <div class="flex flex-wrap gap-x-6">
+                      <For each={group.tags}>
+                        {(tag) => (
+                          <Check
+                            name="tags"
+                            value={tag.slug}
+                            checked={ticked('tags', tag.slug, fromPortal(tag))}
+                          >
+                            {tag.name}
+                          </Check>
+                        )}
+                      </For>
+                    </div>
+                  }
+                >
+                  <select
+                    name="tags"
+                    aria-label={group.name}
+                    class={`${field} mt-1.5 max-w-xs`}
+                  >
+                    <option value="">Not said</option>
+                    <For each={group.tags}>
+                      {(tag) => (
+                        <option
+                          value={tag.slug}
+                          selected={ticked('tags', tag.slug, fromPortal(tag))}
+                        >
+                          {tag.name}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </Show>
               </fieldset>
             )}
           </For>
+          <FieldError message={errors().tags} />
 
           <fieldset class="grid gap-1">
             <legend class="mb-1.5 text-sm font-semibold">Building on it</legend>
-            <Check name="isTemplate" value="true">
+            <Check
+              name="isTemplate"
+              value="true"
+              checked={ticked('isTemplate', 'true')}
+            >
               Offer it as a template: others may take it and publish their own
               version
             </Check>
-            <Check name="copyAllowed" value="true">
+            <Check
+              name="copyAllowed"
+              value="true"
+              checked={ticked('copyAllowed', 'true')}
+            >
               It can be copied in the Portal editor
             </Check>
           </fieldset>
@@ -351,6 +422,7 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                   id="coverImgUrl"
                   name="coverImgUrl"
                   type="url"
+                  value={start('coverImgUrl')}
                   class={field}
                 />
               </FormField>
@@ -361,10 +433,24 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 hint={`One https:// address per line, up to ${MAX_IMAGES}.`}
                 errors={errors()}
               >
-                <textarea id="images" name="images" rows={3} class={field} />
+                <textarea id="images" name="images" rows={3} class={field}>
+                  {start('images')}
+                </textarea>
               </FormField>
-              <FormField label="Video" name="vidUrl" optional errors={errors()}>
-                <input id="vidUrl" name="vidUrl" type="url" class={field} />
+              <FormField
+                label="Video"
+                name="vidUrl"
+                optional
+                hint={`A link to it on ${VIDEO_HOSTS.join(', ')}.`}
+                errors={errors()}
+              >
+                <input
+                  id="vidUrl"
+                  name="vidUrl"
+                  type="url"
+                  value={start('vidUrl')}
+                  class={field}
+                />
               </FormField>
               <FormField
                 label="Source repository"
@@ -372,7 +458,13 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 optional
                 errors={errors()}
               >
-                <input id="repoUrl" name="repoUrl" type="url" class={field} />
+                <input
+                  id="repoUrl"
+                  name="repoUrl"
+                  type="url"
+                  value={start('repoUrl')}
+                  class={field}
+                />
               </FormField>
               <FormField
                 label="Larger files"
@@ -381,7 +473,13 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 hint="A link to files hosted elsewhere: GitHub, Dropbox or Google Drive."
                 errors={errors()}
               >
-                <input id="filesUrl" name="filesUrl" type="url" class={field} />
+                <input
+                  id="filesUrl"
+                  name="filesUrl"
+                  type="url"
+                  value={start('filesUrl')}
+                  class={field}
+                />
               </FormField>
             </div>
           </Section>
@@ -400,7 +498,10 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                     <option value="">Not said</option>
                     <For each={data().options.sdkVersions}>
                       {(sdk) => (
-                        <option value={sdk.version}>
+                        <option
+                          value={sdk.version}
+                          selected={start('sdk') === sdk.version}
+                        >
                           {sdk.version}
                           {sdk.season ? `, ${sdk.season}` : ''}
                         </option>
@@ -416,7 +517,9 @@ export function SubmitPage(props: { data: SubmitPageData; error?: string }) {
                 hint={`Names to credit, one per line, up to ${MAX_CREDITS}. For people with an account here, add them from the experience's page once it is approved.`}
                 errors={errors()}
               >
-                <textarea id="credits" name="credits" rows={3} class={field} />
+                <textarea id="credits" name="credits" rows={3} class={field}>
+                  {start('credits')}
+                </textarea>
               </FormField>
             </div>
           </Section>

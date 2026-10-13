@@ -1,5 +1,5 @@
 // bfportal.gg rewrite: the database schema.
-// Generated from the development database as of migration 0021. It is a
+// Generated from the development database as of migration 0022. It is a
 // snapshot: regenerate it after the schema changes.
 // Paste into https://dbdiagram.io/d
 
@@ -690,6 +690,18 @@ Table "site_settings" {
   '''
 }
 
+Table "submission_drafts" {
+  "user_id" text [pk]
+  "fields" jsonb [not null]
+  "errors" jsonb [not null]
+  "saved_at" timestamptz [not null, default: `now()`]
+
+  Note: '''
+  A submit form that was refused, kept so the page can come back filled in.
+  One per user, removed when a submission of theirs goes through.
+  '''
+}
+
 Table "import_quarantine" {
   "id" integer [pk, increment]
   "source_table" text [not null]
@@ -748,6 +760,7 @@ Ref: "event_interest"."event_id" > "events"."id" [delete: cascade]
 Ref: "event_interest"."user_id" > "user"."id" [delete: cascade]
 Ref: "banners"."created_by" > "user"."id"
 Ref: "banners"."event_id" > "events"."id" [delete: cascade]
+Ref: "submission_drafts"."user_id" - "user"."id" [delete: cascade]
 
 TableGroup accounts {
   "user"
@@ -793,5 +806,6 @@ TableGroup community {
 
 TableGroup site {
   "site_settings"
+  "submission_drafts"
   "import_quarantine"
 }

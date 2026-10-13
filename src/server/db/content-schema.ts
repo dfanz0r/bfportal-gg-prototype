@@ -857,6 +857,22 @@ export const banners = pgTable(
   ],
 )
 
+/**
+ * A submit form that was refused, kept so its sender does not have to type it
+ * again. Only needed when the form was posted with no script: with one, the
+ * page never goes away. One per person, replaced by their next, and removed
+ * when a submission of theirs goes through.
+ */
+export const submissionDrafts = pgTable('submission_drafts', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  // The form's fields as they were sent, and what was wrong, by field.
+  fields: jsonb('fields').notNull(),
+  errors: jsonb('errors').notNull(),
+  savedAt: timestamptz('saved_at').notNull().defaultNow(),
+})
+
 /** One row of site-wide settings. The check keeps it to a single row. */
 export const siteSettings = pgTable(
   'site_settings',

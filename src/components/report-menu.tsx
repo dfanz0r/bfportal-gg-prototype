@@ -16,9 +16,17 @@ const KINDS: { type: ReportType; label: string }[] = [
  * Each choice is a button of one form, posted to the function the script
  * calls, so it works before the page's script has loaded.
  */
-export function ReportMenu(props: { slug: string; signedIn: boolean }) {
+export function ReportMenu(props: {
+  slug: string
+  signedIn: boolean
+  /** What this visitor has reported here before. */
+  reported: ReportType[]
+}) {
   const dismiss = createDismiss({ staysOpen: true })
-  const [sent, setSent] = createSignal<ReportType[]>([])
+  const [justSent, setJustSent] = createSignal<ReportType[]>([])
+  // What the page was loaded with, and what has been sent since. A report is
+  // made once, so each of these stays "Sent" however the page is reached.
+  const sent = () => [...props.reported, ...justSent()]
 
   const submit = async (event: SubmitEvent) => {
     // Signing in is a full page load; let the form go there.
@@ -26,12 +34,13 @@ export function ReportMenu(props: { slug: string; signedIn: boolean }) {
     event.preventDefault()
     const button = event.submitter as HTMLButtonElement | null
     const type = button?.value as ReportType | undefined
-    if (!type) return
+    if (!type || sent().includes(type)) return
     try {
       const result = await reportProblem({ data: { slug: props.slug, type } })
-      if (result.ok) setSent((types) => [...types, type])
+      if (result.ok) setJustSent((types) => [...types, type])
     } catch {
-      // Nothing was recorded; the button stays as it was to try again.
+      // The button stays as it was, to try again. Sending one twice is safe:
+      // a report is recorded once.
     }
   }
 

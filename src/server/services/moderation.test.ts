@@ -88,6 +88,8 @@ describe('moderation', () => {
     expect(titles).not.toContain('Gun Master 2.0') // published
     const waits = queue.items.map((item) => item.submittedAt.getTime())
     expect(waits).toEqual([...waits].sort((a, b) => a - b))
+    // Few enough to show them all; the count is of everything waiting.
+    expect(queue.total).toBe(queue.items.length)
   })
 
   it('tells a moderator what to look at before deciding', async () => {
@@ -96,13 +98,25 @@ describe('moderation', () => {
       code: '1dup9',
       description:
         '![x](https://tracker.example/p.gif) ![y](https://i.imgur.com/a.png)',
+      coverImgUrl: 'https://covers.example/c.png',
+      images: 'https://gallery.example/g.png\nhttps://i.imgur.com/b.png',
     })
+
+    // The queue says so before either is opened.
+    const queue = await listQueue(moderator)
+    if (!queue.ok) throw new Error('expected the queue')
+    const sharesCode = (title: string) =>
+      queue.items.find((item) => item.title === title)?.sameCode
+    expect(sharesCode('First with this code')).toBe(true)
+    expect(sharesCode('Second with this code')).toBe(true)
+    expect(sharesCode('Bridge Parkour Trials')).toBe(false)
 
     const review = await getSubmissionReview(moderator, second, {
       lookup: async () => ({
         status: 'found',
         experience: {
           playgroundId: null,
+          code: '1dup9',
           title: 'What Portal calls it',
           description: '',
           thumbnailUrl: null,
@@ -119,10 +133,11 @@ describe('moderation', () => {
     expect(review.checks).toMatchObject({
       portal: 'published',
       portalTitle: 'What Portal calls it',
-      // imgur is an everyday host; the other one is worth a look.
-      pictureHosts: ['tracker.example'],
+      // imgur is an everyday host; the others are worth a look, whether the
+      // picture is in the description, the cover or the gallery.
+      pictureHosts: ['covers.example', 'gallery.example', 'tracker.example'],
       thinDescription: true,
-      hasCover: false,
+      hasCover: true,
     })
     expect(review.checks.sameCode.map((other) => other.title)).toEqual([
       'First with this code',

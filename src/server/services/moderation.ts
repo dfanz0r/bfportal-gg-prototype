@@ -1,10 +1,10 @@
-import { and, asc, count, eq, isNull, ne } from 'drizzle-orm'
+import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm'
 
 import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
-import { categories, experiences, user } from '../db/schema'
+import { categories, experienceImages, experiences, user } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
 
@@ -26,6 +26,9 @@ const FAMILIAR_PICTURE_HOSTS = [
   'eaassets-a.akamaihd.net',
   'cdn.mcr.ea.com',
 ]
+
+/** How much of the queue one screen shows. The longest waits come first. */
+const QUEUE_PAGE = 100
 
 /** Null if the actor may moderate; otherwise why not. */
 function refusal(actor: Actor | null): Refusal | null {
@@ -55,12 +58,19 @@ export async function listQueue(actor: Actor | null) {
       // A moderator sees who submitted it whether or not they hide their name.
       ownerName: user.name,
       ownerImage: user.image,
+      // Another page already on the same code: worth knowing before opening it.
+      sameCode: sql<boolean>`exists (select 1 from ${experiences} as other where other.game = ${experiences.game} and other.code = ${experiences.code} and other.id <> ${experiences.id} and other.deleted_at is null)`,
     })
     .from(experiences)
     .innerJoin(user, eq(user.id, experiences.ownerId))
     .where(waiting)
     .orderBy(asc(experiences.submittedAt), asc(experiences.id))
-  return { ok: true as const, items: rows, now: new Date() }
+    .limit(QUEUE_PAGE)
+  const [total] = await db
+    .select({ value: count() })
+    .from(experiences)
+    .where(waiting)
+  return { ok: true as const, items: rows, total: total.value, now: new Date() }
 }
 
 /**
@@ -95,7 +105,11 @@ export async function getSubmissionReview(
   if (!found) return refuse('not-found')
   const { experience } = found
 
-  const [sameCode, history, looked] = await Promise.all([
+  const [gallery, sameCode, history, looked] = await Promise.all([
+    db
+      .select({ url: experienceImages.url })
+      .from(experienceImages)
+      .where(eq(experienceImages.experienceId, experience.id)),
     experience.code
       ? db
           .select({
@@ -132,7 +146,19 @@ export async function getSubmissionReview(
   ])
   const earlier = (status: string) =>
     history.find((row) => row.status === status)?.value ?? 0
-  const pictures = pictureHosts(experience.descriptionHtml)
+  // Every picture the page will load: the description's, the cover and the
+  // gallery. Each is fetched by every visitor's browser.
+  const pictures = new Set(pictureHosts(experience.descriptionHtml))
+  for (const address of [
+    experience.coverImgUrl,
+    ...gallery.map((g) => g.url),
+  ]) {
+    try {
+      if (address) pictures.add(new URL(address).hostname)
+    } catch {
+      // Not an address a browser would fetch.
+    }
+  }
 
   return {
     ok: true as const,
@@ -179,10 +205,10 @@ export async function getSubmissionReview(
           ? looked.experience.title
           : null,
       sameCode,
-      /** Hosts its description loads pictures from that are not everyday ones. */
-      pictureHosts: pictures.filter(
-        (host) => !FAMILIAR_PICTURE_HOSTS.includes(host),
-      ),
+      /** Hosts its pictures load from that are not everyday ones. */
+      pictureHosts: [...pictures]
+        .filter((host) => !FAMILIAR_PICTURE_HOSTS.includes(host))
+        .sort(),
       hasCover: Boolean(experience.coverImgUrl),
       // A sentence or less.
       thinDescription: experience.descriptionMd.trim().length < 80,

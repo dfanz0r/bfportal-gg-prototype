@@ -1,5 +1,7 @@
 import { type JSX, Show } from 'solid-js'
 
+import { FieldError } from './field-error'
+
 /**
  * One field of a form: its label, a hint, the field itself, and what is wrong
  * with it if the server said so. `name` matches the field's `name`, so the
@@ -13,7 +15,6 @@ export function FormField(props: {
   errors?: Record<string, string>
   children: JSX.Element
 }) {
-  const error = () => props.errors?.[props.name]
   return (
     <div class="grid gap-1.5">
       <label for={props.name} class="text-sm font-semibold">
@@ -26,13 +27,7 @@ export function FormField(props: {
       <Show when={props.hint}>
         <p class="text-[13px] text-fg-3">{props.hint}</p>
       </Show>
-      <Show when={error()}>
-        {(message) => (
-          <p class="text-[13px] text-danger" role="alert">
-            {message()}
-          </p>
-        )}
-      </Show>
+      <FieldError message={props.errors?.[props.name]} />
     </div>
   )
 }

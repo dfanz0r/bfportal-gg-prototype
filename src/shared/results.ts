@@ -13,8 +13,31 @@ export const refuse = (
   errors?: Record<string, string>,
 ): Refusal => ({ ok: false, reason, ...(errors ? { errors } : {}) })
 
-/** A path on this site to send someone back to, or the home page. */
+const NOWHERE = 'https://nowhere.invalid'
+
+/**
+ * A path on this site to send someone back to, or the home page.
+ *
+ * Checked by resolving it the way a browser would and seeing where it lands.
+ * "//host" is another site, and so is "/\\host": browsers read a backslash as
+ * a slash. Control characters are stripped by browsers before they parse, so
+ * a path carrying any is refused outright.
+ */
 export function safeBackPath(value: unknown) {
-  // One slash, then not another: "//host" is another site.
-  return typeof value === 'string' && /^\/(?!\/)/.test(value) ? value : '/'
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what this looks for
+    /[\\\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return '/'
+  }
+  try {
+    const url = new URL(value, NOWHERE)
+    return url.origin === NOWHERE
+      ? `${url.pathname}${url.search}${url.hash}`
+      : '/'
+  } catch {
+    return '/'
+  }
 }

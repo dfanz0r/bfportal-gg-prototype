@@ -1164,6 +1164,9 @@ event can gain a list of experiences then.
   home page, replacing Wagtail's "extra content" stream field.
 - `import_quarantine`: legacy rows the import could not accept, with the reason and the
   original data.
+- `submission_drafts`: at most one row per user. The fields of a submit form that was
+  posted with no script and refused, and what was wrong with each, so the page can come
+  back filled in. Removed when a submission of theirs goes through.
 - `redirects`: only if production has any rows in `wagtailredirects_redirect`.
 
 ## Moderation flow
@@ -1736,20 +1739,47 @@ was settled first, so the screens are built against seed data and the import fol
    rejected experience can be opened by its owner and the moderators, with a note
    saying so.
 
+   Tightened after review, 2026-10-13:
+
+   - **Limits.** An account that is not staff may have 5 submissions waiting and send
+     10 in a day; both are counted in the database. Lookups from the submit page are
+     held to 20 a minute per account, in memory, and a lookup's answer is reused for a
+     minute. gametools is someone else's service and the queue is a moderator's time.
+   - **The address is found by trying.** Two people sending the same title at once
+     both read the address as free. The unique constraint decides, and the one that
+     loses takes the next number.
+   - **A link is enough.** Given a Portal link and no code, the code comes from the
+     lookup. If Portal does not say and it is not a template, the form asks for it.
+   - **A group that takes one tag takes one,** checked in the service and drawn as a
+     list to pick from.
+   - **A refused form is not lost without script.** The fields and what was wrong are
+     kept in `submission_drafts` and the visitor is sent to `/submit?draft=true`,
+     which draws the form filled in with each problem beside its field.
+   - **A write that got no answer is not called a failure.** The page says it may or
+     may not have gone through. Once the server has said yes, a failure to move to
+     the next page is not shown as an error either.
+   - **A server function that takes a form never throws on bad input.** It answers
+     with a refusal like any other.
+   - Addresses are built from titles with accents removed, so "Über" is "uber". A
+     video must be on YouTube, Twitch or Vimeo.
+
    Not in submit yet: uploading the Portal export and a template's files; inviting
    accounts as collaborators, which is done from the page after approval; checking
-   that a cover address is really a picture; any limit on how often someone may
-   submit; and a live card preview.
+   that a cover address is really a picture; a place for someone to see their own
+   waiting submissions; and a live card preview.
 6. **Admin:** the review queue and the two review screens first, then reports, the
    experience list, and the rest of the side menu.
    Built so far, 2026-10-13: the review queue at `/admin`, listing new submissions the
    longest wait first, and the screen for reviewing one at `/admin/review/<id>`. It
    shows what was submitted beside its checks: what Portal says about the code right
    now, whether Portal calls it something else, other pages using the same code,
-   unfamiliar hosts its description loads pictures from, a missing cover, a thin
-   description, and how the submitter's earlier submissions went. Approving publishes
-   it; turning it down needs a note, which its owner then sees on its page. A
-   submission is decided once, even if two moderators press at the same moment.
+   unfamiliar hosts its description, cover or gallery load pictures from, a missing
+   cover, a thin description, and how the submitter's earlier submissions went.
+   Approving publishes it; turning it down needs a note, which its owner then sees on
+   its page, and a few common notes can be started with a press. A submission is
+   decided once, even if two moderators press at the same moment. The queue shows the
+   100 longest waits with a count of everything waiting, and marks a submission whose
+   code another page already has.
 
    These screens are drawn in the browser (`ssr: 'data-only'`), with the guard and
    the data on the server. The list of familiar picture hosts is a constant in

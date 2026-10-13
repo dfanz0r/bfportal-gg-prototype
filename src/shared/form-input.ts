@@ -17,23 +17,33 @@ export const formBoolean = z.union([
  * The validator for a function that a form may post to. `viaForm` says which
  * way it was called; a form's `back` field is where to send the visitor
  * afterwards.
+ *
+ * It never throws. Input that does not read comes back with `input` null and
+ * what is wrong in `errors`, for the handler to answer as a refusal like any
+ * other. A thrown error would reach the visitor as a broken page.
  */
 export function formOr<T extends z.ZodType>(schema: T) {
   return (given: z.input<T>) => {
     const raw: unknown = given
-    if (raw instanceof FormData) {
-      return {
-        input: schema.parse(formFields(raw)) as z.output<T>,
-        viaForm: true,
-        back: safeBackPath(raw.get('back')),
-      }
-    }
+    const viaForm = raw instanceof FormData
+    const read = schema.safeParse(viaForm ? formFields(raw) : raw)
     return {
-      input: schema.parse(raw) as z.output<T>,
-      viaForm: false,
-      back: '/',
+      input: read.success ? (read.data as z.output<T>) : null,
+      errors: read.success ? undefined : fieldErrors(read.error),
+      viaForm,
+      back: viaForm ? safeBackPath(raw.get('back')) : '/',
     }
   }
+}
+
+/** What is wrong with some input, by field, in words to show beside it. */
+export function fieldErrors(error: z.ZodError) {
+  const errors: Record<string, string> = {}
+  for (const issue of error.issues) {
+    const name = String(issue.path[0] ?? 'form')
+    errors[name] ??= issue.message
+  }
+  return errors
 }
 
 /**
