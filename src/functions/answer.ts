@@ -9,3 +9,8 @@ export function formAnswer(result: { ok: true } | Refusal, back: string) {
   const to = !result.ok && result.reason === 'signed-out' ? '/login' : back
   return new Response(null, { status: 303, headers: { Location: to } })
 }
+
+/** A redirect for a plain HTML form. Throw it from the handler. */
+export function redirectTo(path: string) {
+  return new Response(null, { status: 303, headers: { Location: path } })
+}

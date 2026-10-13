@@ -50,6 +50,10 @@ export function experienceHead(data: Experience | undefined) {
             { name: 'twitter:card', content: 'summary_large_image' },
           ]
         : [{ name: 'twitter:card', content: 'summary' }]),
+      // One that only its owner and the moderators can open is not for search.
+      ...(data.status === 'published'
+        ? []
+        : [{ name: 'robots', content: 'noindex' }]),
     ],
     links: [{ rel: 'canonical', href: address }],
   }
@@ -159,6 +163,35 @@ export function ExperiencePage(props: { data: Experience }) {
       </section>
 
       <div class="wrap pt-6 pb-20 sm:pt-8 sm:pb-24">
+        {/* Only its owner and the moderators get this far before it is
+            published. */}
+        <Show when={data().status !== 'published'}>
+          <div class="mb-6 grid gap-1 border-l-2 border-steel bg-steel/8 px-4 py-3 text-sm text-fg-2">
+            <Show
+              when={data().status === 'rejected'}
+              fallback={
+                <p>
+                  <b class="font-semibold text-fg">
+                    {data().status === 'pending'
+                      ? 'Waiting for a moderator.'
+                      : 'Not published.'}
+                  </b>{' '}
+                  Only its owner and the moderators can see this page.
+                </p>
+              }
+            >
+              <p>
+                <b class="font-semibold text-fg">
+                  A moderator turned this down.
+                </b>{' '}
+                Only its owner and the moderators can see this page.
+              </p>
+              <Show when={data().reviewNote}>
+                {(note) => <p>Their note: {note()}</p>}
+              </Show>
+            </Show>
+          </div>
+        </Show>
         <Show when={data().unavailable || data().bugged || data().xpFarm}>
           <div class="mb-6 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
             <Show when={data().unavailable}>

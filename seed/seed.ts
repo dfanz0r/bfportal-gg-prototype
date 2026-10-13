@@ -9,6 +9,7 @@ import * as schema from '../src/server/db/schema'
 import { renderMarkdown } from '../src/server/markdown'
 import type { ExperienceType, Game } from '../src/shared/content'
 import type { Role } from '../src/shared/roles'
+import { slugify } from '../src/shared/slug'
 import {
   bf6Maps,
   bf2042Maps,
@@ -84,13 +85,6 @@ const portalTagsSchema = z.object({
 function readJson<T>(file: string, shape: z.ZodType<T>) {
   const text = readFileSync(new URL(file, import.meta.url), 'utf8')
   return shape.parse(JSON.parse(text))
-}
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 }
 
 /** A lookup that names what is missing, so a typo in the data is findable. */

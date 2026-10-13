@@ -34,3 +34,7 @@ export const tag =
 /** One choice in a row of filter links. Mark the current one `aria-current`. */
 export const pill =
   'inline-flex h-[34px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-medium text-fg-2 hover:border-steel hover:text-fg aria-[current=true]:border-accent aria-[current=true]:text-fg'
+
+/** A text field. A `<select>` and a `<textarea>` take it too. */
+export const field =
+  'w-full border border-line-strong bg-surface-1 px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-3 focus:border-steel'

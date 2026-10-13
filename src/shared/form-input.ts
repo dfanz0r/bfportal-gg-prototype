@@ -23,7 +23,7 @@ export function formOr<T extends z.ZodType>(schema: T) {
     const raw: unknown = given
     if (raw instanceof FormData) {
       return {
-        input: schema.parse(Object.fromEntries(raw)) as z.output<T>,
+        input: schema.parse(formFields(raw)) as z.output<T>,
         viaForm: true,
         back: safeBackPath(raw.get('back')),
       }
@@ -34,4 +34,17 @@ export function formOr<T extends z.ZodType>(schema: T) {
       back: '/',
     }
   }
+}
+
+/**
+ * A form's fields as an object. A name that appears more than once, as a
+ * group of checkboxes does, becomes a list.
+ */
+export function formFields(form: FormData) {
+  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {}
+  for (const name of new Set(form.keys())) {
+    const values = form.getAll(name)
+    fields[name] = values.length > 1 ? values : values[0]
+  }
+  return fields
 }

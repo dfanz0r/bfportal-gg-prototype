@@ -1727,6 +1727,19 @@ was settled first, so the screens are built against seed data and the import fol
    more built on top of the schema.
 5. **Writes:** like, report, submit with the code lookup and the export upload, edit,
    update posts, starting a playtest, and the Discord webhooks.
+   Built so far, 2026-10-13: like and report, which set the pattern every write
+   follows (see "Writes" in `AGENTS.md`); the gametools lookup; and submit. The
+   submit page takes the game and a code or Portal link in its address, shows what
+   Portal says, and starts the form from it. On submit the code is looked up again,
+   so the rotation, Portal's tags and the paid-game flag come from Portal and not from
+   the form; if gametools does not answer, the submission still goes in. A pending or
+   rejected experience can be opened by its owner and the moderators, with a note
+   saying so.
+
+   Not in submit yet: uploading the Portal export and a template's files; inviting
+   accounts as collaborators, which is done from the page after approval; checking
+   that a cover address is really a picture; any limit on how often someone may
+   submit; and a live card preview.
 6. **Admin:** the review queue and the two review screens first, then reports, the
    experience list, and the rest of the side menu.
 7. **Edges:** public API, Atom feeds, sitemap, robots, redirects from the old
