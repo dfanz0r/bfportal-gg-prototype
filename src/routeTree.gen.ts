@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as ForumRouteImport } from './routes/forum'
 import { Route as GuidesRouteImport } from './routes/guides'
@@ -27,6 +28,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisclaimerRoute = DisclaimerRouteImport.update({
+  id: '/disclaimer',
+  path: '/disclaimer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsRoute = EventsRouteImport.update({
@@ -97,6 +103,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
@@ -130,6 +138,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/events': typeof EventsRoute
   '/forum': typeof ForumRoute
   '/guides': typeof GuidesRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/disclaimer'
     | '/events'
     | '/forum'
     | '/guides'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/disclaimer'
     | '/events'
     | '/forum'
     | '/guides'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/disclaimer'
     | '/events'
     | '/forum'
     | '/guides'
@@ -197,6 +209,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DisclaimerRoute: typeof DisclaimerRoute
   EventsRoute: typeof EventsRoute
   ForumRoute: typeof ForumRoute
   GuidesRoute: typeof GuidesRoute
@@ -219,6 +232,13 @@ declare module '@tanstack/solid-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disclaimer': {
+      id: '/disclaimer'
+      path: '/disclaimer'
+      fullPath: '/disclaimer'
+      preLoaderRoute: typeof DisclaimerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events': {
@@ -317,6 +337,7 @@ declare module '@tanstack/solid-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DisclaimerRoute: DisclaimerRoute,
   EventsRoute: EventsRoute,
   ForumRoute: ForumRoute,
   GuidesRoute: GuidesRoute,

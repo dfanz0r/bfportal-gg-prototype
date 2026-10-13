@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
+import { disclaimer } from '../shared/legal'
 import { links } from '../shared/links'
 import { type SectionPath, section } from '../shared/sections'
 import { Icon, type IconName } from './icon'
@@ -46,6 +47,8 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
 ]
 
 const columnLink = 'text-sm text-fg-2 hover:text-fg'
+const heading =
+  'font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase'
 
 function FooterItem(props: { link: FooterLink }) {
   return (
@@ -91,9 +94,7 @@ export function SiteFooter() {
         <For each={COLUMNS}>
           {(column) => (
             <div>
-              <h2 class="mb-3.5 font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase">
-                {column.title}
-              </h2>
+              <h2 class={`${heading} mb-3.5`}>{column.title}</h2>
               <ul class="grid gap-[9px]">
                 <For each={column.links}>
                   {(link) => (
@@ -108,11 +109,27 @@ export function SiteFooter() {
         </For>
       </div>
 
+      {/* On every page, at reading size: the site shows EA's game content. */}
+      <section class="border-t border-line" aria-labelledby="footer-disclaimer">
+        <div class="wrap grid gap-2 py-6">
+          <h2 id="footer-disclaimer" class={heading}>
+            Disclaimer
+          </h2>
+          <For each={disclaimer}>
+            {(paragraph) => (
+              <p class="max-w-[78em] text-sm text-fg-2">{paragraph}</p>
+            )}
+          </For>
+        </div>
+      </section>
+
       <div class="border-t border-line">
-        <p class="wrap py-4 text-[12.5px] text-fg-3">
-          © 2026 bfportal.gg. A community project, not affiliated with
-          Electronic Arts or DICE.
-        </p>
+        <div class="wrap flex flex-wrap justify-between gap-x-6 gap-y-1 py-4 text-[12.5px] text-fg-3">
+          <p>© 2026 bfportal.gg. A community project.</p>
+          <Link to="/disclaimer" class="hover:text-fg">
+            Disclaimer
+          </Link>
+        </div>
       </div>
     </footer>
   )
