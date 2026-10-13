@@ -893,14 +893,53 @@ no key. The site already uses the 2042 equivalent.
 | Tags | Portal's own tags, such as `custom_scripted` and `Core_Modes` |
 | Still loads | `publishStateType` and `moderationState`, which the nightly validation can use |
 
-It does not return the script, the blocks or the spatial data: only the export has
-those. So the two sources complement each other. The code gives the listing details and
-the cover image; the export gives the files, exactly what a template is built with, and
-the precise "built with" types. From the lookup alone, `custom_scripted` says a script
-or blocks are used but not which.
+For most experiences it does not return the script, the blocks or the spatial data,
+and only the export has those. So the two sources complement each other. The code
+gives the listing details and the cover image; the export gives the files, exactly
+what a template is built with, and the precise "built with" types. From the lookup
+alone, `custom_scripted` says a script or blocks are used but not which.
+
+Corrected 2026-10-13 after looking up 34 codes for the seed data: one of them, `zd7hy`,
+did come back with everything. Its reply held the rules as `modRules` and three
+attachments: `Script.ts`, a spatial layout of about 1.2 MB, and `blacklist.json`. What
+makes Portal include them for one experience and not the others is not known; the
+other four tagged `custom_scripted` had none. When they are present, "built with" can
+be read from the lookup with no upload. They are the creator's work, so the site does
+not store or show them unless the creator offers the experience as a template.
+
+Also learned from those 34:
+
+| Field | What was seen |
+|---|---|
+| Progression mode | `portal-default`, `portal-default-backfillai`, `portal-unranked` and `official-progression`. EA's own website labels only `portal-default` as full XP and the other three as limited, which is the rule the XP badge uses |
+| `licenseRequirements` | `multiplayer` alone, or with `premium_san` and `premium_subscription`. It matches the `isPremium` flag on EA's browse listing exactly. Read as: the experience needs the paid game. Not confirmed |
+| Creator | `playerCreator` or `trustedCreator`. The seven trusted ones are the standing official playlists such as "Hardcore Conquest" |
+| Maps | 22 level ids with display names and pictures, kept in `seed/bf6-experiences.json`. Two came back with no display name or picture, `MP_DryLake` (Area 51) and `MP_Paradise` (Vegas Strip): they had not been released when the data was gathered, and their names were entered by hand. So a map can be in a rotation before the lookups know its name, and a page falls back to the level id |
+| Modes | Conquest large, Breakthrough Large, Rush, Domination, Team deathmatch, Squad deathmatch, Custom, and three Redsec modes |
+| Publish state | Every one `PUBLISHED`, and every compile status `OK`, so there is still no example of either going wrong |
 
 The creator comes back as account ids, not a name, and `/bf6/experience/` needs an auth
-token, so it is not used.
+token, so it is not used. A name can sometimes be had in a second step, tried
+2026-10-13: `/bf6/stats/?playerid=<personaId>&platform=pc` returns `userName`. It named
+12 of the 22 creators behind the seed experiences and answered "Player not found" for
+the other ten on every platform tried, the trusted creator of the official playlists
+among them. EA's own page for an experience shows the name, but loads it in the
+browser from a service that needs a signed-in token; it is not in the page's HTML.
+So a Portal creator's name is a nice extra when it resolves, never something a page
+depends on. On bfportal.gg the creator is the account that submitted the experience.
+
+EA's website has its own service for this, `drop-api.ea.com/ugx/battlefield-6/item/<playground id>`,
+which needs the bearer token of a signed-in visitor. With a maintainer's own token it
+was used once, on 2026-10-13, to fill in the seed data: it named all 22 creators and
+also gave created and updated dates, English tag names and EA's own map names and
+pictures. For one of the twelve creators gametools had named, EA's name was different,
+so gametools' player lookup is not reliable for this. The site itself does not call
+this service: a personal token expires and is not the site's to use. Token files are
+git-ignored (`.auth.*`).
+
+`/bf6/shared_playground/` answers by code as well, and adds two things the playground
+lookup lacks: when the design was last updated, and each tag's English name ("Custom
+Logic" for `custom_scripted`), which the tag list itself does not give.
 
 Battlefield 6 codes are not 2042's six characters. The eight seen were four or five
 letters and digits (`12as4`, `hyqt`, `1264g`), returned in lower case and matched
