@@ -10,7 +10,6 @@ import { iconButton } from './ui'
 
 const SOCIAL: { name: IconName; label: string; href: string }[] = [
   { name: 'discord', label: 'Discord', href: links.discord },
-  { name: 'twitter', label: 'Twitter', href: links.twitter },
   { name: 'github', label: 'GitHub', href: links.github },
   { name: 'patreon', label: 'Patreon', href: links.patreon },
 ]
