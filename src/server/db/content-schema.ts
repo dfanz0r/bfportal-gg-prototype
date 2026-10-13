@@ -200,6 +200,9 @@ export const maps = pgTable(
     name: text('name').notNull(),
     levelId: text('level_id'),
     imageUrl: text('image_url'),
+    // Whether playing on it needs the paid game. Null when not known, and for
+    // a game with no free version.
+    requiresFullGame: boolean('requires_full_game'),
     sortOrder: integer('sort_order').notNull().default(0),
   },
   (table) => [
@@ -276,8 +279,18 @@ export const experiences = pgTable(
     categoryId: integer('category_id')
       .notNull()
       .references(() => categories.id),
-    // A Prefab has a Portal URL and may have no code.
+    // A template may have no code.
     code: text('code'),
+    // Portal's own id for the experience. An experience has two pages on
+    // EA's side and both addresses are built from this: the public page, where
+    // players find it, and the editor link, where another creator opens a
+    // copy. The second only works when its creator allows copying.
+    playgroundId: text('playground_id'),
+    // Whether its creator lets others copy it in the Portal editor. Null when
+    // nobody has said.
+    copyAllowed: boolean('copy_allowed'),
+    // The link the old site stored, kept as imported. New experiences store
+    // the playground id instead.
     expUrl: text('exp_url'),
     coverImgUrl: text('cover_img_url'),
     vidUrl: text('vid_url'),
@@ -300,6 +313,11 @@ export const experiences = pgTable(
     // The progression mode gametools reports, as Portal names it:
     // "portal-default" earns full XP, anything else is restricted.
     xpMode: text('xp_mode'),
+    // Whether playing it needs the paid game, or the free version will do.
+    // Portal reports it for a code; without one it follows from the maps: one
+    // paid map is enough. Null when not known, and for a game with no free
+    // version.
+    requiresFullGame: boolean('requires_full_game'),
     // The SDK release its creators last said it works with. Neither the
     // export nor the code lookup carries one, so it is chosen on the form.
     sdkVersionId: integer('sdk_version_id'),
@@ -346,6 +364,7 @@ export const experiences = pgTable(
     index('experiences_owner_idx').on(table.ownerId),
     index('experiences_category_idx').on(table.categoryId),
     index('experiences_code_idx').on(table.code),
+    index('experiences_playground_idx').on(table.playgroundId),
     foreignKey({
       name: 'experiences_sdk_version_fk',
       columns: [table.sdkVersionId, table.game],
@@ -525,8 +544,9 @@ export const snippets = pgTable(
     categoryId: integer('category_id').references(() => categories.id),
     // The Portal export, validated before it is stored.
     expJson: jsonb('exp_json'),
-    // The Script.ts attachment, extracted from the export on save.
-    code: text('code').notNull().default(''),
+    // The Script.ts attachment, extracted from the export on save. Not
+    // `code`: on an experience and a playtest that is the Portal share code.
+    script: text('script').notNull().default(''),
     vidUrl: text('vid_url'),
     repoUrl: text('repo_url'),
     // The SDK release the script was last said to work with.

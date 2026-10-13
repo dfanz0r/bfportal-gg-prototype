@@ -134,6 +134,27 @@
       "when": 1791872787220,
       "tag": "0018_creator_edit_access",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791878962398,
+      "tag": "0019_requires_full_game",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791879071150,
+      "tag": "0020_playground_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791880726437,
+      "tag": "0021_rename_snippet_script",
+      "breakpoints": true
     }
   ]
 }
