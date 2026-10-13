@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql as raw } from 'drizzle-orm'
 import {
   afterAll,
   afterEach,
@@ -107,7 +107,8 @@ async function storedUser(discordId: string) {
 
 describe('signing in with Discord', () => {
   beforeEach(async () => {
-    await db.delete(user)
+    // Other test files leave rows that reference users.
+    await db.execute(raw`truncate ${user} cascade`)
   })
 
   afterEach(() => {
