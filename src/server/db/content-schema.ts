@@ -269,8 +269,8 @@ export const experiences = pgTable(
     game: gameEnum('game').notNull(),
     status: contentStatusEnum('status').notNull().default('pending'),
     title: text('title').notNull(),
-    // Markdown is what the owner wrote. The HTML is rendered and sanitized
-    // from it on every write, and is what pages show.
+    // Markdown is what the owner wrote. The HTML is what pages show, and is
+    // only ever written by `renderMarkdown` in src/server/markdown.ts.
     descriptionMd: text('description_md').notNull().default(''),
     descriptionHtml: text('description_html').notNull().default(''),
     ownerId: text('owner_id')

@@ -6,6 +6,7 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import { z } from 'zod'
 
 import * as schema from '../src/server/db/schema'
+import { renderMarkdown } from '../src/server/markdown'
 import type { ExperienceType, Game } from '../src/shared/content'
 import type { Role } from '../src/shared/roles'
 import {
@@ -90,26 +91,6 @@ function slugify(text: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-}
-
-/**
- * Sample text as HTML: escaped, one paragraph per blank line. A stand-in for
- * the Markdown renderer, which the seed should call once it exists.
- */
-function textToHtml(text: string) {
-  const escapeHtml = (value: string) =>
-    value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-  return text
-    .split(/\n{2,}/)
-    .filter((paragraph) => paragraph.trim())
-    .map(
-      (paragraph) => `<p>${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`,
-    )
-    .join('\n')
 }
 
 /** A lookup that names what is missing, so a typo in the data is findable. */
@@ -453,7 +434,7 @@ export async function seed(db: Db, now = new Date()) {
           status: 'published',
           title: real.title,
           descriptionMd: real.description,
-          descriptionHtml: textToHtml(real.description),
+          descriptionHtml: renderMarkdown(real.description),
           ownerId: userId(slugify(real.creator.name)),
           categoryId: categoryId('Multiplayer'),
           code: real.code,
@@ -509,7 +490,7 @@ export async function seed(db: Db, now = new Date()) {
           status,
           title: item.title,
           descriptionMd: item.description,
-          descriptionHtml: textToHtml(item.description),
+          descriptionHtml: renderMarkdown(item.description),
           ownerId: userId(item.owner),
           categoryId: categoryId(item.category),
           code: item.code,
@@ -626,7 +607,7 @@ export async function seed(db: Db, now = new Date()) {
           status: 'published' as const,
           title: snippet.title,
           descriptionMd: snippet.description,
-          descriptionHtml: textToHtml(snippet.description),
+          descriptionHtml: renderMarkdown(snippet.description),
           ownerId: userId(snippet.owner),
           categoryId: categoryId(snippet.category),
           script: snippet.script,
@@ -667,7 +648,7 @@ export async function seed(db: Db, now = new Date()) {
             authorId: userId(update.author),
             title: update.title,
             bodyMd: update.body,
-            bodyHtml: textToHtml(update.body),
+            bodyHtml: renderMarkdown(update.body),
             status: update.status ?? ('published' as const),
             publishedAt: published ? ago(update.age) : null,
             reviewedBy: published ? moderator : null,
@@ -696,7 +677,7 @@ export async function seed(db: Db, now = new Date()) {
           code: playtest.code,
           summary: playtest.summary,
           briefMd: playtest.brief,
-          briefHtml: textToHtml(playtest.brief),
+          briefHtml: renderMarkdown(playtest.brief),
           hostId: userId(playtest.host),
           regions: playtest.regions,
           opensAt,
