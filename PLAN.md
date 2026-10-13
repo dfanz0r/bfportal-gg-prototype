@@ -215,6 +215,7 @@ tables use `timestamptz` throughout.
 | `code`, `exp_url` | Six characters in 2042, four or five in Battlefield 6; URL must be on `portal.battlefield.com` |
 | `cover_img_url`, `vid_url` | External URLs, as today |
 | `repo_url` | New. The project's source repository; owner-editable, so it goes through moderation like any edit |
+| `files_url` | New. A link to files too large to upload: Dropbox, Google Drive or GitHub |
 | `max_players`, `max_bots` | |
 | `featured`, `trending` | Admin only |
 | `bugged`, `broken`, `xp_farm` | Health flags |
@@ -319,7 +320,7 @@ something still in progress, a call for testers.
 | `experience_id`, `snippet_id` | Exactly one is set, enforced by the database. Maps and tools get a column each when they get tables |
 | `author_id` | The owner or a listed creator |
 | `title`, `body_md`, `body_html` | Markdown, rendered and sanitised on write, as for descriptions |
-| `status`, `published_at` | The same four states as an experience. Whether a post starts `published` or `pending` is an open decision |
+| `status`, `published_at` | The same four states as an experience. A post starts `pending` and a moderator approves it |
 | `reviewed_by`, `reviewed_at`, `review_note` | A moderator's removal or approval |
 | `deleted_at` | The author's own delete |
 
@@ -390,7 +391,9 @@ Rules:
   export only fills the form and nothing is stored.
 - Files are served as downloads or shown as escaped text, never as a page: a fixed
   plain-text or JSON content type, `nosniff`, and `Content-Disposition: attachment`.
-- A size limit per file and per project, and only `.json`, `.ts` and `.tscn`.
+- 2 MB per file, and only `.json`, `.ts` and `.tscn`. A larger file, typically a big
+  Godot scene, is hosted elsewhere and linked through `experiences.files_url`, which
+  accepts Dropbox, Google Drive and GitHub addresses.
 - Files are part of what a moderator reviews, on submission and on every edit.
 
 Snippets already keep their export in `snippets.exp_json`. They can move to this table
@@ -453,19 +456,19 @@ The site keeps that shape:
 | `regions` | Any of EU, NA, SA, Asia and OCE. Each maps to a Tester role to mention |
 | `opens_at`, `closes_at` | A playtest can be posted at a set time, and stays open until an end date or until the host closes it |
 | `together_at` | Optional. For modes that need a full lobby: when to play it together |
-| `announced_at`, `reminded_at`, `discord_url` | The Discord post and the play-together reminder, each sent once |
+| `status`, `reviewed_by`, `reviewed_at`, `review_note` | Held as `pending` until a moderator approves it; nothing is shown or posted before that |
+| `announced_at`, `reminded_at` | The Discord post and the play-together reminder, each sent once |
+| `discord_url` | The Discord thread where testers report back |
 | `result_update_id` | The update post with what changed |
 
-`playtest_reports` holds what testers found: the site's version of the feedback thread.
-A report has an author, an optional region and a markdown body, and a tester can post
-more than one.
+Feedback stays in Discord, agreed 2026-10-12. Each playtest has a thread there, and the
+site links to it. The site stores no reports of its own.
 
 Where it shows:
 
 - A playtests page: open ones, newest first, with filters for region, game and what it
   is built with. It sits beside community events under Events.
-- A page per playtest: the brief, the code, the maps, and the reports with a box to add
-  one.
+- A page per playtest: the brief, the code, the maps, and a link to its Discord thread.
 - The home page: the newest open ones.
 - The experience page: its open playtest, and a way for its creators to start one.
 - An experience's update feed, when the host posts the results.
@@ -475,9 +478,10 @@ Replacing the bot means the site does what the bot did:
 - **Posting.** The site posts each playtest to the playtests channel through a Discord
   webhook, mentioning the Tester roles for its regions. A webhook can mention a role if
   the role is set to be mentionable.
-- **Feedback.** Reports are written on the playtest's page. If the channel is a Discord
-  forum channel, the webhook can open a thread per playtest as well, and the page links
-  to it; in an ordinary text channel a webhook cannot start a thread.
+- **Feedback.** In a Discord thread per playtest, linked from the playtest's page. The
+  thread has to be made by something: a webhook can open one only in a forum channel,
+  and a bot can open one anywhere. Whichever makes it, its address is saved on the
+  playtest.
 - **Reminding.** Only when a play-together time is set: one post shortly before.
 - **Tester roles.** People keep taking them in Discord. Handing out roles from the site
   would need a real bot account, which is not planned.
@@ -530,7 +534,8 @@ exceptions listed under "Behaviour not carried over".
 | Report bugged, broken or XP farm | Any other logged-in user | A report row; no flag changes |
 | Set featured, trending or any health flag | Admin | Immediate |
 | Unpublish | Moderator, admin | `unpublished` |
-| Post an update | Owner, listed creator | New. On a published project only. Published at once or held for approval: see "Open decisions" |
+| Post an update | Owner, listed creator | New. On a published project only. Held for approval, like a submission |
+| Start a playtest | Owner, listed creator; any user for something with no page | New. Held for approval; approving it posts it to Discord |
 | Remove an update | Its author; moderator, admin | New. The author's delete is immediate; a moderator's removal carries a note |
 | Scheduled validation | Job | Sets or clears `broken` from gametools.network |
 
@@ -600,7 +605,7 @@ What "feature complete" means, by area.
 **Playtests (new)**
 
 - Starting a playtest with a brief and regions, a feed of open ones, a page per
-  playtest with tester reports, and Discord posts by webhook. Replaces the Discord
+  playtest linking to its Discord thread, and Discord posts by webhook. Replaces the Discord
   playtest bot.
 - An "open playtest" panel on the experience page, and results posted as an update.
 
@@ -843,17 +848,17 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | `allow_editing` | Keep the column, hide the checkbox until it means something |
 | Gametools data on the experience page | Fetch on the server with a short cache and a timeout, so the page renders complete |
 | Account email | Optional for now: stored when Discord provides one, a placeholder otherwise, and not used for anything. The site may want to require a real email later, for example to tell a user about a moderation decision. That means deciding what happens to Discord accounts that have none, and to existing users who signed up without one |
-| Moderating update posts | Publish at once for owners and creators of an already published project, notify the moderators' Discord channel, and let moderators remove a post with a note. Holding every post for approval would make status updates slow and add to the queue. A rate limit applies either way |
+| Moderating new kinds of content | **Agreed 2026-10-12:** the same pipeline as the old site. Update posts, playtests and uploaded files are all held for a moderator, like submissions and edits. Loosen it later if the queue becomes the problem |
 | Who may post updates | The owner and the listed creators |
 | Repository link | Accept `https` URLs on a short allow-list of hosts, starting with GitHub. Showing stars or the latest commit from GitHub's API can come later |
 | Project stage | Not built. A "work in progress / released / discontinued" label on a project would let unfinished tools be listed honestly; decide when tools get their own section |
 | Announcing updates | Do not post every update to the public Discord channel; the feed is the place for them |
 | Where uploaded files are stored | In the database. They are text, small, and rarely read, and it keeps the site free of file storage. Move to object storage only if binary files are ever allowed |
-| File size limits | 2 MB per file and 10 MB per project to start, which is far above the 30 KB export examined |
+| File size limits | **Agreed 2026-10-12:** 2 MB per file, Godot scenes included. Anything larger is hosted elsewhere and linked, as some existing experiences already do with Dropbox, Google Drive or GitHub |
 | Sharing uploaded files | **Agreed 2026-10-12:** sharing files is what makes an experience a template, a tag the creator sets on creation. There is no separate "share" switch |
-| Code on a template | Optional, as it was for prefabs: a template may exist only as files. An experience that is not a template still needs a code |
+| Code on a template | **Agreed 2026-10-12:** optional. A template may exist only as files, and tools and add-ons will not need a code either when they get pages. An experience that is not a template still needs one |
 | The Discord playtest bot | **Agreed 2026-10-12, for now:** the site replaces it. Scheduling and sign-up happen on the site; a webhook announces and reminds in Discord. Revisit if people miss scheduling from inside Discord |
-| Where playtest feedback lives | On the playtest's page, with a Discord thread as well if the channel is a forum channel. Decide whether Discord replies should count, which a webhook cannot read |
+| Where playtest feedback lives | **Agreed 2026-10-12:** in the playtest's Discord thread, linked from the site. Open: what creates the thread, a forum-channel webhook or a bot |
 | Who may start a playtest | The owner or a listed creator for an experience with a page; any logged-in user for something with no page yet, with a rate limit |
 | Playtests for unpublished work | Allowed, shown as "No page yet". A playtest never exposes an unpublished experience's page |
 | Postgres version | Move to a current major during the migration, since the data is reloaded anyway. Development runs 18 |
