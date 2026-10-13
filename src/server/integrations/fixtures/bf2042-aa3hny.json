@@ -1,0 +1,64 @@
+{
+  "progressionMode": {
+    "value": "portal-unranked"
+  },
+  "originalPlayground": {
+    "playgroundName": "PAYLOAD (OF AGES)",
+    "playgroundDescription": "One team needs to deliver the payload to the final outpost while the other team is trying to stop it or even push it back to the last checkpoint. The payload is moved by being close to it with more people than the other team.",
+    "playgroundId": "00000000-0000-0000-0000-000000000000",
+    "mapRotation": {
+      "maps": [
+        {
+          "mapname": "Exposure",
+          "mode": "Custom",
+          "gameSize": 24,
+          "rounds": 1,
+          "image": "https://cdn.gametools.network/maps/bf2042/Map_Art_BF2042_RID_L-66e845a2.png"
+        },
+        {
+          "mapname": "Valparaiso",
+          "mode": "Custom",
+          "gameSize": 24,
+          "rounds": 1,
+          "image": "https://cdn.gametools.network/maps/bf2042/Map_Art_BFBC2_VP_L-600385e2.png"
+        },
+        {
+          "mapname": "Battle of the Bulge",
+          "mode": "Custom",
+          "gameSize": 24,
+          "rounds": 1,
+          "image": "https://cdn.gametools.network/maps/bf2042/Map_Art_BF1942_BB_L-2559980c.png"
+        }
+      ]
+    }
+  },
+  "tag": [
+    {
+      "id": "mapdefault_era"
+    },
+    {
+      "id": "custom_scripted"
+    },
+    {
+      "id": "mastery_restricted"
+    },
+    {
+      "id": "no_vehicles"
+    },
+    {
+      "id": "custom_vehicle_settings"
+    },
+    {
+      "id": "ai_enabled"
+    },
+    {
+      "id": "even_team_sizes"
+    },
+    {
+      "id": "sym_team_settings"
+    },
+    {
+      "id": "custom_spawning"
+    }
+  ]
+}

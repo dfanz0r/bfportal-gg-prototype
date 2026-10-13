@@ -1,0 +1,97 @@
+{
+  "playElement": {
+    "id": "2a5ea060-9aa2-11f1-89bb-9e77d3f592d2",
+    "designId": "afd5fe70-9b1d-11f1-88ce-5685fb2f13ba",
+    "creator": {
+      "playerCreator": {
+        "player": {
+          "platform": "PC"
+        }
+      }
+    },
+    "name": "Air Vehicle Sandbox",
+    "description": {
+      "value": "Test every air vehicle in an open sandbox"
+    },
+    "playElementSettings": {},
+    "publishStateType": "PUBLISH_STATE_TYPE_PUBLISHED",
+    "thumbnailUrl": {
+      "value": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_MP_01-ab6fbd7c.jpg"
+    },
+    "moderationState": "MODERATION_STATE_TYPE_IN_REVIEW",
+    "shortCode": {
+      "value": "1264g"
+    }
+  },
+  "playElementDesign": {
+    "designId": "afd5fe70-9b1d-11f1-88ce-5685fb2f13ba",
+    "designName": "Remix for Coupe(Air Vehicle Sandbox)",
+    "designMetadata": {
+      "progressionMode": {
+        "value": "portal-unranked"
+      }
+    },
+    "mapRotation": {
+      "maps": [
+        {
+          "levelName": "MP_Portal_Sand",
+          "levelLocation": "ModBuilderCustom0",
+          "rounds": 1,
+          "allowedSpectators": 4,
+          "teamComposition": {
+            "teams": [
+              {
+                "teamId": 1,
+                "capacity": 12
+              },
+              {
+                "teamId": 2,
+                "capacity": 12
+              }
+            ],
+            "balancingMethod": "EVEN_NUMBERS"
+          },
+          "mapname": "Portal Sandbox",
+          "image": "https://cdn.gametools.network/maps/bf6/T_UI_Granite_Portal_07_Thumb_SML-b141ec28.jpg",
+          "mode": "Custom"
+        }
+      ],
+      "attributes": {}
+    },
+    "mutators": [
+      {
+        "name": "MaxPlayerCount_PerTeam",
+        "category": "WA_ST_Teams",
+        "kind": {
+          "mutatorSparseInt": {
+            "defaultValue": 12,
+            "size": 3
+          }
+        },
+        "id": "2976738751"
+      }
+    ],
+    "licenseRequirements": ["multiplayer"],
+    "tags": [
+      {
+        "tagId": "custom_scripted",
+        "metadata": {
+          "translations": [
+            {
+              "kind": "6",
+              "translationId": "ID_ARRIVAL_SERVERTAG_CUSTOM_SCRIPTED_TITLECASE"
+            },
+            {
+              "kind": "7",
+              "translationId": "ID_ARRIVAL_SERVERTAG_CUSTOM_SCRIPTED_DESC"
+            }
+          ]
+        }
+      }
+    ],
+    "attachmentCompileStatus": "ATTACHMENT_COMPILE_STATUS_OK"
+  },
+  "progressionMode": {
+    "value": "portal-unranked"
+  }
+}
