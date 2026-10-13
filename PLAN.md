@@ -538,8 +538,12 @@ How it behaves:
   tags and does not let a creator invent one. Tags set from a code lookup are added for
   them.
 - **One address parameter.** A tag's slug is unique within its game, so every tag
-  filter, whatever group it is in, is `?tag=<slug>`, repeatable. A slug the selected
-  game does not have is ignored, so a link survives switching tabs.
+  filter, whatever group it is in, is the one `tag` parameter. Several are joined with
+  dots, `?tag=bc2.bf3`: the router would write a real list as JSON and a comma would be
+  percent-encoded, while a dot is neither and no slug contains one. A repeated
+  `tag=…&tag=…`, which a form sends without script, is read the same way. A slug the
+  selected game does not have is ignored, so a link survives switching tabs. Within a
+  group any chosen tag will do; across groups all must hold.
 - **Admins manage it on one screen per game** (Categories and tags, admins only):
   groups in order, the tags in each with how many experiences use them, and add,
   rename, hide, move to another group, and merge.
@@ -1355,6 +1359,16 @@ What "feature complete" means, by area.
   code is published on Portal and its name matches, no other page uses the code, the
   export is valid and "built with" matches it, the cover image loads and its size, and
   how the submitter's earlier submissions went. Approve, or reject with a note.
+- A warning when what is being reviewed loads pictures from elsewhere, agreed
+  2026-10-13: "Loads pictures from i.imgur.com, tracker.example". Descriptions,
+  update posts and playtest briefs may include HTTPS pictures, as on the old site, and
+  every visitor's browser fetches them, so whoever hosts one learns who opened the
+  page. The site does not block them; the moderator sees the hosts and decides.
+  `pictureHosts` in `src/server/markdown.ts` gives the list. It shows on every kind of
+  review: submissions, edits, update posts and playtests. Only unfamiliar hosts raise
+  it: a short list of hosts everyone uses, such as imgur and GitHub, does not, so the
+  warning stays worth reading. That list is settings an admin can edit, drawn up when
+  the review screen is built.
 - Reviewing an edit shows live against proposed, field by field, with changed text
   marked and the unchanged fields listed.
 - Reports: counts per experience by kind, the flags set now, and "set flags" or
@@ -1519,8 +1533,10 @@ The same shape as today, so nothing about hosting has to change at once:
 - Jobs are CLI entry points in the same image, started by the host's scheduler. The
   current repository does not show how `validate` is scheduled today.
 - Configuration stays in environment variables: Discord client id and secret, the two
-  webhook id and token pairs, `OWNERS`, the Cloudflare credentials, the database URL.
-  One module validates them, and the server refuses to start if any is missing.
+  webhook id and token pairs, `OWNERS`, the Cloudflare credentials, the database URL,
+  and `SITE_URL`, the public address used in canonical links and previews, which
+  defaults to the sign-in address. One module validates them, and the server refuses
+  to start if any is missing.
 - HTML is not cached at Cloudflare for now. Caching it for requests with no session
   cookie is deferred; see "Rendering". The API keeps its five-minute cache headers.
 
@@ -1653,6 +1669,58 @@ was settled first, so the screens are built against seed data and the import fol
    events, playtests and profiles, built from the mockups against the seed data. Each page arrives
    with its head tags, its server-HTML test and working links without script; see
    "Rendering".
+   Built, 2026-10-13, each with a service and its tests, a server function, a route
+   loader and its head tags:
+   - the games registry;
+   - the Library, both tabs, with search kept in the address;
+   - the experience page: gallery, description, updates, map rotation, a template's
+     files with a download, more from the creator, and a side column with the code,
+     both Portal links, the open playtest, facts, tags and credits;
+   - the home page: banner, search, counts, trending experiences, recent updates, open
+     playtests, trending scripts, upcoming events and a band for each other game;
+   - the updates feed, filtered by kind of project and by game;
+   - events, upcoming and past;
+   - playtests: the open ones, how it works, recently closed, and a page per playtest
+     with its brief, code and Discord thread;
+   - scripts: the list by category, and a script's page with its code, description
+     and updates;
+   - profiles, with experiences (owned, and credited once accepted), scripts and
+     liked on tabs; a name anywhere links to its profile.
+
+   Left out of these for now: an SDK season filter in the Library; the like, share,
+   report, edit, "interested" and follow actions, which are writes; account settings;
+   one page per update post and per event; the weekly showcase and the "popular"
+   search chips, which have no data behind them yet; the code's roll-in; Atom feeds;
+   and the server-HTML tests, which need a way to render a route inside the test
+   runner. The page heads are plain bands with no artwork until the site has a
+   picture it may use. "Show ones that no longer load" is off by default for both
+   games, as the plan says and unlike the Battlefield 6 mockup. Profiles carry
+   `noindex`; the plan has not said whether they should be indexed.
+
+   Player counts are the largest lobby in the rotation, each lobby being the sum of
+   its teams' sizes as gametools reports them. That can count bot slots as players,
+   and a team with no stated size counts as none; the export's `humanCapacity` is the
+   better source when there is one.
+
+   Reviewed 2026-10-13, and changed as a result:
+   - logging out goes through Better Auth's HTTP handler, so its check of where a
+     request came from applies; the check is also kept on in tests, where Better
+     Auth turns it off by itself;
+   - the tests refuse to run against a database that is not on this machine;
+   - Markdown is rendered and sanitized in one place, `src/server/markdown.ts`, which
+     is the only writer of the HTML columns. It allows HTTPS pictures and marks every
+     link `nofollow noopener ugc`. This had to exist before the first form or the
+     import could write a description;
+   - a template stays listed when its code goes, as long as its files can be taken;
+   - dates do switch to the visitor's time zone; "show more" stops where the address
+     stops; searching by creator finds credits; a profile's lists page.
+
+   Still to check when there is production-sized data, at the import rehearsal: the
+   trending sort counts likes per row before it limits, and will be the first query
+   to slow down; the home page runs about fifteen queries and an experience page ten,
+   uncached. File downloads are not cached either. The service tests assert exact
+   counts against the seed, which will need loosening as the seed grows, and there
+   are still no browser tests.
 4. **The import,** against the test legacy database, then the same screens on imported
    data. This is where migration problems surface, so it must not slip behind stage 5.
 5. **Writes:** like, report, submit with the code lookup and the export upload, edit,
@@ -1703,6 +1771,7 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Creators and collaborators | **Asked for 2026-10-13,** and the schema is built this way: a creator is a name with no account or an account, both credited, and an account can be given edit access by the owner. **Agreed 2026-10-13:** edit access is always explicit and off by default. Proposed, not yet agreed: a newly added account must accept before it is shown; a collaborator cannot delete the experience or manage other creators; ownership changes hands only through an admin |
 | Old "additional creators" on import | **Agreed 2026-10-13:** they are imported as credited accounts without edit access. Edit access is opt-in, per person, by the owner |
 | Rendering | **Planned 2026-10-13:** server-rendered first load and client navigation for every public page, forms that work without script, and the admin drawn in the browser. See "Rendering". **Agreed 2026-10-13:** a path per game for the Library. Deferred: caching HTML at Cloudflare for requests with no session cookie |
+| Pictures in descriptions | **Agreed 2026-10-13:** allowed over HTTPS, as on the old site, in descriptions, update posts and playtest briefs. Nothing is blocked or proxied. A moderator is warned when what they are reviewing loads pictures from a host that is not on a short list of familiar ones |
 | Battlefield 6 categories | Open. The mockups use Multiplayer, Co-op and Solo as the main categories, with Style (Casual, Competitive, Showcase, Example) as a second label. Not confirmed: whether those three are right for Battlefield 6, and whether Style sits beside them or replaces them |
 | Who may create events and banners | Moderators and admins, in the admin. Not confirmed |
 | Artwork | Open. The mockups use crops of EA artwork as placeholders. The old site runs under Electronic Arts' Fansite Agreement, carries its disclaimer and links EA's map artwork directly; the rewrite's disclaimer now names both games. The agreement's own text was not found online, so what it permits is still to be checked against the copy the project holds |

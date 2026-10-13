@@ -37,7 +37,7 @@ and before type-checking. The route tree is committed; never edit it by hand.
 | `src/routes` | One file per page or HTTP endpoint. Thin: a route wires data to components |
 | `src/components` | Shared Solid components and `ui.ts`, the shared class lists |
 | `src/functions` | Server functions: the only way client code reaches `src/server` |
-| `src/server` | Database, auth, configuration. Never imported by client code |
+| `src/server` | Database, auth, configuration, and `services`, which hold the queries and rules. Never imported by client code, types included: take a type from the server function instead |
 | `src/shared` | Constants, types and text used on both sides |
 | `src/styles.css` | Design tokens and the few custom utilities |
 | `tests` | Test database setup. Tests sit beside the code they cover |
@@ -50,7 +50,11 @@ Rules that hold the structure together:
   `server.handlers`; everything else goes through a server function. The build fails
   when this is broken.
 - **A route guard is not protection.** It keeps a page out of view. Every server
-  function checks the session and the role itself.
+  function checks the session and the role itself, and has a test that each role it
+  should refuse is refused.
+- **Anything that changes state goes through Better Auth's HTTP handler or a POST
+  server function,** never a direct call that skips the check of where a request
+  came from. `src/server/auth/sign-out.ts` is the example.
 - **Configuration is read in one place,** `src/server/env.ts`. Nothing else touches
   `process.env`.
 - **A thing is named once.** Sections, external links, legal text and the values behind
@@ -66,17 +70,37 @@ Reach for what exists before writing markup:
 | A page | `PageLayout` (the head band, then content in the column) |
 | A page title | `head: () => pageTitle('…')` on the route |
 | A section with no pages yet | `SectionPlaceholder` |
+| A titled part of a page | `Section` |
 | A button or link that looks like one | `buttonAccent`, `buttonSteel`, `buttonGhost`, `iconButton` from `ui.ts` |
 | A heading or a paragraph | `display` and `body` from `ui.ts` |
+| A bordered block, a small label, a tag, a filter link | `panel`, `label`, `tag`, `pill` from `ui.ts` |
+| A row of filter links | `Pills` |
+| "Showing 12 of 40" and the link to more | `ShowMore` |
 | An icon | `<Icon name="…" />`; add new ones to `icon.tsx` |
 | A menu that opens | `<details>` with `createDismiss()` |
 | A user's picture | `Avatar` |
+| A person's name, linked to their profile | `PersonLink`; "by …" with a picture is `Byline` |
 | The site search | `SearchForm` |
+| An experience in a listing | `ExperienceCard` |
+| What an experience is built with | `BuiltWithTags` |
+| An update post | `UpdateCard` in a listing, `UpdatePost` in full |
+| A playtest, an event, a script in a listing | `PlaytestCard`, `EventCard`, `ScriptRow` |
+| "Name: value" rows | `Facts` with `Fact`s inside |
+| A source repository | `RepoLink` |
+| A share code that copies itself | `CopyCode`; any other text is `CopyText` |
+| A date or "5 hours ago" | `DateText`, which hydrates safely; never format a date in a component |
+| Something that may only differ from the server's HTML once the page runs | `createHydrated()` |
+| Text someone wrote, as HTML | the `prose` class |
+| A link to a game's Library tab, with filters | `LibraryLink` |
+| Anything that differs by game | its entry in `src/shared/games.ts` |
 
 How we write them:
 
-- **One component per file,** named in kebab case, with a named export and its props
-  typed inline. No barrel files.
+- **A file exports one component,** named in kebab case, with its props typed inline.
+  A small helper only that component uses stays private in the same file. No barrel
+  files.
+- **A route file is thin.** It wires the address and the loader to a page component
+  in `src/components`; the page itself is not written there.
 - **Extract on the second use.** Markup or a long class list that appears twice becomes
   a component or a constant in `ui.ts`. Do not copy it a second time, and do not
   extract something used once.
@@ -101,7 +125,9 @@ which pages get what. The rules when writing a page:
 - **Treat loader data as public.** It is written into the HTML. Return only what the
   page shows.
 - **Keep state in the address.** Filters, sort, tab and page number are search
-  parameters, validated on the route with Zod.
+  parameters, validated on the route with Zod. A route's search stays in the form
+  the address is written in, so reading an address and writing it back change
+  nothing; `src/shared/library-search.ts` is the pattern to copy.
 - **Render the same thing on the server and in the browser.** No clock, time zone,
   locale, random value, window size or browser storage while rendering. Render dates
   in a fixed form inside `<time datetime>` and localize after hydration; take "now"
@@ -163,7 +189,13 @@ change the mockup or the plan in the same piece of work so the two do not drift.
   who did something to the row: `submitted_by`, `reviewed_by`, `uploaded_by`.
 - **One name, one meaning.** `code` is always the Portal share code. Do not reuse a
   column name for something else in another table.
-- **Stored text is Markdown;** the HTML shown is rendered and sanitized on write.
+- **Stored text is Markdown, and its HTML is written in one place.** Pages print the
+  stored HTML as it is, so every `*_html` column is written only through
+  `renderMarkdown` in `src/server/markdown.ts`. Never build that HTML any other way.
+- **A person shown in public goes through `publicPerson`.** Select `personColumns`
+  and pass the row to it; that is where a hidden name is honored.
+- **The site's own address is `siteUrl`** from `src/server/env.ts`, for canonical
+  links and previews.
 - **What users submit is held for a moderator,** with the exceptions the plan lists.
 
 ## Tests
@@ -172,6 +204,11 @@ Vitest. Tests that need a database run against a real Postgres, in a `bfportal_t
 database that each run rebuilds from the migrations. Component tests run under
 happy-dom: start the file with `// @vitest-environment happy-dom`. Write tests where a
 mistake is expensive: constraints, permissions, moderation, login, the import.
+
+Test files share the one test database and run one after another. A file that needs
+seed data calls `seed` itself and must not rely on what another file left behind, or
+assume nothing else is there. The tests and the seed refuse to run against a database
+that is not on this machine; keep it that way.
 
 ## How to work here
 
