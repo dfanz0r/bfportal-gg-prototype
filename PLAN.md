@@ -10,6 +10,8 @@ rewriting bfportal.gg in TypeScript. It is not a task list. References such as
 A better, more stable version of the current site:
 
 - Feature complete with the current site, implemented more cleanly.
+- One addition the current site does not have: update posts on projects, with a
+  site-wide feed of recent updates, and a link to a project's source repository.
 - Visually centred on Battlefield 6, with the Battlefield 2042 library kept.
 - TypeScript on the front end and the back end.
 
@@ -23,9 +25,9 @@ Requirements that shaped the stack:
 Not goals:
 
 - Keeping the Django/Wagtail database schema. Data moves once into a new schema.
-- Building the planned BF6 sections (Maps, Tools & Plugins, Guides & Docs, Library, Events).
-  They are placeholders today and stay placeholders, but the structure should make them
-  cheap to add.
+- Building the planned BF6 sections (Maps, Tools & Plugins, Guides & Docs, Forum). They
+  are placeholders today and stay placeholders, but the structure should make them cheap
+  to add. Events are the exception: see "Events and banners".
 
 ## Stack
 
@@ -142,7 +144,11 @@ Public URLs are kept so existing links, embeds and search results keep working.
 | `/users/<discord_id>/`, `…/experiences/`, `…/liked/` | Profile and its two lists |
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
 | `/scripts/`, `/scripts/snippets/`, `/scripts/experiences/`, `/scripts/featured/`, `/scripts/<slug>/` | BF6 scripts section |
-| `/events/`, `/tutorials/` | "Coming soon" placeholders |
+| `/updates/` | New. Recent update posts across the site, with filters; `/updates/feed.xml` is the Atom feed |
+| `/experiences/<slug>/updates/<id>/` | New. One update post; the experience page lists them |
+| `/events/` | New. Upcoming and past events |
+| `/playtests/`, `/playtests/<id>/`, `/playtests/new/` | New. Open playtests; one playtest's brief and reports; the form to start one |
+| `/tutorials/` | "Coming soon" placeholder |
 | `/login/`, `/logout/` | Straight to Discord; no password or email flows. Logout is a POST |
 | `/sitemap.xml`, `/robots.txt` | Generated from the database |
 | `/api/experiences/`, `/api/users/` | Public read API |
@@ -200,17 +206,22 @@ tables use `timestamptz` throughout.
 |---|---|
 | `id` | Old numeric ids are kept (the public API exposes them) |
 | `slug` | Unique; kept from the old site |
-| `game` | `bf2042` or `bf6`; see "Open decisions" |
+| `game` | `bf2042` or `bf6` |
+| `types` | New, Battlefield 6 only. What it is built with: any of `script` (TypeScript), `blocks` (the rules editor) and `spatial` (custom map data), or `verified` alone for a verified mode, which is official settings and a map rotation with none of the three. Read from an uploaded export, otherwise chosen on the form. Shown as tags on cards and pages, and filterable |
 | `status` | `pending`, `published`, `unpublished` or `rejected` |
 | `title`, `description_md`, `description_html` | Markdown is stored; HTML is rendered and sanitised on write |
 | `owner_id` | The submitter |
 | `category_id` | Main category |
-| `code`, `exp_url` | Six-character code; URL must be on `portal.battlefield.com` |
+| `code`, `exp_url` | Six characters in 2042, four or five in Battlefield 6; URL must be on `portal.battlefield.com` |
 | `cover_img_url`, `vid_url` | External URLs, as today |
+| `repo_url` | New. The project's source repository; owner-editable, so it goes through moderation like any edit |
 | `max_players`, `max_bots` | |
 | `featured`, `trending` | Admin only |
 | `bugged`, `broken`, `xp_farm` | Health flags |
+| `is_template` | New. The community's word for what the old site called a prefab: the creator offers the files so others can publish their own version with their own changes. Set on creation; shows a Template tag and makes the files downloadable. The import sets it for every experience in the old Prefab category |
 | `allow_editing` | Stored and exposed by the API today but never enforced; keep the column, decide its meaning later |
+| `reviewed_by`, `reviewed_at`, `review_note` | The moderator's decision on the submission itself; edits are reviewed on their revision |
+| `deleted_at` | Set when the owner deletes it; the row stays and is hidden everywhere |
 | `submitted_at`, `first_published_at`, `last_published_at` | Today "first published" is set at submission (`core/views.py:204`); the new schema separates the two |
 | `announced_at` | When the Discord announcement went out; replaces the `first_publish` flag |
 | `meta_title`, `meta_description`, `meta_image`, `include_in_sitemap` | Embed overrides |
@@ -218,7 +229,13 @@ tables use `timestamptz` throughout.
 Join tables:
 
 - `experience_creators` (experience, user)
-- `experience_subcategories` (experience, category)
+- `experience_images` (experience, position, url). New. Extra pictures for a gallery on
+  the experience page, shown after the cover image. Each is an external link and gets
+  the same checks as the cover; the mockup allows up to eight. Owner-editable, so they
+  are part of an edit's payload.
+- `experience_subcategories` (experience, category). The form calls this "Style". The
+  choices are Casual, Competitive, Showcase and Example. The old site's "Jam"
+  subcategory is imported with its experiences but no longer offered.
 - `experience_tags` (experience, tag), with a `tags` table (name, slug)
 - `experience_likes` (experience, user, created_at). One store, replacing the two
   that exist today (`core/models/users.py:41`, `core/models/experience.py:157`).
@@ -234,12 +251,13 @@ public sees.
 |---|---|
 | `experience_id` | |
 | `kind` | `edit` or `clear_flags` (the owner asking for bugged/broken to be cleared) |
-| `payload` | The full proposed field set as JSON, including tags, creators and subcategories |
+| `payload` | The owner-editable fields as JSON, including tags, creators and subcategories. Admin-only fields are never in it, so approving an edit cannot revert a change to `featured` or a health flag made while it waited |
 | `status` | `pending`, `approved` or `rejected` |
 | `submitted_by`, `submitted_at` | |
 | `reviewed_by`, `reviewed_at`, `review_note` | |
 
-Approving applies the payload to the experience in one transaction. A new submission
+An experience has at most one pending revision, enforced by the database; a second edit
+replaces the first. Approving applies the payload to the experience in one transaction. A new submission
 needs no revision: it is simply an experience with status `pending`.
 
 The alternative is a fully relational versions table, where an experience points at its
@@ -255,6 +273,7 @@ script main, script sub). One `categories` table with a `kind` column covers all
 | Field | Note |
 |---|---|
 | `kind` | `experience_main`, `experience_sub`, `script_main` or `script_sub` |
+| `game` | Empty for a category both games use. The old "Prefab" category is renamed "Templates" and belongs to Battlefield 2042 only; for Battlefield 6 a template is a flag, not a category |
 | `name`, `slug` | Unique per kind |
 | `icon_svg` | Sanitised SVG markup stored in the row |
 | `visible`, `selectable_on_form`, `not_ready` | Same meaning as today |
@@ -289,10 +308,209 @@ per-type detail tables would make likes, creators and moderation generic, but it
 same shape as Wagtail's page inheritance, which is what made the current schema awkward.
 Revisit it if a third content type arrives.
 
+### Update posts
+
+New in the rewrite. A project page is no longer only a description and a code: its
+creators can post updates on it, like a small blog. Release notes, a status report on
+something still in progress, a call for testers.
+
+| Field | Note |
+|---|---|
+| `experience_id`, `snippet_id` | Exactly one is set, enforced by the database. Maps and tools get a column each when they get tables |
+| `author_id` | The owner or a listed creator |
+| `title`, `body_md`, `body_html` | Markdown, rendered and sanitised on write, as for descriptions |
+| `status`, `published_at` | The same four states as an experience. Whether a post starts `published` or `pending` is an open decision |
+| `reviewed_by`, `reviewed_at`, `review_note` | A moderator's removal or approval |
+| `deleted_at` | The author's own delete |
+
+One table for every project type keeps the feed a single query. The alternative, a
+shared "project" row that experiences, snippets, maps and tools all hang from, would
+make updates, likes and creators generic, but it is the same inheritance shape the plan
+already turned down for experiences and snippets.
+
+Where updates show up:
+
+- On the project page, newest first, under the description.
+- In a site-wide feed of recent updates, filterable by game and by kind of project
+  (experiences, scripts, and later maps and tools), with a short version on the home
+  page.
+- As an Atom feed for the whole site and for each project, so people can follow a
+  project without an account.
+- In the public API.
+
+### Project files
+
+New in the rewrite. A creator can upload the files behind a project, and the site can
+fill in the submit form from them.
+
+The files that exist for a Battlefield 6 Portal project:
+
+| File | What it is |
+|---|---|
+| Experience export (`.json`) | Everything Portal exports: name, description, game mode, mutators, team sizes, the map rotation, the rules workspace, and the attachments below, base64-encoded |
+| `Script.ts` | The TypeScript script; an attachment inside the export |
+| `*.spatial.json` | A map's spatial layout; one per map in the rotation, inside the export |
+| `Strings.json` | The script's strings; inside the export |
+| `*.tscn` | The Godot scene a spatial layout was built from. Not in the export; uploaded separately |
+
+The easy path is one upload: the creator drops the export on the submit form. Read from
+one real export (`movement_probe_experience.json`), it gives:
+
+| Form field | From the export |
+|---|---|
+| Title, description | `name`, `description`. Portal's default description ("Experience description.") is flagged so it is not published as is |
+| Players | The sum of `humanCapacity` across `teamComposition` |
+| Game mode | `gameMode` |
+| Map rotation | `mapRotation`: a map id and its spatial layout per entry. Map ids need a table of display names |
+| Script, rules, strings | The `Script.ts` attachment, the block tree under `workspace.mod.blocks`, and `Strings.json` |
+
+It does not contain the experience code, the Portal link, tags, a category or a cover
+image. The code lookup below supplies most of those. Bots were absent from the one export examined; that needs
+checking against an experience that has them.
+
+Storage. Every one of these files is text, so they are stored in the database:
+
+| Field | Note |
+|---|---|
+| `experience_id`, `snippet_id` | Exactly one is set |
+| `kind` | `export`, `script`, `spatial`, `scene`, `strings` or `other` |
+| `filename`, `size_bytes`, `sha256` | |
+| `body` | The file's text. The table is read only when a file is viewed or downloaded |
+| `map_index` | For a spatial layout or scene: which map of the rotation |
+| `from_export` | Whether it was taken out of the export or added separately |
+
+`experiences.game_mode` and `experiences.map_rotation` hold what the page shows, so a
+listing never opens a file.
+
+Rules:
+
+- The export is validated against a Zod port of `bf6/models/bf_experience_export.py`
+  before anything is read from it. This is the validator snippets already need.
+- Files are shared when the creator offers the experience as a template. Otherwise the
+  export only fills the form and nothing is stored.
+- Files are served as downloads or shown as escaped text, never as a page: a fixed
+  plain-text or JSON content type, `nosniff`, and `Content-Disposition: attachment`.
+- A size limit per file and per project, and only `.json`, `.ts` and `.tscn`.
+- Files are part of what a moderator reviews, on submission and on every edit.
+
+Snippets already keep their export in `snippets.exp_json`. They can move to this table
+later so there is one way to store a project's files.
+
+### What gametools.network returns for a code
+
+Checked on 2026-10-12 against `https://api.gametools.network/bf6/playground/` with real
+codes, including `1264G`. The lookup takes `experiencecode` or `experienceid` and needs
+no key. The site already uses the 2042 equivalent.
+
+| Form field | From the lookup |
+|---|---|
+| Title, description | `playElement.name`, `playElement.description` |
+| Cover image | `playElement.thumbnailUrl`, the thumbnail chosen in Portal |
+| Map rotation | Each map's display name, level id, image, rounds and team sizes |
+| Players | Team capacities, summed |
+| Tags | Portal's own tags, such as `custom_scripted` and `Core_Modes` |
+| Still loads | `publishStateType` and `moderationState`, which the nightly validation can use |
+
+It does not return the script, the blocks or the spatial data: only the export has
+those. So the two sources complement each other. The code gives the listing details and
+the cover image; the export gives the files, exactly what a template is built with, and
+the precise "built with" types. From the lookup alone, `custom_scripted` says a script
+or blocks are used but not which.
+
+The creator comes back as account ids, not a name, and `/bf6/experience/` needs an auth
+token, so it is not used.
+
+Battlefield 6 codes are not 2042's six characters. The eight seen were four or five
+letters and digits (`12as4`, `hyqt`, `1264g`), returned in lower case and matched
+without regard to case. Codes are stored normalised and shown in upper case, and the
+format check is per game.
+
+### Playtests
+
+New in the rewrite. The community runs playtests through a Discord bot today. The
+working assumption, agreed 2026-10-12, is that the site replaces that bot.
+
+What a playtest is, taken from the bot's current posts: a call for testers. A creator
+posts a brief for an experience, and anyone in the called regions plays it in their own
+time and reports back in a thread. It is not a scheduled session with sign-ups. The
+bot's post has:
+
+- the experience's name, its creator and a description;
+- its maps and player count;
+- free-form sections, typically "what to try" and "please report";
+- the experience code;
+- the regions, as mentions of a Tester role per region;
+- a thread for feedback, named after the code.
+
+The site keeps that shape:
+
+| Field | Note |
+|---|---|
+| `experience_id` | The experience being tested. Empty when it has no page yet; `title` names it then |
+| `code`, `game` | What testers type in. Maps and player count are fetched for the code |
+| `summary` | One sentence, for the feed and the top of the Discord post |
+| `brief_md`, `brief_html` | The brief, in markdown. The form starts it with "What to try" and "Please report" headings |
+| `regions` | Any of EU, NA, SA, Asia and OCE. Each maps to a Tester role to mention |
+| `opens_at`, `closes_at` | A playtest can be posted at a set time, and stays open until an end date or until the host closes it |
+| `together_at` | Optional. For modes that need a full lobby: when to play it together |
+| `announced_at`, `reminded_at`, `discord_url` | The Discord post and the play-together reminder, each sent once |
+| `result_update_id` | The update post with what changed |
+
+`playtest_reports` holds what testers found: the site's version of the feedback thread.
+A report has an author, an optional region and a markdown body, and a tester can post
+more than one.
+
+Where it shows:
+
+- A playtests page: open ones, newest first, with filters for region, game and what it
+  is built with. It sits beside community events under Events.
+- A page per playtest: the brief, the code, the maps, and the reports with a box to add
+  one.
+- The home page: the newest open ones.
+- The experience page: its open playtest, and a way for its creators to start one.
+- An experience's update feed, when the host posts the results.
+
+Replacing the bot means the site does what the bot did:
+
+- **Posting.** The site posts each playtest to the playtests channel through a Discord
+  webhook, mentioning the Tester roles for its regions. A webhook can mention a role if
+  the role is set to be mentionable.
+- **Feedback.** Reports are written on the playtest's page. If the channel is a Discord
+  forum channel, the webhook can open a thread per playtest as well, and the page links
+  to it; in an ordinary text channel a webhook cannot start a thread.
+- **Reminding.** Only when a play-together time is set: one post shortly before.
+- **Tester roles.** People keep taking them in Discord. Handing out roles from the site
+  would need a real bot account, which is not planned.
+
+What is lost against a bot: slash commands and anything interactive inside Discord. If
+that matters, a bot can be added later on top of the same tables.
+
+Configuration: one more webhook id and token pair, and a role id per region.
+
+### Events and banners
+
+New in the rewrite, and kept small. Portal Jam was a one-off and has no place of its
+own, but the site keeps a general way to run something for a limited time.
+
+- `events`: title, summary, description, cover image, a link to where it happens, start
+  and end, an optional capacity, a host, and whether it is published. `event_interest`
+  records who pressed "Interested".
+- `banners`: a notice across the top of the site with a start and an end. It appears and
+  disappears by its own clock. It has a short label, a message, an optional link, a
+  placement (the home page only, or every page) and whether a visitor can dismiss it.
+  It may point at an event, but a maintenance notice or a new-feature note uses the
+  same table.
+
+Moderators and admins create both, in the admin. The old site's Discord scheduled
+events admin is not carried over; this replaces it. If a future jam needs entries, an
+event can gain a list of experiences then.
+
 ### Small tables
 
 - `site_settings`: one row. `need_login_to_view_profile`, plus a markdown block for the
   home page, replacing Wagtail's "extra content" stream field.
+- `import_quarantine`: legacy rows the import could not accept, with the reason and the
+  original data.
 - `redirects`: only if production has any rows in `wagtailredirects_redirect`.
 
 ## Moderation flow
@@ -312,6 +530,8 @@ exceptions listed under "Behaviour not carried over".
 | Report bugged, broken or XP farm | Any other logged-in user | A report row; no flag changes |
 | Set featured, trending or any health flag | Admin | Immediate |
 | Unpublish | Moderator, admin | `unpublished` |
+| Post an update | Owner, listed creator | New. On a published project only. Published at once or held for approval: see "Open decisions" |
+| Remove an update | Its author; moderator, admin | New. The author's delete is immediate; a moderator's removal carries a note |
 | Scheduled validation | Job | Sets or clears `broken` from gametools.network |
 
 The exact permissions of the "Moderators" group exist only in the production database;
@@ -351,19 +571,43 @@ What "feature complete" means, by area.
 
 **Submitting and editing**
 
+- The submit form asks for the game first, because that decides what can be supplied.
+  Both games can start from the experience code, which gametools.network looks up.
+  Battlefield 6 can also add the export; Battlefield 2042 has almost nothing to export.
 - Submit form: category, Portal URL or code, title, markdown description (the markdownx
   editor today), additional creators (user autocomplete), tags (autocomplete), players,
   bots, subcategories, cover image URL, video URL.
 - Autofill from gametools.network when a URL or code is entered
   (`bfportal/static/js/bfportal.js:46`).
-- Validation: code required unless the category is Prefab; Portal URL required for
-  Prefab; URL host must be `portal.battlefield.com`; code is alphanumeric; cover image
+- Validation: a code is required unless the experience is a template (the old Prefab
+  category). Battlefield 6 has no such category: its form asks what the experience is
+  built with, and whether to offer it as a template; URL host must be `portal.battlefield.com`; code is alphanumeric; cover image
   must be an image.
 
 **BF6**
 
 - Scripts section with Snippets and Experiences tabs, featured listing, snippet pages.
 - Navigation with the six planned sections, five of them placeholders.
+
+**Updates (new)**
+
+- Creators post, edit and delete updates on their own projects.
+- A recent-updates feed with filters, a home page section and Atom feeds.
+- A source repository link on the project page.
+- Uploading the Portal export to fill in the submit form, and sharing a project's files
+  (export, script, spatial layouts, Godot scenes) for others to view and download.
+
+**Playtests (new)**
+
+- Starting a playtest with a brief and regions, a feed of open ones, a page per
+  playtest with tester reports, and Discord posts by webhook. Replaces the Discord
+  playtest bot.
+- An "open playtest" panel on the experience page, and results posted as an update.
+
+**Events and banners (new)**
+
+- An events page with upcoming and past events, and an "Interested" button.
+- Time-limited banners, set up in the admin.
 
 **Admin**
 
@@ -379,13 +623,15 @@ What "feature complete" means, by area.
 - `/api/experiences/` and `/api/users/` with five-minute cache headers; `/api/users/`
   filters by `uid` and `username`.
 - Sitemap of pages and of profiles that have not hidden their name; robots.txt.
+- Scheduled job, every few minutes: post playtests whose time has come, and any
+  play-together reminders, to Discord.
 - Scheduled job: sync the tag list from gametools.network and purge the Cloudflare cache
   for the autocomplete endpoints, then check every published experience against
   gametools.network, marking broken ones and adding their tags.
 
 **Not carried over because nothing uses them**
 
-- Discord scheduled events admin, Wagtail documents, Wagtail forms, the empty blog page
+- Discord scheduled events admin (replaced by the new events table), Wagtail documents, Wagtail forms, the empty blog page
   type, the mock-data commands (replace with a seed script when needed), the one-off
   repair commands (`fix_img`, `tasks`, `import_db`).
 
@@ -496,6 +742,9 @@ Things that will need care:
 - **Markdown.** The new renderer will differ from Python-Markdown in places. Spot-check
   the longest and most-viewed descriptions.
 
+Because old ids are kept, the import resets each id sequence to the highest imported
+id when it finishes.
+
 Checks after each run: row counts per table; tag, like and creator counts per
 experience; a crawl of every URL in the old sitemap expecting a 200 from the new site.
 
@@ -544,7 +793,19 @@ lint, the build, type-checking and the tests on Node 22, the oldest supported ve
   game.
 - Colours, type and spacing are defined once as Tailwind theme tokens, so the look can
   be changed without touching components.
-- Whether there is a design reference to work from is an open question.
+- The design reference is the static mockup in `mockups/site`, one page per main screen
+  with working links between them: home, both libraries, an experience page, the
+  updates feed, scripts and a script page, the submit form and a profile. Its tokens at
+  the top of `site.css` are the starting point for the Tailwind theme. The mockups are
+  not committed, because their images are placeholder crops of EA artwork.
+- Page content sits in a centred column about 1360px wide. Layouts are checked on a
+  2660px-wide display as well as at laptop and phone widths.
+- The 2042 library is the same shell with a second accent colour, the 2042 teal, used
+  inside the page. The top bar and logo stay orange. Teal means 2042 and nothing else:
+  success and "verified" states on other pages use the neutral steel and white.
+- The library opens on whether an experience still loads: the count and the time of the
+  last check are in its header, and experiences that no longer load are hidden by
+  default.
 
 ## Order of work
 
@@ -555,7 +816,8 @@ Each stage ends with something that can be compared against the live site.
 2. **Read-only site on real data:** the import, then listings, detail, category and
    profile pages. Doing the import this early means every screen is built against
    production data, and migration problems surface at the start.
-3. **Writes:** like, report, submit, edit, the moderation queue and the Discord webhooks.
+3. **Writes:** like, report, submit, edit, update posts, the moderation queue and the
+   Discord webhooks.
 4. **Admin:** experience management, categories, tags, users, settings.
 5. **BF6:** scripts section and snippet authoring.
 6. **Edges:** public API, sitemap, robots, redirects, scheduled jobs.
@@ -565,22 +827,35 @@ The visual work can run alongside from stage 2.
 
 ## Open decisions
 
-Each has a recommendation; none is settled.
+Each has a recommendation. Rows marked agreed are settled; the rest are not.
 
 | Decision | Recommendation |
 |---|---|
 | Better Auth for Discord login | Yes. It has a TanStack Start integration with a Solid variant. It requires an email per user; see "Data migration" |
-| How BF2042 and BF6 share the site | One site, BF6 home at `/`, existing `/experiences/` URLs unchanged, a `game` column on experiences |
-| Public API compatibility | Keep the paths and the fields real consumers read; drop Wagtail-specific query features. Needs a list of who calls the API |
-| Old experience ids | Keep them |
+| How BF2042 and BF6 share the site | **Agreed 2026-10-12:** one site, BF6 home at `/`, a `game` column on experiences, and one Library with a tab per game. 2042 has no home page of its own. 2042 submissions stay open. Still open: the URL of each game's listing, with existing `/experiences/<slug>/` links kept |
+| Public API compatibility | **Agreed 2026-10-12:** keep the general shape, not full compatibility. The four main paths, the `meta`/`items` envelope, `limit`/`offset`, the field names and the `code`, `search`, `uid` and `username` filters stay. The list returns experiences only, the page size is capped, `liked_by` becomes a like count, the Discord object is trimmed to id, username, display name and avatar, and `hide_username` is honoured. Wagtail-only parts (`type=`, the `find` endpoints, `meta.parent`) go. A list of who calls the API would still be useful |
+| Old experience ids | Keep them. The schema is built this way |
 | Revision history | Import only the live version and any pending one; archive the rest as a dump |
-| Experiences and snippets | Separate tables |
-| Categories | One table with a `kind` column |
-| Owner delete | Implement it as a soft delete; the button exists today but does nothing |
+| Experiences and snippets | Separate tables. The schema is built this way |
+| Categories | One table with a `kind` column. The schema is built this way |
+| Owner delete | Implement it as a soft delete; the button exists today but does nothing. The schema is built this way |
 | Home page content | One markdown block in site settings |
 | `allow_editing` | Keep the column, hide the checkbox until it means something |
 | Gametools data on the experience page | Fetch on the server with a short cache and a timeout, so the page renders complete |
 | Account email | Optional for now: stored when Discord provides one, a placeholder otherwise, and not used for anything. The site may want to require a real email later, for example to tell a user about a moderation decision. That means deciding what happens to Discord accounts that have none, and to existing users who signed up without one |
+| Moderating update posts | Publish at once for owners and creators of an already published project, notify the moderators' Discord channel, and let moderators remove a post with a note. Holding every post for approval would make status updates slow and add to the queue. A rate limit applies either way |
+| Who may post updates | The owner and the listed creators |
+| Repository link | Accept `https` URLs on a short allow-list of hosts, starting with GitHub. Showing stars or the latest commit from GitHub's API can come later |
+| Project stage | Not built. A "work in progress / released / discontinued" label on a project would let unfinished tools be listed honestly; decide when tools get their own section |
+| Announcing updates | Do not post every update to the public Discord channel; the feed is the place for them |
+| Where uploaded files are stored | In the database. They are text, small, and rarely read, and it keeps the site free of file storage. Move to object storage only if binary files are ever allowed |
+| File size limits | 2 MB per file and 10 MB per project to start, which is far above the 30 KB export examined |
+| Sharing uploaded files | **Agreed 2026-10-12:** sharing files is what makes an experience a template, a tag the creator sets on creation. There is no separate "share" switch |
+| Code on a template | Optional, as it was for prefabs: a template may exist only as files. An experience that is not a template still needs a code |
+| The Discord playtest bot | **Agreed 2026-10-12, for now:** the site replaces it. Scheduling and sign-up happen on the site; a webhook announces and reminds in Discord. Revisit if people miss scheduling from inside Discord |
+| Where playtest feedback lives | On the playtest's page, with a Discord thread as well if the channel is a forum channel. Decide whether Discord replies should count, which a webhook cannot read |
+| Who may start a playtest | The owner or a listed creator for an experience with a page; any logged-in user for something with no page yet, with a rate limit |
+| Playtests for unpublished work | Allowed, shown as "No page yet". A playtest never exposes an unpublished experience's page |
 | Postgres version | Move to a current major during the migration, since the data is reloaded anyway. Development runs 18 |
 
 ## What needs production access to answer
