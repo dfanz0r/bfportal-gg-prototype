@@ -616,7 +616,21 @@ What "feature complete" means, by area.
 
 **Admin**
 
-- Moderation queue with approve and reject, showing what an edit changes.
+- An overview: how much is waiting by kind and for how long, the oldest items, reports
+  to look at, site health (the nightly code check, gametools, Discord webhooks) and
+  recent decisions.
+- One review queue for everything held for a moderator: new submissions, edits, update
+  posts, playtests and requests to clear a flag. Oldest first.
+- Reviewing a submission shows the page as it will appear, beside automatic checks: the
+  code is published on Portal and its name matches, no other page uses the code, the
+  export is valid and "built with" matches it, the cover image loads and its size, and
+  how the submitter's earlier submissions went. Approve, or reject with a note.
+- Reviewing an edit shows live against proposed, field by field, with changed text
+  marked and the unchanged fields listed.
+- Reports: counts per experience by kind, the flags set now, and "set flags" or
+  "dismiss". A report never changes a flag by itself.
+- Featured and trending are switches only admins see, on the review screen and in the
+  experience list.
 - Experience list with search by title and code, filters (trending, health flags,
   category, subcategory, tag) and report counts; full edit including owner, creators,
   admin-only flags and report lists.
@@ -798,6 +812,8 @@ lint, the build, type-checking and the tests on Node 22, the oldest supported ve
   game.
 - Colours, type and spacing are defined once as Tailwind theme tokens, so the look can
   be changed without touching components.
+- The admin screens are mocked up in the same folder (`admin*.html`): overview, review
+  queue, reviewing a submission, reviewing an edit, reports and the experience list.
 - The design reference is the static mockup in `mockups/site`, one page per main screen
   with working links between them: home, both libraries, an experience page, the
   updates feed, scripts and a script page, the submit form and a profile. Its tokens at
