@@ -42,6 +42,7 @@ login is not configured.
 | `pnpm db:up` | Start the local Postgres container |
 | `pnpm db:generate` | Write a migration from changes to the schema |
 | `pnpm db:migrate` | Apply pending migrations |
+| `pnpm db:seed` | Empty the content tables and fill them with sample data. Local databases only |
 | `pnpm auth:generate` | Regenerate Better Auth's tables after changing the auth configuration |
 
 ## Layout

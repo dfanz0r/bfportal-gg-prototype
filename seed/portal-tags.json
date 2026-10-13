@@ -1,0 +1,302 @@
+{
+  "source": "Portal's own tags for each game, from gametools.network's availabletags lists on 2026-10-13. Battlefield 2042's come with English names and descriptions. Battlefield 6's come as ids only: seven names are from EA's website, and the four marked \"guess\" were written by hand from the id.",
+  "bf2042": [
+    {
+      "id": "friendly_fire",
+      "name": "FRIENDLY FIRE",
+      "description": "Friendly Fire is on.",
+      "group": "general"
+    },
+    {
+      "id": "kingston_era",
+      "name": "2042",
+      "description": "Includes a Battlefield 2042 faction.",
+      "group": "mode"
+    },
+    {
+      "id": "1942_era",
+      "name": "1942",
+      "description": "Includes a Battlefield 1942 faction.",
+      "group": "mode"
+    },
+    {
+      "id": "bc2_era",
+      "name": "BC2",
+      "description": "Includes a Battlefield: Bad Company 2 faction.",
+      "group": "mode"
+    },
+    {
+      "id": "bf3_era",
+      "name": "BF3",
+      "description": "Includes a Battlefield 3 faction.",
+      "group": "mode"
+    },
+    {
+      "id": "custom_scripted",
+      "name": "CUSTOM LOGIC",
+      "description": "Contains Logic Editor scripting.",
+      "group": "mode"
+    },
+    {
+      "id": "heavily_modified",
+      "name": "HEAVILY MODIFIED",
+      "description": "Includes many changed Modifiers.",
+      "group": "general"
+    },
+    {
+      "id": "lopsided",
+      "name": "HEAVILY ASYMMETRICAL",
+      "description": "Contains many changed per-team Modifiers.",
+      "group": "mode"
+    },
+    {
+      "id": "asym_settings",
+      "name": "ASYMMETRICAL",
+      "description": "Teams have different Modifiers.",
+      "group": "package"
+    },
+    {
+      "id": "asym_teams",
+      "name": "ASYM. PLAYER COUNT",
+      "description": "Teams have different player counts.",
+      "group": "mode"
+    },
+    {
+      "id": "no_vehicles",
+      "name": "NO VEHICLES",
+      "description": "Combat Vehicles have been removed.",
+      "group": "package"
+    },
+    {
+      "id": "melee_only",
+      "name": "NO WEAPONS",
+      "description": "Primary and Secondary weapons are disabled.",
+      "group": "package"
+    },
+    {
+      "id": "health_damage_mods",
+      "name": "HEALTH/DMG MODIFIERS",
+      "description": "Has health changes, damage changes, or both.",
+      "group": "general"
+    },
+    {
+      "id": "hero_restrictions",
+      "name": "CHARACTER RESTRICTIONS",
+      "description": "Some Specialists or Classes are not allowed.",
+      "group": "package"
+    },
+    {
+      "id": "asym_hero_restrictions",
+      "name": "ASYM. CHARACTER RESTRICTIONS",
+      "description": "Allowed Specialists or Classes are different per-team.",
+      "group": "package"
+    },
+    {
+      "id": "custom_loadouts",
+      "name": "LOADOUT RESTRICTIONS",
+      "description": "Weapon or gadget options have been restricted.",
+      "group": "package"
+    },
+    {
+      "id": "asym_loadouts",
+      "name": "ASYM. LOADOUT RESTRICTIONS",
+      "description": "Weapon/gadget options have been restricted per-team.",
+      "group": "package"
+    },
+    {
+      "id": "custom_hero_settings",
+      "name": "SOLDIER MODIFIERS",
+      "description": "Soldier Modifiers have been changed.",
+      "group": "general"
+    },
+    {
+      "id": "asym_hero_settings",
+      "name": "ASYM. SOLDIER MODIFIERS",
+      "description": "Soldier Modifiers are different per-team.",
+      "group": "general"
+    },
+    {
+      "id": "custom_vehicle_settings",
+      "name": "VEHICLE MODIFIERS",
+      "description": "Vehicle Modifiers have been changed.",
+      "group": "general"
+    },
+    {
+      "id": "asym_vehicle_settings",
+      "name": "ASYM. VEHICLE MODIFIERS",
+      "description": "Vehicle Modifiers are different per-team.",
+      "group": "general"
+    },
+    {
+      "id": "hardcore",
+      "name": "HARDCORE",
+      "description": "Damage/health changes, limited HUD, Friendly Fire.",
+      "group": "general"
+    },
+    {
+      "id": "custom_scoring",
+      "name": "SCORE MODIFIERS",
+      "description": "Has changes to game mode scoring.",
+      "group": "mode"
+    },
+    {
+      "id": "custom_time",
+      "name": "GAME TIME MODIFIERS",
+      "description": "Has changes to game length.",
+      "group": "mode"
+    },
+    {
+      "id": "no_hud",
+      "name": "NO HUD",
+      "description": "HUD has been disabled.",
+      "group": "package"
+    },
+    {
+      "id": "limited_hud",
+      "name": "LIMITED HUD",
+      "description": "Some of the HUD has been disabled.",
+      "group": "package"
+    },
+    {
+      "id": "ai_enabled",
+      "name": "PvP AI",
+      "description": "PvP AI soldiers are present.",
+      "group": "general"
+    },
+    {
+      "id": "even_team_sizes",
+      "name": "SYM. PLAYER COUNT",
+      "description": "Teams have the same number of maximum players.",
+      "group": "mode"
+    },
+    {
+      "id": "sym_team_settings",
+      "name": "SYMMETRICAL MODIFIERS",
+      "description": "Teams have the same Modifiers.",
+      "group": "mode"
+    },
+    {
+      "id": "custom_spawning",
+      "name": "SPAWN MODIFIERS",
+      "description": "Spawning or respawning rules have changed.",
+      "group": "general"
+    },
+    {
+      "id": "low_player_count",
+      "name": "FEWER PLAYERS",
+      "description": "Fewer maximum players than the default.",
+      "group": "mode"
+    },
+    {
+      "id": "high_player_count",
+      "name": "EXTRA PLAYERS",
+      "description": "More maximum players than the default.",
+      "group": "mode"
+    },
+    {
+      "id": "weapon_handling",
+      "name": "WEAPON HANDLING",
+      "description": "Weapons handle differently.",
+      "group": "general"
+    },
+    {
+      "id": "fixed_ai",
+      "name": "PvE AI",
+      "description": "PvE AI soldiers are present.",
+      "group": "general"
+    },
+    {
+      "id": "no_callins",
+      "name": "CALL-IN RESTRICTIONS",
+      "description": "Call-in and/or Deploy vehicles are disabled.",
+      "group": "package"
+    },
+    {
+      "id": "mapdefault_era",
+      "name": "MAP FACTION",
+      "description": "Uses map settings to determine Faction.",
+      "group": "mode"
+    },
+    {
+      "id": "xp_restricted",
+      "name": "XP LIMITED",
+      "description": "Ability to gain XP is limited",
+      "group": "mode"
+    },
+    {
+      "id": "mastery_restricted",
+      "name": "MASTERY LIMITED",
+      "description": "Ability to gain Mastery Ranks is limited",
+      "group": "mode"
+    },
+    {
+      "id": "onfoot_restricted",
+      "name": "VEHICLE DEPLOY ONLY",
+      "description": "Players are not allowed to deploy on foot and must deploy into a vehicle. NOTE that if there are no vehicles available, players will be unable to deploy.",
+      "group": "mode"
+    },
+    {
+      "id": "vehicle_superiority",
+      "name": "VEHICLE SUPERIORITY",
+      "description": "Allowed vehicle limits changes and restricted to certain vehicle-friendly maps.",
+      "group": "mode"
+    }
+  ],
+  "bf6": [
+    {
+      "id": "friendly_fire",
+      "name": "Friendly Fire",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "custom_scripted",
+      "name": "Custom Logic",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "Asymmetrical",
+      "name": "Heavily Asymmetrical",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "custom_loadouts",
+      "name": "Loadout Restrictions",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "no_hud",
+      "name": "No HUD",
+      "nameFrom": "guess"
+    },
+    {
+      "id": "limited_hud",
+      "name": "Limited HUD",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "hardcore",
+      "name": "Hardcore",
+      "nameFrom": "guess"
+    },
+    {
+      "id": "class_locked_weapons",
+      "name": "Class-locked Weapons",
+      "nameFrom": "ea"
+    },
+    {
+      "id": "Official",
+      "name": "Official",
+      "nameFrom": "guess"
+    },
+    {
+      "id": "Short_Experience",
+      "name": "Short Experience",
+      "nameFrom": "guess"
+    },
+    {
+      "id": "Core_Modes",
+      "name": "Core Modes",
+      "nameFrom": "ea"
+    }
+  ]
+}
