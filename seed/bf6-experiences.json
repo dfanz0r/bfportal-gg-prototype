@@ -1,0 +1,2613 @@
+{
+  "source": "Real Battlefield 6 Portal experiences, as sample content for local development, gathered on 2026-10-13. The listing, descriptions, dates, creator names, tag names and map names and pictures come from EA's Battlefield 6 website. The progression mode, license requirements, player counts and map rotations come from looking each code up on gametools.network.",
+  "game": "bf6",
+  "tags": {
+    "Asymmetrical": "Heavily Asymmetrical",
+    "class_locked_weapons": "Class-locked Weapons",
+    "Core_Modes": "Core Modes",
+    "custom_loadouts": "Loadout Restrictions",
+    "custom_scripted": "Custom Logic",
+    "friendly_fire": "Friendly Fire",
+    "limited_hud": "Limited HUD"
+  },
+  "maps": {
+    "MP_Abbasid": {
+      "name": "Siege of Cairo",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/c2/fb/T_UI_Abbasid-c2fb824d.png"
+    },
+    "MP_Aftermath": {
+      "name": "Empire State",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/e7/07/T_UI_Aftermath-e707b5ea.png"
+    },
+    "MP_Atoll": {
+      "name": "Wake Island",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/76/c9/T_UI_Atoll_Large-76c937e7.png"
+    },
+    "MP_Badlands": {
+      "name": "Blackwell Fields",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/c2/35/T_UI_Badlands-c23567de.png"
+    },
+    "MP_Battery": {
+      "name": "Iberian Offensive",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/04/b4/T_UI_Battery-04b43258.png"
+    },
+    "MP_Capstone": {
+      "name": "Liberation Peak",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/49/11/T_UI_Capstone-49113207.png"
+    },
+    "MP_Contaminated": {
+      "name": "Contaminated",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/f4/ca/T_UI_Contaminated-f4cac144.png"
+    },
+    "MP_DryLake": {
+      "name": "Area 51",
+      "imageUrl": null
+    },
+    "MP_Dumbo": {
+      "name": "Manhattan Bridge",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/0a/b3/T_UI_Dumbo-0ab3c073.png"
+    },
+    "MP_Eastwood": {
+      "name": "Eastwood",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/0b/9f/T_UI_Eastwood-0b9f465d.png"
+    },
+    "MP_FireStorm": {
+      "name": "Operation Firestorm",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/61/ed/T_UI_Firestorm-61ed38f8.png"
+    },
+    "MP_GolmudRailway": {
+      "name": "Railway to Golmud",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/eb/bf/T_UI_Golmud-ebbfce73.png"
+    },
+    "MP_Granite": {
+      "name": "Fort Lyndon",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/68/e0/T_UI_Granite_01-68e04322.png"
+    },
+    "MP_Granite_MainStreet_Portal": {
+      "name": "Downtown",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/vulcanite/maps/T_UI_Granite_Portal_01_Thumb_SML-013f94ef.png"
+    },
+    "MP_Isolated": {
+      "name": "Tsuru Reef",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/be/e6/T_UI_Isolated-bee6f7bd.png"
+    },
+    "MP_Limestone": {
+      "name": "Saints Quarter",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/65/6c/T_UI_Limestone-656c9b8a.png"
+    },
+    "MP_Outskirts": {
+      "name": "New Sobek City",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/a1/cf/T_UI_Outskirts-a1cf35d2.png"
+    },
+    "MP_Paradise": {
+      "name": "Vegas Strip",
+      "imageUrl": null
+    },
+    "MP_Plaza": {
+      "name": "Cairo Bazaar",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/e0/d2/T_UI_Plaza-e0d22470.png"
+    },
+    "MP_Portal_Sand": {
+      "name": "Portal Sandbox",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/b0/e4/T_UI_Granite_Portal_07_Large-b0e4aef6.png"
+    },
+    "MP_Subsurface": {
+      "name": "Hagental Base",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/6f/90/T_UI_Subsurface-6f909eef.png"
+    },
+    "MP_Tungsten": {
+      "name": "Mirak Valley",
+      "imageUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/gamedata/glacier/42/22/T_UI_Tungsten-422219f6.png"
+    }
+  },
+  "experiences": [
+    {
+      "code": "1264g",
+      "title": "Air Vehicle Sandbox",
+      "description": "Test every air vehicle in an open sandbox",
+      "playgroundId": "2a5ea060-9aa2-11f1-89bb-9e77d3f592d2",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_MP_01-ab6fbd7c.jpg",
+      "likes": 15570,
+      "created": "2026-08-18T01:14:31.000Z",
+      "updated": "2026-08-18T15:58:43.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "andy6170"
+      },
+      "players": 24,
+      "tags": ["custom_scripted"],
+      "rotation": [
+        {
+          "map": "MP_Portal_Sand",
+          "mode": "Custom",
+          "rounds": 1,
+          "teams": [12, 12]
+        }
+      ]
+    },
+    {
+      "code": "z5p1u",
+      "title": "Jets & Helicopters | Practice vs Bots in Vehicles | Tsuru Reef",
+      "description": "Custom PVE Conquest mode:\n- All aircraft available.\n- Bots use all vehicles and play the objective.\n- Dynamic bot count based on server load.\n- Auto-resupply every 15s.\n- In-game vehicle HP toggle (100% or 400%).\n- In-game Nightfall mode toggle.",
+      "playgroundId": "ab3aecd0-bbd1-11f0-93fe-682b6c5fc60e",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_11-0e4dd1fc.jpg",
+      "likes": 5070,
+      "created": "2025-11-07T12:02:44.000Z",
+      "updated": "2026-09-17T22:44:40.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Ketchuppplant"
+      },
+      "players": 8,
+      "tags": ["custom_scripted", "Asymmetrical", "custom_loadouts"],
+      "rotation": [
+        {
+          "map": "MP_Isolated",
+          "mode": "Custom",
+          "rounds": 1,
+          "teams": [8, 0]
+        }
+      ]
+    },
+    {
+      "code": "1x2m2",
+      "title": "! [VORTEX] 24/7 Hagental Breakthrough 64 | FULL XP | 60hz",
+      "description": "Skill-focused, 64-player infantry only Breakthrough on Hagental.\n- Increased player movement speed to match BF4\n- Bot backfill enabled\n- 500 tickets and longer sector times\n- No M320 explosive GL",
+      "playgroundId": "58d63040-563a-11f1-83c7-14a1da4b099a",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/a971fc8cca3b6c3001ff4592aa72f53c9a425385765e849a3f7332e42121e4c9/c9e47b56-9d3a-4890-9a4e-551c4b00abfb/1791280545-352x248-352-248-c64cd0dd-ce25-4511-b8e0-b209872484f6.png",
+      "likes": 1980,
+      "created": "2026-05-23T00:00:02.000Z",
+      "updated": "2026-10-06T10:00:19.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "FrozenRelicBF"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "yckgr",
+      "title": "1000% DMG 10HP ONESHOT BREAKTHROUGH HARDCORE | FULL XP | BOTS",
+      "description": "Full XP Instakill/Oneshot Breaktrough Hardcore no fall damage, max running speed. No mortars. FF off. All maps in rotation. Experience code YCKGR or in Filters set Name to 10HP and Free slots to Any. \nTo join our community, search for \"1000hc\" on Discord.",
+      "playgroundId": "d203f900-ac8c-11f0-8938-a7c004cf99be",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_RG_02-61f2a47b.jpg",
+      "likes": 1570,
+      "created": "2025-10-19T01:42:06.000Z",
+      "updated": "2026-10-13T07:40:42.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Defqon737"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "y9qd",
+      "title": "1000% DMG 10HP ONESHOT RUSH HARDCORE | FULL XP | BOTS",
+      "description": "FULL XP Instakill/Oneshot Rush Hardcore Open weapons, no fall damage, max running speed. FF off. No mortars. EXPERIENCE CODE - Y9QD. Or in Filters - Name 10HP and set Free slots to Any. \nTo join our community, search for \"1000hc\" on Discord.",
+      "playgroundId": "67ba45f0-a60a-11f0-a523-3a2971fc78b6",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Mrktg_04-3ea223f2.jpg",
+      "likes": 700,
+      "created": "2025-10-10T18:53:26.000Z",
+      "updated": "2026-09-01T02:43:40.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Defqon737"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zawg6",
+      "title": "1000% DMG 10HP ONESHOT CONQUEST HARDCORE | FULL XP | BOTS",
+      "description": "FULL XP Instakill/Oneshot Conquest Hardcore Open weapons, no fall damage, max running speed. FF off. EXPERIENCE CODE - ZAWG6 . Or in Filters - Name 10HP and set Free slots to Any. \nTo join our community, search for \"1000hc\" on Discord.",
+      "playgroundId": "51ea32a0-c151-11f0-bdc4-cd78f31021e6",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_29-f25b2533.jpg",
+      "likes": 3400,
+      "created": "2025-11-14T11:59:05.000Z",
+      "updated": "2026-10-13T07:41:54.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Defqon737"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "113ub",
+      "title": "NEW WORLD ORDER | HARDCORE CONQUEST | FULL XP | BOTS",
+      "description": "Traditional Hardcore w/ FF OFF. Bots have 100hp and this can't be modified. Move vehicles out of main base and engage in playable area. Do not sabotage vehicles in enemy base. Join NWO: /nwo-bf6",
+      "playgroundId": "ddc7bc30-8b5d-11f1-944a-63e7316fb636",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_29-f25b2533.jpg",
+      "likes": 760,
+      "created": "2026-07-29T14:57:49.000Z",
+      "updated": "2026-10-09T09:59:17.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "BIA_VIPER"
+      },
+      "players": 64,
+      "tags": ["Core_Modes", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "1zgz2",
+      "title": "[TBG] - HARDCORE BREAKTHROUGH - FULL XP - TRUE BORN GAMING",
+      "description": "True Born Gaming: discord . gg / tbgclan - Join us today! Search for us in portal: \"True Born\" - slots, select \"Any\"\nThis is not an extreme hardcore server! Rotational maps!",
+      "playgroundId": "df56be00-8475-11f1-80d2-91e0c00ef9ee",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/fa1cf2183d02e1e7ea395ec5f989afc2c8b6464df7b454e6638ecf04f7262866/4b84de1b-1b11-4cf9-a029-3c9a85954d4d/1772129335-352x248-352-248-1446ac23-3601-424d-bd2b-aad50f6bdc4e.png",
+      "likes": 490,
+      "created": "2026-07-20T20:02:01.000Z",
+      "updated": "2026-09-18T18:00:54.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Sirpopemeow"
+      },
+      "players": 64,
+      "tags": ["Core_Modes", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zd7hy",
+      "title": "Gulf of Lyndon: Night Ops  Conquest Large",
+      "description": "A large-scale Conquest experience featuring vehicles, intense urban combat, air engagements, and naval warfare across the Gulf of Lyndon. Now featuring randomized day and night conditions.\n\nCreated by: kurtinthegrind, andy6170 and Byarlant",
+      "playgroundId": "f5b060f0-c5cd-11f0-a5ca-e03b56a3a662",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/aab47743edc7f12b92f0b6ca561fd0eefbdf8c1459401c4943679060763d498b/1d149ba3-aaae-471c-9384-6a6796bb9183/1782037707-352x248-352-248-a13dcf55-4cae-45bc-a4e1-684eb1f20263.jpg",
+      "likes": 48070,
+      "created": "2025-11-20T05:01:22.000Z",
+      "updated": "2026-09-16T23:09:20.000Z",
+      "xp": "limited",
+      "xpMode": "official-progression",
+      "premium": false,
+      "licenses": [],
+      "creator": {
+        "kind": "player",
+        "name": "kurtinthegrind"
+      },
+      "players": 64,
+      "tags": ["custom_scripted"],
+      "files": [
+        "Script.ts",
+        "GulfofLyndon_Conquest_Large.spatial.minified.json"
+      ],
+      "hasRules": true,
+      "rotation": [
+        {
+          "map": "MP_Granite_MainStreet_Portal",
+          "mode": "Custom",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zrq39",
+      "title": "[TBG] - HARDCORE BREAKTHROUGH - FULL XP - TRUE BORN GAMING",
+      "description": "True Born Gaming: discord . gg / tbgclan - Join us today! Search for us in portal: \"True Born\" - slots, select \"Any\" This is not an extreme hardcore server! Rotational maps!",
+      "playgroundId": "5aa97c80-1024-11f1-b7ee-71545c312aae",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/fa1cf2183d02e1e7ea395ec5f989afc2c8b6464df7b454e6638ecf04f7262866/4b84de1b-1b11-4cf9-a029-3c9a85954d4d/1772129335-352x248-352-248-1446ac23-3601-424d-bd2b-aad50f6bdc4e.png",
+      "likes": 3420,
+      "created": "2026-02-22T19:26:15.000Z",
+      "updated": "2026-10-13T06:46:11.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "AChonkyCat"
+      },
+      "players": 64,
+      "tags": ["Core_Modes", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_DryLake",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Paradise",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Paradise",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_DryLake",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_DryLake",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Paradise",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zgza6",
+      "title": "NEW WORLD ORDER | HARDCORE CONQUEST | FULL XP | BOTS",
+      "description": "Traditional Hardcore w/ FF OFF. Bots have 100hp and this can't be modified. Move vehicles out of main base and engage in playable area. Do not sabotage vehicles in enemy base. Join NWO: /nwo-bf6",
+      "playgroundId": "e244fd00-cf0a-11f0-b020-c1d4b29d4196",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/dbd2d88496d34e6df446bb6fd5708bae73c34cdbc9ff7a99019fe194fb1e2daf/fcf9177f-d965-4603-87b5-dba9631f80b8/1764630490-352x248-352-248-5f84c00b-e4a3-416b-ba47-a4156fa8eb7a.jpg",
+      "likes": 10410,
+      "created": "2025-12-01T23:10:10.000Z",
+      "updated": "2026-10-09T09:56:23.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "BIA_VIPER"
+      },
+      "players": 64,
+      "tags": ["Core_Modes", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "mphd",
+      "title": "FaithWalker's Hardcore Conquest | discord.gg/FWBC",
+      "description": "FaithWalker's Hardcore Conquest is Open Weapons-No DMRs, 90% Movement, FF Off, Crawl On Downed, & Limited HUD. Most weapons are 1-2 shot kills depending on caliber and range. Join FaithWalker's Battlefield Community: ( discord.gg/FWBC ) -exp code \"MPHD\"",
+      "playgroundId": "6713da10-a8fa-11f0-b500-82ab9c3412ce",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/3f365f1df318877c6d42c7633d0c6c7c0cc1aecefaf28fc54774a0e050646409/013c30bc-6894-4c4e-80cc-2533b3ce5315/1781007672-352x248-352-248-634e3d8d-9489-465b-ad6c-9d083b4251fa.jpg",
+      "likes": 33250,
+      "created": "2025-10-14T12:36:27.000Z",
+      "updated": "2026-10-07T19:12:48.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "FaithWalker24"
+      },
+      "players": 64,
+      "tags": ["custom_loadouts", "Core_Modes", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "x7sd",
+      "title": "Hardcore Breakthrough",
+      "description": "Play Breakthrough with a Hardcore ruleset, including increased damage, limited HUD, Closed Weapon rules and more, creating an intense, less forgiving experience.",
+      "playgroundId": "e4add460-9dee-11f0-8e1e-3bf65f5d3efa",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_27-76336adc.jpg",
+      "likes": 129860,
+      "created": "2025-10-15T11:16:21.000Z",
+      "updated": "2026-08-26T16:25:31.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "BFPortalOfficial"
+      },
+      "players": 48,
+      "tags": [
+        "friendly_fire",
+        "class_locked_weapons",
+        "Core_Modes",
+        "limited_hud"
+      ],
+      "rotation": [
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        }
+      ]
+    },
+    {
+      "code": "x7sb",
+      "title": "Hardcore Conquest",
+      "description": "Play Conquest with a Hardcore ruleset, including increased damage, limited HUD, Closed Weapon rules and more, creating an intense, less forgiving experience.",
+      "playgroundId": "b592a7f0-9dee-11f0-a603-084d8359f73a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_02-302b2312.jpg",
+      "likes": 106500,
+      "created": "2025-10-15T11:15:02.000Z",
+      "updated": "2026-08-26T16:27:40.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "BFPortalOfficial"
+      },
+      "players": 64,
+      "tags": [
+        "friendly_fire",
+        "class_locked_weapons",
+        "Core_Modes",
+        "limited_hud"
+      ],
+      "rotation": [
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "x7sn",
+      "title": "Hardcore Rush",
+      "description": "Play Rush with a Hardcore ruleset, including increased damage, limited HUD, Closed Weapon rules and more, creating an intense, less forgiving experience.",
+      "playgroundId": "82987720-9def-11f0-8e1e-3bf65f5d3efa",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_29-f25b2533.jpg",
+      "likes": 68410,
+      "created": "2025-10-15T11:20:46.000Z",
+      "updated": "2026-08-26T16:26:43.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "BFPortalOfficial"
+      },
+      "players": 24,
+      "tags": [
+        "friendly_fire",
+        "class_locked_weapons",
+        "Core_Modes",
+        "limited_hud"
+      ],
+      "rotation": [
+        {
+          "map": "MP_Plaza",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [12, 12]
+        }
+      ]
+    },
+    {
+      "code": "x7qa",
+      "title": "FNB - Conquest Chaos",
+      "description": "Faster movement speed, more tickets, faster bullet speed.",
+      "playgroundId": "6d1810e0-93db-11f0-bb03-2f12d4cf6462",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/12ea4189e37cb17bde67015bc935a07683117ead9b1b9d4ea963c4c59cdf0edd/e5a2feae-1b6a-4b5c-87da-bd012e2a10c9/1788356170-352x248-352-248-e278499e-7c64-4e6e-8de2-3b574a42e01a.jpg",
+      "likes": 47900,
+      "created": "2025-10-12T15:31:48.000Z",
+      "updated": "2026-09-08T11:11:18.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "aT1C"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "x7st",
+      "title": "Infantry Breakthrough",
+      "description": "It's boots on the ground in the infantry-only version of Breakthrough, with no ground or air vehicles.",
+      "playgroundId": "40559db0-9df0-11f0-a603-084d8359f73a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_22-c2ff6b61.jpg",
+      "likes": 47500,
+      "created": "2025-10-15T11:26:04.000Z",
+      "updated": "2026-08-26T16:27:26.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "BFPortalOfficial"
+      },
+      "players": 48,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [24, 24]
+        }
+      ]
+    },
+    {
+      "code": "x7qk",
+      "title": "FNB - Class locked Breakthrough Mayhem",
+      "description": "Class locked, faster movement speed, more tickets, faster bullet speed.",
+      "playgroundId": "db687110-9468-11f0-8f70-5b8716a8e6be",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/12ea4189e37cb17bde67015bc935a07683117ead9b1b9d4ea963c4c59cdf0edd/c4af4f8d-7a92-4102-852a-08c8d2e32ce2/1788356202-352x248-352-248-24708216-08bb-4ce0-bdad-35ffa6d34ae6.jpg",
+      "likes": 39200,
+      "created": "2025-10-13T08:24:12.000Z",
+      "updated": "2026-09-02T13:36:56.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "aT1C"
+      },
+      "players": 64,
+      "tags": ["class_locked_weapons", "Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Isolated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zydgb",
+      "title": "Operation Metro",
+      "description": "Welcome to my \"remake\" of Operation Metro. Conquest 32vs32. Enjoy!",
+      "playgroundId": "b3aea9b0-b14a-11f0-b7b7-afbcbf706412",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_17-a54bf59f.jpg",
+      "likes": 15320,
+      "created": "2025-10-25T02:31:24.000Z",
+      "updated": "2025-11-16T17:14:49.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "BellumI988"
+      },
+      "players": 64,
+      "tags": ["custom_scripted", "custom_loadouts", "class_locked_weapons"],
+      "rotation": [
+        {
+          "map": "MP_Aftermath",
+          "mode": "Custom",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "yqyq5",
+      "title": "FNB - Rush Chaos",
+      "description": "Rush Chaos has invaded Battlefield 6. Prepare for a hectic battle over the MCOMs!",
+      "playgroundId": "2ee961e0-af40-11f0-aff2-6c385200ca9a",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/12ea4189e37cb17bde67015bc935a07683117ead9b1b9d4ea963c4c59cdf0edd/dd3aaf32-0e55-40e2-8403-78b742b540ff/1788356262-352x248-352-248-5ee2c739-65bf-4d71-9469-01ebbcb9cc5f.jpg",
+      "likes": 12950,
+      "created": "2025-10-22T12:11:04.000Z",
+      "updated": "2026-09-11T19:16:26.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "trusted",
+        "name": "aT1C"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Badlands",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Abbasid",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Battery",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Plaza",
+          "mode": "Rush",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "zx45f",
+      "title": "Chaos Climb",
+      "description": "Climb your way to the top against another team through chaos and mayhem! First team to reach the top wins!\nJoin a populated server, it is more fun and chaotic with players!\nCurrent Version: v0.755\nChangelog: More fire and bug fixes",
+      "playgroundId": "c8b6a040-a805-11f0-a439-6bcb8014083e",
+      "thumbnailUrl": "https://cdn.mcr.ea.com/172/images-users/8f019aa0e5f064ec9113e5acdde25c9f173f3947de75a1b12c41d9a346f80e45/f607fc0b-0856-4e4d-9cde-40d15ec34a76/1763242495-352x248-352-248-428b6b66-89a6-4eed-a459-104f9a105734.jpg",
+      "likes": 11360,
+      "created": "2025-10-13T07:25:24.000Z",
+      "updated": "2025-12-10T07:22:26.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Forstorare"
+      },
+      "players": 40,
+      "tags": ["custom_scripted", "custom_loadouts", "limited_hud"],
+      "rotation": [
+        {
+          "map": "MP_Dumbo",
+          "mode": "Custom",
+          "rounds": 1,
+          "teams": [20, 20]
+        }
+      ]
+    },
+    {
+      "code": "15dnu",
+      "title": "Battle Royale Duos 34p",
+      "description": "Experience description.",
+      "playgroundId": "b856c9a0-c2e9-11f1-a6e0-b9676d5be35a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/PortalPlaceholderImage-352x248-b4fdbb60.jpg",
+      "likes": 0,
+      "created": "2026-10-22T07:27:30.000Z",
+      "updated": "2026-10-22T07:27:31.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "EEASELQV033"
+      },
+      "players": 34,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Granite",
+          "mode": "Redsec Duos",
+          "rounds": 1,
+          "teams": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        }
+      ]
+    },
+    {
+      "code": "15dnt",
+      "title": "Battle Royale Quads 52p",
+      "description": "Experience description.",
+      "playgroundId": "a2f045a0-c2e9-11f1-b307-316f3faa4712",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/PortalPlaceholderImage-352x248-b4fdbb60.jpg",
+      "likes": 0,
+      "created": "2026-10-22T07:26:54.000Z",
+      "updated": "2026-10-22T07:26:55.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "EEASELQV033"
+      },
+      "players": 52,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Granite",
+          "mode": "Redsec Quads",
+          "rounds": 1,
+          "teams": [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        }
+      ]
+    },
+    {
+      "code": "15dns",
+      "title": "Gauntlet 6p",
+      "description": "Experience description.",
+      "playgroundId": "91bce400-c2e9-11f1-a6e0-b9676d5be35a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/PortalPlaceholderImage-352x248-b4fdbb60.jpg",
+      "likes": 0,
+      "created": "2026-10-22T07:26:25.000Z",
+      "updated": "2026-10-22T07:26:27.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "EEASELQV033"
+      },
+      "players": 6,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Granite",
+          "mode": "Redsec Gauntlet",
+          "rounds": 1,
+          "teams": [1, 1, 1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "code": "15dnr",
+      "title": "Gauntlet 32p",
+      "description": "Experience description.",
+      "playgroundId": "7e188260-c2e9-11f1-a78d-ebbc7d8e89e2",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/PortalPlaceholderImage-352x248-b4fdbb60.jpg",
+      "likes": 0,
+      "created": "2026-10-22T07:25:52.000Z",
+      "updated": "2026-10-22T07:25:54.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "EEASELQV033"
+      },
+      "players": 32,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Granite",
+          "mode": "Redsec Gauntlet",
+          "rounds": 1,
+          "teams": [4, 4, 4, 4, 4, 4, 4, 4]
+        }
+      ]
+    },
+    {
+      "code": "15fd3",
+      "title": "testin",
+      "description": "Experience description.",
+      "playgroundId": "819fdf40-c3f8-11f1-82f2-3404bf014a6e",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Mrktg_07-b7cc3a7a.jpg",
+      "likes": 0,
+      "created": "2026-10-16T15:45:51.000Z",
+      "updated": "2026-10-16T15:45:55.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": false,
+      "licenses": ["multiplayer"],
+      "creator": {
+        "kind": "player",
+        "name": "SNRBO305"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Granite",
+          "mode": "Redsec Quads",
+          "rounds": 1,
+          "teams": [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        }
+      ]
+    },
+    {
+      "code": "15mvw",
+      "title": "[ZColin]Speed Domination - 2",
+      "description": "Bili%bili-Zo-tin*Co/lin,\nCommercial use is prohibited.",
+      "playgroundId": "bf92b580-c6d6-11f1-b307-316f3faa4712",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_MP_01-ab6fbd7c.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:21:46.000Z",
+      "updated": "2026-10-13T07:21:46.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "bf6trackeraewmgm"
+      },
+      "players": 12,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Capstone",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Limestone",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        }
+      ]
+    },
+    {
+      "code": "15mvu",
+      "title": "Schlachtfeld Niedersachsen 2",
+      "description": "Experience description.",
+      "playgroundId": "8a1a81d0-c6d6-11f1-9e7c-51d14a3c0d7e",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_MP_05-58cedadf.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:20:16.000Z",
+      "updated": "2026-10-13T07:39:53.000Z",
+      "xp": "full",
+      "xpMode": "portal-default",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "StuntmanMike84"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Abbasid",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_DryLake",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Paradise",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Outskirts",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_FireStorm",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    },
+    {
+      "code": "15mvs",
+      "title": "[ZColin]Speed Domination - 4",
+      "description": "Bili%bili-Zo-tin*Co/lin,\nCommercial use is prohibited.",
+      "playgroundId": "36cde440-c6d6-11f1-9e7c-51d14a3c0d7e",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_34-79879a41.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:17:56.000Z",
+      "updated": "2026-10-13T07:17:57.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "bf6trackertf360q"
+      },
+      "players": 12,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Isolated",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Domination",
+          "rounds": 1,
+          "teams": [4, 8]
+        }
+      ]
+    },
+    {
+      "code": "15mvq",
+      "title": "[ZColin]Speed SquadDM-Isolated, Atoll",
+      "description": "Bilibili-ZotinColin,Commercial use is prohibited.\nMode: MP_SquadDM | Release: 2026-07-22 19:25",
+      "playgroundId": "10d5e3f0-c6d6-11f1-87a7-00dc8cc3940a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_34-79879a41.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:16:53.000Z",
+      "updated": "2026-10-13T07:16:53.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "bf6trackeraewmgm"
+      },
+      "players": 16,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Atoll",
+          "mode": "Squad deathmatch",
+          "rounds": 1,
+          "teams": [4, 4, 4, 4]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Squad deathmatch",
+          "rounds": 1,
+          "teams": [4, 4, 4, 4]
+        }
+      ]
+    },
+    {
+      "code": "15mvp",
+      "title": "[ZColin]FAST PRO Mission",
+      "description": "Bilibili-ZotinColin\nComm-ercial use is prohibited.",
+      "playgroundId": "b6b73630-c6d5-11f1-87a7-00dc8cc3940a",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_16-3c4889eb.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:14:22.000Z",
+      "updated": "2026-10-13T07:14:22.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "bf6trackerh59wtw"
+      },
+      "players": 21,
+      "tags": ["friendly_fire", "Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Abbasid",
+          "mode": "Breakthrough Large",
+          "rounds": 1,
+          "teams": [10, 11]
+        }
+      ]
+    },
+    {
+      "code": "15mvf",
+      "title": "conquest",
+      "description": "By LUKeBF6",
+      "playgroundId": "e01297b0-c6d3-11f1-b307-316f3faa4712",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Rvl_05-7783ca9e.jpg",
+      "likes": 0,
+      "created": "2026-10-13T07:01:12.000Z",
+      "updated": "2026-10-13T07:10:23.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "lukeink187"
+      },
+      "players": 31,
+      "tags": ["friendly_fire", "custom_loadouts", "Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Aftermath",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [2, 29]
+        }
+      ]
+    },
+    {
+      "code": "15mva",
+      "title": "[ZColin]Speed TeamDM - Outskirts, Subsurface, Tungsten - 4",
+      "description": "Bilibili-ZotinColin,Commercial use is prohibited.\nMode: MP_TeamDM | Release: 2026-07-22 19:00",
+      "playgroundId": "5f7f8db0-c6d3-11f1-9e7c-51d14a3c0d7e",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_Mrktg_09-10df4570.jpg",
+      "likes": 0,
+      "created": "2026-10-13T06:57:36.000Z",
+      "updated": "2026-10-13T06:57:37.000Z",
+      "xp": "limited",
+      "xpMode": "portal-unranked",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Aio5hkn3s"
+      },
+      "players": 12,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_Outskirts",
+          "mode": "Team deathmatch",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Team deathmatch",
+          "rounds": 1,
+          "teams": [4, 8]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Team deathmatch",
+          "rounds": 1,
+          "teams": [4, 8]
+        }
+      ]
+    },
+    {
+      "code": "15mvn",
+      "title": "NEU 1 Conquest",
+      "description": "Experience description.",
+      "playgroundId": "f0652a30-c339-11f1-a78d-ebbc7d8e89e2",
+      "thumbnailUrl": "https://eaassets-a.akamaihd.net/battlelog/battlebinary/glacier/preApprovedThumbnails/Portal_Experience_Tile_MP_04-66df560b.jpg",
+      "likes": 0,
+      "created": "2026-10-08T17:01:43.000Z",
+      "updated": "2026-10-13T07:13:40.000Z",
+      "xp": "limited",
+      "xpMode": "portal-default-backfillai",
+      "premium": true,
+      "licenses": ["multiplayer", "premium_san", "premium_subscription"],
+      "creator": {
+        "kind": "player",
+        "name": "Sir_Die-a-lot900"
+      },
+      "players": 64,
+      "tags": ["Core_Modes"],
+      "rotation": [
+        {
+          "map": "MP_GolmudRailway",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Subsurface",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Contaminated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Isolated",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Atoll",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Eastwood",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_DryLake",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Paradise",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Tungsten",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Dumbo",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        },
+        {
+          "map": "MP_Capstone",
+          "mode": "Conquest large",
+          "rounds": 1,
+          "teams": [32, 32]
+        }
+      ]
+    }
+  ]
+}

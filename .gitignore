@@ -14,3 +14,6 @@ __unconfig*
 # Design mockups. Their images are placeholder crops of EA artwork, so they
 # stay out of the repository. See "Visual direction" in PLAN.md.
 mockups
+
+# Personal access tokens for one-off data pulls. Never commit.
+.auth.*

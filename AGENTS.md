@@ -41,6 +41,7 @@ and before type-checking. The route tree is committed; never edit it by hand.
 | `src/shared` | Constants, types and text used on both sides |
 | `src/styles.css` | Design tokens and the few custom utilities |
 | `tests` | Test database setup. Tests sit beside the code they cover |
+| `seed` | Sample data for local development |
 | `mockups` | The design reference. Git-ignored; its images are not ours to publish |
 
 Rules that hold the structure together:
