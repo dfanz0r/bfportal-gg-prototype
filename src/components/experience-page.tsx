@@ -11,6 +11,7 @@ import { Gallery } from './gallery'
 import { LibraryLink } from './library-link'
 import { LikeButton } from './like-button'
 import { PersonLink } from './person-link'
+import { ReportMenu } from './report-menu'
 import { Section } from './section'
 import { buttonGhost, panel } from './ui'
 import { UpdatePost } from './update-post'
@@ -135,12 +136,24 @@ export function ExperiencePage(props: { data: Experience }) {
                 </Show>
               </p>
             </div>
-            <LikeButton
-              slug={data().slug}
-              likes={data().likes}
-              liked={data().viewer.liked}
-              signedIn={data().viewer.signedIn}
-            />
+            <div class="flex flex-wrap items-center gap-2">
+              <LikeButton
+                slug={data().slug}
+                likes={data().likes}
+                liked={data().viewer.liked}
+                signedIn={data().viewer.signedIn}
+              />
+              {/* Its owner marks problems another way; reporting is for
+                  everyone else. */}
+              <Show
+                when={!data().viewer.isOwner && data().status === 'published'}
+              >
+                <ReportMenu
+                  slug={data().slug}
+                  signedIn={data().viewer.signedIn}
+                />
+              </Show>
+            </div>
           </div>
         </div>
       </section>
