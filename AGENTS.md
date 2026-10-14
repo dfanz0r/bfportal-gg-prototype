@@ -86,6 +86,9 @@ Reach for what exists before writing markup:
 | A heading or a paragraph | `display` and `body` from `ui.ts` |
 | A bordered block, a small label, a tag, a filter link | `panel`, `label`, `tag`, `pill` from `ui.ts` |
 | A row of filter links | `Pills` |
+| Tabs between the parts of one area, each at its own address | `Tabs` |
+| The trail and the "by, when" line above a page's title | `crumbs` and `meta` on `PageLayout` |
+| A day as a small block, the day over the month | `DateBlock` |
 | "Showing 12 of 40" and the link to more | `ShowMore` |
 | An icon | `<Icon name="…" />`; add new ones to `icon.tsx` |
 | A menu that opens | `<details>` with `createDismiss()` |
@@ -120,6 +123,11 @@ How we write them:
   with `<For>`, not rows written out by hand.
 - **Keep Solid's reactivity.** Do not destructure props. Use `<Show>` and `<For>`, and
   read a value where it is used so it updates when it changes.
+- **Read a prop that holds markup once.** Each read builds the markup again, so
+  `<Show when={props.actions}>{props.actions}</Show>` builds it twice: the server
+  writes one copy, the browser hydrates the other, and the whole page fails. Take it
+  through `children(() => props.actions)` and use that. `PageHead` is the example,
+  and `page-head.test.tsx` counts the builds.
 - **Work without JavaScript where HTML can.** Menus are `<details>`; actions that
   change something are forms that post. Scripts improve them, they do not create them.
 - **Label what has no text.** An icon-only control carries an `aria-label`; icons
@@ -260,8 +268,9 @@ that is not on this machine; keep it that way.
   (`feat(db): …`, `fix(ui): …`, `docs: …`), and never push without being asked.
 - Do only what was asked. Do not add sections to the README or new documents on your
   own; conventions for people changing the code belong in this file.
-- Ask before starting a browser or a local server to check something. Say when a
-  change has not been looked at in a browser.
+- Look at visual work. Render the page and its mockup to screenshots and compare
+  them, the whole page down to the footer, at a few widths, before calling it done;
+  say plainly when something has not been rendered or not been compared. Use the dev server that is already running and do not start another.
 - Say what you verified and what you did not.
 - Change files with the editor's own edit and write tools, one visible change at a
   time. Do not create or rewrite files from the command line: no scripts that patch

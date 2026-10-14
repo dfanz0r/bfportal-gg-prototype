@@ -12,6 +12,7 @@ import {
   isNotNull,
   isNull,
   lte,
+  max,
   ne,
   or,
   type SQL,
@@ -235,16 +236,24 @@ export async function getLibrary(
       .from(experiences)
       .where(and(visible, available))
       .groupBy(experiences.game),
+    // What the head of the page says. Everything is counted among those that
+    // still load, but for `listed`: how many there are whether they load or
+    // not, which a library that leads with its health sets the count against.
     db
       .select({
-        experiences: count(),
+        experiences: count(sql`case when ${available} then 1 end`),
         newThisWeek: count(
-          sql`case when ${experiences.firstPublishedAt} >= ${weekAgo.toISOString()}::timestamptz then 1 end`,
+          sql`case when ${available} and ${experiences.firstPublishedAt} >= ${weekAgo.toISOString()}::timestamptz then 1 end`,
         ),
-        creators: countDistinct(experiences.ownerId),
+        creators: countDistinct(
+          sql`case when ${available} then ${experiences.ownerId} end`,
+        ),
+        listed: count(),
+        // When the nightly check last looked at any of them.
+        checkedAt: max(experiences.portalCheckedAt),
       })
       .from(experiences)
-      .where(and(inGame, available)),
+      .where(inGame),
   ])
 
   const groups = [...groupBy(groupRows, (row) => row.groupSlug).values()]
@@ -283,6 +292,8 @@ export async function getLibrary(
       tags: group.map((tag) => ({ name: tag.name, slug: tag.slug })),
     })),
     stats,
+    // When this was read, for "checked 6 hours ago".
+    now,
   }
 }
 

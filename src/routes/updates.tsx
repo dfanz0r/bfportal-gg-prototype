@@ -4,7 +4,7 @@ import { For, Show } from 'solid-js'
 import { PageLayout } from '../components/page-layout'
 import { Pills } from '../components/pills'
 import { ShowMore } from '../components/show-more'
-import { buttonGhost, pill } from '../components/ui'
+import { buttonGhost, label, panel, pill } from '../components/ui'
 import { UpdateCard } from '../components/update-card'
 import { fetchUpdates } from '../functions/updates'
 import {
@@ -104,10 +104,19 @@ function Page() {
           </p>
         }
       >
-        <div class="mt-6 grid gap-4 lg:grid-cols-3">
-          <For each={data().items}>
-            {(update) => <UpdateCard update={update} now={data().now} />}
-          </For>
+        <div class="mt-4 grid items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10">
+          <div class="min-w-0 border-t border-line">
+            <For each={data().items}>
+              {(update) => <UpdateCard update={update} now={data().now} row />}
+            </For>
+          </div>
+          <aside class={`${panel} p-5`}>
+            <h2 class={`${label} mb-3`}>Posting updates</h2>
+            <p class="text-[13.5px] leading-[1.45] text-fg-2">
+              Owners and listed creators can post from their project's page. A
+              moderator looks at each update before it appears here.
+            </p>
+          </aside>
         </div>
         <ShowMore
           shown={data().items.length}

@@ -34,6 +34,12 @@ export type GameInfo = {
     title: string
     lead: string
     sort: 'trending' | 'likes'
+    /**
+     * What the head of its Library leads with. A game people are still
+     * building for leads with what is new; one that is an archive leads with
+     * how much of it still loads.
+     */
+    leadsWith: 'new' | 'health'
   }
 }
 
@@ -56,6 +62,7 @@ export const gameList: readonly GameInfo[] = [
       title: 'Experience library',
       lead: 'Every Battlefield 6 experience shared with the community. Filter by mode, size and tags, or paste a code to check it before you load in.',
       sort: 'trending',
+      leadsWith: 'new',
     },
   },
   {
@@ -73,6 +80,7 @@ export const gameList: readonly GameInfo[] = [
       title: 'Battlefield 2042 library',
       lead: "Every experience the community shared for 2042's Portal, from Bad Company Rush to wingsuit races. Still here, still searchable, and checked every night against the game.",
       sort: 'likes',
+      leadsWith: 'health',
     },
   },
 ]

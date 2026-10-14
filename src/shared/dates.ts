@@ -17,6 +17,18 @@ export function formatDate(date: Date, timeZone = 'UTC') {
   }).format(date)
 }
 
+/** The day of the month and the month's short name, "16" and "Oct". */
+export function formatDayAndMonth(date: Date, timeZone = 'UTC') {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    timeZone,
+  }).formatToParts(date)
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)?.value ?? ''
+  return { day: part('day'), month: part('month') }
+}
+
 /** "Oct 16, 2026, 8:30 PM UTC", for a tooltip. */
 export function formatDateTime(date: Date, timeZone = 'UTC') {
   return new Intl.DateTimeFormat('en-US', {

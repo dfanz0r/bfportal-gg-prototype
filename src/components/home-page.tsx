@@ -11,10 +11,13 @@ import { PlaytestCard } from './playtest-card'
 import { ScriptRow } from './script-row'
 import { SearchForm } from './search-form'
 import { Section } from './section'
-import { buttonSteel, display, panel } from './ui'
+import { buttonGhost, display, panel } from './ui'
 import { UpdateCard } from './update-card'
 
-const more = 'inline-flex items-center gap-1.5 hover:text-fg'
+const more = 'inline-flex items-center gap-1.5 hover:text-accent'
+
+/** "2042" from "Battlefield 2042": how a game is named beside its library. */
+const shortName = (name: string) => name.replace('Battlefield ', '')
 
 function Stat(props: { value: number; label: string }) {
   return (
@@ -91,10 +94,12 @@ export function HomePage(props: { data: Home }) {
         </div>
       </section>
 
-      <div class="wrap pb-20">
+      <div class="wrap">
         <Show when={data().trending.length > 0}>
           <Section
-            title="Trending experiences"
+            large
+            title="Trending"
+            accent="experiences"
             note="What people liked this week."
             action={
               <LibraryLink game={defaultGame.id} class={more}>
@@ -113,7 +118,9 @@ export function HomePage(props: { data: Home }) {
 
         <Show when={data().updates.length > 0}>
           <Section
-            title="Recent updates"
+            large
+            title="Recent"
+            accent="updates"
             note="News from creators about what they are building."
             action={
               <Link to="/updates" class={more}>
@@ -132,7 +139,9 @@ export function HomePage(props: { data: Home }) {
 
         <Show when={data().playtests.length > 0}>
           <Section
-            title="Open playtests"
+            large
+            title="Open"
+            accent="playtests"
             note="Try something before it ships and tell its creator what you found."
             action={
               <Link to="/playtests" class={more}>
@@ -151,7 +160,9 @@ export function HomePage(props: { data: Home }) {
 
         <Show when={data().scripts.length > 0}>
           <Section
-            title="Trending scripts"
+            large
+            title="Trending"
+            accent="scripts"
             note="Rules, logic and interface snippets to build on."
             action={
               <Link to="/scripts" class={more}>
@@ -170,7 +181,9 @@ export function HomePage(props: { data: Home }) {
 
         <Show when={data().events.length > 0}>
           <Section
-            title="Upcoming events"
+            large
+            title="Upcoming"
+            accent="events"
             note="Community nights, tournaments and workshops."
             action={
               <Link to="/events" class={more}>
@@ -179,39 +192,59 @@ export function HomePage(props: { data: Home }) {
               </Link>
             }
           >
-            <ul class="grid gap-4 lg:grid-cols-3">
+            <ul class="grid gap-4 min-[680px]:grid-cols-2 min-[1100px]:grid-cols-4">
               <For each={data().events}>
                 {(event) => <EventCard event={event} />}
               </For>
             </ul>
           </Section>
         </Show>
-
-        <For each={otherGames()}>
-          {(game) => (
-            <section
-              data-game={game.id}
-              class="mt-14 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border border-line border-l-2 border-l-accent bg-surface-1 px-6 py-6"
-            >
-              <div>
-                <h2
-                  class={`${display} text-3xl leading-none tracking-[0.02em] text-steel-hi`}
-                >
-                  The {game.name.replace('Battlefield ', '')} library lives on
-                </h2>
-                <p class="mt-2.5 max-w-[46em] text-[15.5px] text-fg-2">
-                  {countOf(game.id)} experiences that still load, checked every
-                  night against the game.
-                </p>
-              </div>
-              <LibraryLink game={game.id} class={buttonSteel}>
-                Open the {game.name.replace('Battlefield ', '')} library
-                <Icon name="arrow-right" />
-              </LibraryLink>
-            </section>
-          )}
-        </For>
       </div>
+
+      {/* The other games' libraries: a band the width of the window, the last
+          thing before the footer and flush against it. The negative margin
+          takes back the gap the footer leaves above itself. */}
+      <Show when={otherGames().length > 0}>
+        <div class="mt-24 -mb-24">
+          <For each={otherGames()}>
+            {(game) => (
+              <section
+                data-game={game.id}
+                class="relative isolate overflow-hidden border-t border-line"
+              >
+                <div
+                  class="dot-grid absolute inset-0 -z-10 [mask-image:linear-gradient(to_left,rgb(0_0_0/0.85),transparent_62%)]"
+                  aria-hidden="true"
+                />
+                <div class="wrap flex flex-wrap items-center justify-between gap-x-10 gap-y-6 py-14">
+                  <div>
+                    <p class="inline-flex items-center gap-2.5 font-mono text-[11.5px] font-medium tracking-[0.18em] text-accent uppercase before:size-[7px] before:bg-accent">
+                      {game.name} archive
+                    </p>
+                    <h2
+                      class={`${display} mt-3 text-[clamp(34px,4.2vw,48px)] leading-[0.95] tracking-[0.01em] text-steel-hi`}
+                    >
+                      The {shortName(game.name)} library lives on
+                    </h2>
+                    <p class="mt-3 max-w-[520px] text-[15.5px] text-fg-2">
+                      {countOf(game.id)} experiences from the{' '}
+                      {shortName(game.name)} era are still here, searchable by
+                      code, creator and tag.
+                    </p>
+                  </div>
+                  <LibraryLink
+                    game={game.id}
+                    class={`${buttonGhost} bg-base/60 backdrop-blur-sm hover:border-accent hover:text-accent`}
+                  >
+                    Browse the {shortName(game.name)} library
+                    <Icon name="arrow-right" />
+                  </LibraryLink>
+                </div>
+              </section>
+            )}
+          </For>
+        </div>
+      </Show>
     </main>
   )
 }

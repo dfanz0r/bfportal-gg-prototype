@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
+import { defaultGame, gameList } from '../shared/games'
 import { disclaimer } from '../shared/legal'
 import { links } from '../shared/links'
 import { type SectionPath, section } from '../shared/sections'
@@ -24,7 +25,19 @@ const page = (to: SectionPath): FooterLink => ({ to, label: section(to).title })
 const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: 'Browse',
-    links: [page('/library'), page('/scripts'), page('/maps'), page('/tools')],
+    links: [
+      page('/library'),
+      page('/scripts'),
+      page('/maps'),
+      page('/tools'),
+      // Each other game's library, by its short name: "2042 archive".
+      ...gameList
+        .filter((game) => game.id !== defaultGame.id)
+        .map((game) => ({
+          href: game.libraryPath,
+          label: `${game.name.replace('Battlefield ', '')} archive`,
+        })),
+    ],
   },
   {
     title: 'Create',

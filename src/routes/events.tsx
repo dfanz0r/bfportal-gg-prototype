@@ -4,7 +4,8 @@ import { For, Show } from 'solid-js'
 import { EventCard } from '../components/event-card'
 import { PageLayout } from '../components/page-layout'
 import { Pills } from '../components/pills'
-import { buttonGhost, pill } from '../components/ui'
+import { Tabs } from '../components/tabs'
+import { pill } from '../components/ui'
 import { fetchEvents } from '../functions/events'
 import { eventsSearchSchema } from '../shared/feed-search'
 
@@ -27,16 +28,20 @@ function Page() {
   const data = Route.useLoaderData()
 
   return (
-    <PageLayout
-      title="Events"
-      lead={LEAD}
-      actions={
-        <Link to="/playtests" class={buttonGhost}>
-          Playtests
-        </Link>
-      }
-    >
-      <Pills label="When">
+    <PageLayout title="Events" lead={LEAD}>
+      <Tabs
+        label="Playtests and events"
+        items={[
+          { name: 'Playtests', href: '/playtests' },
+          {
+            name: 'Community events',
+            href: '/events',
+            count: data().counts.upcoming,
+            current: true,
+          },
+        ]}
+      />
+      <Pills label="When" class="mt-4">
         <Link
           to="/events"
           class={pill}
@@ -70,7 +75,7 @@ function Page() {
           </p>
         }
       >
-        <ul class="mt-6 grid gap-4 lg:grid-cols-3">
+        <ul class="mt-6 grid gap-4 min-[680px]:grid-cols-2 min-[1100px]:grid-cols-4">
           <For each={data().items}>
             {(event) => <EventCard event={event} />}
           </For>

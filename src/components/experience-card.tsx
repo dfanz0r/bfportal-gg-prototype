@@ -26,6 +26,14 @@ export function ExperienceCard(props: {
   // address is the not-found page.
   const href = () => `/experiences/${experience().slug}`
 
+  // A card that already says what it is built with has room for one topic
+  // tag; more would wrap to a second row and make the cards uneven.
+  const topicTags = () =>
+    experience().tags.slice(
+      0,
+      experience().types.length > 0 || experience().isTemplate ? 1 : 2,
+    )
+
   return (
     <article class="card-hover flex flex-col border border-line bg-surface-1">
       <div class="relative aspect-video overflow-hidden bg-surface-3">
@@ -138,7 +146,7 @@ export function ExperienceCard(props: {
                 </LibraryLink>
               </li>
             </Show>
-            <For each={experience().tags}>
+            <For each={topicTags()}>
               {(item) => (
                 <li>
                   <LibraryLink

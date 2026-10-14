@@ -35,6 +35,10 @@ export function LibraryLink(props: Props) {
           resetScroll={!props.keepScroll}
           class={props.class}
           aria-current={props['aria-current']}
+          // The router marks a link current when the page's address starts
+          // with the link's. "/library" starts every other game's address, so
+          // without this the first game's tab is marked on all of them.
+          activeOptions={{ exact: true }}
         >
           {props.children}
         </Link>

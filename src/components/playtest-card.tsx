@@ -5,18 +5,18 @@ import type { PlaytestItem } from '../functions/playtests'
 import { CopyCode } from './copy-code'
 import { DateText } from './date-text'
 import { Regions } from './regions'
-import { panel } from './ui'
+import { display, panel } from './ui'
 
 /** A call for testers, in a listing. */
 export function PlaytestCard(props: { playtest: PlaytestItem }) {
   const playtest = () => props.playtest
   return (
     <article class={`${panel} flex flex-col gap-2 p-4`}>
-      <h3 class="text-[15px] font-semibold">
+      <h3 class={`${display} text-[22px] leading-[1.05] tracking-[0.015em]`}>
         <Link
           to="/playtests/$id"
           params={{ id: String(playtest().id) }}
-          class="hover:text-steel-hi"
+          class="hover:text-accent-hi"
         >
           {playtest().name}
         </Link>
@@ -27,7 +27,7 @@ export function PlaytestCard(props: { playtest: PlaytestItem }) {
         <Show when={playtest().closesAt} fallback="Open">
           {(closes) => (
             <span>
-              {playtest().open ? 'Until' : 'Closed'}{' '}
+              {playtest().open ? 'Open until' : 'Closed'}{' '}
               <DateText value={closes()} />
             </span>
           )}

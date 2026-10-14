@@ -251,6 +251,9 @@ describe('library', () => {
     expect(bf6.categories.map((category) => category.name)).not.toContain(
       'Templates',
     )
-    expect(bf6.stats).toMatchObject({ experiences: 41 })
+    // 41 that load, of 42 listed: Rooftop Gun Game is no longer on Portal.
+    expect(bf6.stats).toMatchObject({ experiences: 41, listed: 42 })
+    expect(bf6.stats.checkedAt).toBeInstanceOf(Date)
+    expect(bf6.now).toEqual(NOW)
   })
 })

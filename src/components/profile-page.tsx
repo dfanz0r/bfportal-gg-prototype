@@ -10,10 +10,10 @@ import {
 import { Avatar } from './avatar'
 import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
-import { Pills } from './pills'
 import { ScriptRow } from './script-row'
 import { ShowMore } from './show-more'
-import { buttonGhost, pill } from './ui'
+import { Tabs } from './tabs'
+import { buttonGhost } from './ui'
 
 const TAB_LABELS: Record<ProfileTab, string> = {
   experiences: 'Experiences',
@@ -25,6 +25,10 @@ const ROLE_LABELS: Record<string, string> = {
   moderator: 'Moderator',
   admin: 'Admin',
 }
+
+/** A small boxed word or two under the name: a role, when they joined. */
+const badge =
+  'border border-line bg-surface-2 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.1em] text-fg-2 uppercase'
 
 /** The head of a profile. */
 export function profileHead(data: Profile | undefined) {
@@ -46,54 +50,66 @@ export function ProfilePage(props: { data: Profile }) {
   // The first tab is what the bare address shows.
   const tabInAddress = (tab: ProfileTab) =>
     tab === profileTabs[0] ? undefined : tab
+  const stats = (): [number, string][] => [
+    [data().counts.experiences, 'experiences'],
+    [data().counts.scripts, 'scripts'],
+    [data().counts.likesReceived, 'likes received'],
+    [data().counts.updates, 'updates posted'],
+  ]
 
   return (
     <main id="content">
       <section class="dot-grid border-b border-line bg-surface-1">
-        <div class="wrap flex flex-wrap items-center gap-x-6 gap-y-4 py-6">
-          <Avatar name={name()} image={data().image} class="size-16 text-xl" />
-          <div class="min-w-0">
-            <h1 class="font-display text-[clamp(34px,3.4vw,46px)] leading-[0.96] font-extrabold tracking-[0.005em] text-steel-hi uppercase [overflow-wrap:anywhere]">
-              {name()}
-            </h1>
-            <p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13.5px] text-fg-2">
-              <Show when={ROLE_LABELS[data().role]}>
-                {(role) => (
-                  <span class="border-l-2 border-accent bg-surface-2 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.1em] text-fg uppercase">
-                    {role()}
-                  </span>
-                )}
-              </Show>
-              <span>
-                Joined <DateText value={data().joinedAt} />
-              </span>
-              <span>{data().counts.likesReceived} likes received</span>
-              <span>{data().counts.updates} updates posted</span>
-            </p>
+        <div class="wrap pt-6">
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-4">
+            <Avatar
+              name={name()}
+              image={data().image}
+              class="size-[72px] text-2xl"
+            />
+            <div class="min-w-0">
+              <h1 class="font-display text-[clamp(34px,3.4vw,46px)] leading-[0.96] font-extrabold tracking-[0.005em] text-steel-hi uppercase [overflow-wrap:anywhere]">
+                {name()}
+              </h1>
+              <p class="mt-2.5 flex flex-wrap items-center gap-2">
+                <Show when={ROLE_LABELS[data().role]}>
+                  {(role) => (
+                    <span class={`${badge} border-l-2 border-l-accent`}>
+                      {role()}
+                    </span>
+                  )}
+                </Show>
+                <span class={badge}>
+                  Joined <DateText value={data().joinedAt} />
+                </span>
+              </p>
+            </div>
           </div>
+          <p class="mt-5 flex flex-wrap gap-x-9 gap-y-1.5 border-t border-steel/15 py-3 text-[13.5px] text-fg-2">
+            <For each={stats()}>
+              {([value, what]) => (
+                <span>
+                  <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
+                    {value}
+                  </b>
+                  {what}
+                </span>
+              )}
+            </For>
+          </p>
         </div>
       </section>
 
       <div class="wrap pt-7 pb-20">
-        <Pills label="What to show">
-          <For each={profileTabs}>
-            {(tab) => (
-              <Link
-                to="/users/$discordId"
-                params={{ discordId: data().discordId }}
-                search={{ tab: tabInAddress(tab) }}
-                resetScroll={false}
-                class={pill}
-                aria-current={data().tab === tab ? 'true' : undefined}
-              >
-                {TAB_LABELS[tab]}
-                <span class="font-mono text-[11.5px] text-fg-3">
-                  {data().counts[tab]}
-                </span>
-              </Link>
-            )}
-          </For>
-        </Pills>
+        <Tabs
+          label="What to show"
+          items={profileTabs.map((tab) => ({
+            name: TAB_LABELS[tab],
+            href: `/users/${data().discordId}${tabInAddress(tab) ? `?tab=${tab}` : ''}`,
+            count: data().counts[tab],
+            current: data().tab === tab,
+          }))}
+        />
 
         <Show
           when={shown() > 0}

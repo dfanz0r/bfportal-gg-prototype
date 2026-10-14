@@ -81,6 +81,9 @@
   html {
     background: var(--color-base);
     color-scheme: dark;
+    /* Every scrollbar in the page's own colors, the ones inside boxes too.
+       Some browsers draw theirs light whatever the color scheme says. */
+    scrollbar-color: var(--color-line-strong) var(--color-base);
   }
   body {
     min-height: 100vh;

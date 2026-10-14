@@ -1,8 +1,8 @@
-import { Link } from '@tanstack/solid-router'
 import { Show } from 'solid-js'
 
 import type { Playtest } from '../functions/playtests'
 import { gameInfo } from '../shared/games'
+import { Byline } from './byline'
 import { CopyCode } from './copy-code'
 import { DateText } from './date-text'
 import { Fact } from './fact'
@@ -32,10 +32,18 @@ export function PlaytestPage(props: { data: Playtest }) {
     <PageLayout
       title={`Playtest: ${data().name}`}
       lead={data().summary}
-      actions={
-        <Link to="/playtests" class={buttonGhost}>
-          All playtests
-        </Link>
+      crumbs={[
+        { label: 'Events', href: '/events' },
+        { label: 'Playtests', href: '/playtests' },
+      ]}
+      meta={
+        <>
+          <Byline person={data().host} class="text-[13.5px]" />
+          <span>
+            Opened <DateText value={data().opensAt} now={data().now} />
+          </span>
+          <Regions regions={data().regions} />
+        </>
       }
     >
       <div

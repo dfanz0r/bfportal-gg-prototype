@@ -16,7 +16,10 @@ export function NotFound() {
   )
 }
 
-export function RouteError() {
+export function RouteError(props: { error: unknown }) {
+  // The page says nothing about what failed; the console has to, or whoever
+  // is looking into it has only "something went wrong" to go on.
+  console.error(props.error)
   return (
     <PageLayout
       title="Something went wrong"

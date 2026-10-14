@@ -21,7 +21,7 @@ export function CopyCode(props: {
       class={
         props.label
           ? buttonAccent
-          : 'inline-flex h-[30px] items-center gap-2 border border-line-strong px-2.5 font-mono text-[12.5px] font-semibold tracking-[0.12em] text-fg uppercase transition-colors hover:border-steel hover:bg-steel/6'
+          : 'inline-flex h-[30px] items-center justify-center gap-2 border border-line-strong px-2.5 font-mono text-[12.5px] font-semibold tracking-[0.12em] text-fg uppercase transition-colors hover:border-steel hover:bg-steel/6'
       }
     >
       <span>

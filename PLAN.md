@@ -1996,6 +1996,43 @@ was settled first, so the screens are built against seed data and the import fol
    uncached. File downloads are not cached either. The service tests assert exact
    counts against the seed, which will need loosening as the seed grows, and there
    are still no browser tests.
+
+   Checked against the mockups, 2026-10-13: each public page rendered beside its
+   mockup at 1440px, and the reworked ones at 390px.
+
+   - **Found broken.** Home, a script's page, the playtests list, a playtest and
+     events all failed in the browser with "Something went wrong", though the server
+     sent them whole. `PageHead` and `Section` read a prop holding markup twice, so
+     the server and the browser disagreed about it. Fixed, with a test; the error
+     page now writes what failed to the console.
+   - **Brought in line.** Section headings (size, the accent segment on their rule,
+     the accented word on the home page) and the links beside them. The script page:
+     trail, author and date under the title, numbered lines, a copy button in the
+     side column. Playtests: a list of rows with a side column for how it works,
+     getting pinged and what closed recently. Events: a day block on each card, four
+     across. Playtests and events share tabs. The updates feed: rows with the
+     project's picture and a side column. The profile: badges, a line of counts, and
+     tabs. Cards show one topic tag when they also say what they are built with.
+     The 2042 band at the foot of the home page: a band the width of the window,
+     flush against the footer, with its eyebrow, large heading and ghost button, not
+     a box in the column. The 2042 library's head: how many still load, as a bar and
+     a count, with when the codes were last checked, which "Look" above has always
+     called for; which head a game's library gets is `library.leadsWith` in the
+     registry. The footer lists the 2042 archive.
+   - **Found on the way.** On the 2042 library both game tabs were marked current:
+     the router calls a link current when the address starts with it, and
+     "/library" starts "/library/bf2042". The first of these was missed on the
+     first pass because only the top of each comparison was looked at. Compare the
+     whole page, to the footer.
+   - **Still different, because the site lacks the data or the feature.** The hero
+     artwork, the weekly showcase and the popular searches on home; pictures,
+     places filled and "interested" on events; comments, downloads and a second tag
+     on scripts; the feed's grouping by day and "most active this month"; a
+     playtest row's picture, author and what it is built with; the tabs under an
+     experience's gallery; trending by week, month or all time.
+   - **Not checked.** The submit form and the moderators' screens, which need a
+     signed-in browser; the 2042 library and a single playtest in detail; widths
+     between 390px and 1440px, and above.
 4. **The import,** against the test legacy database, then the same screens on imported
    data. This is where migration problems surface. Put off on 2026-10-13 until after
    writes, by choice; the risk taken is that a migration problem is found later, with

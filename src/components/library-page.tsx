@@ -7,6 +7,7 @@ import {
   MAX_PAGES,
   PAGE_SIZE,
 } from '../shared/library-search'
+import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
 import { LibraryFilters } from './library-filters'
 import { LibraryLink } from './library-link'
@@ -93,26 +94,66 @@ export function LibraryPage(props: { data: Library }) {
             />
           </div>
 
-          <p class="flex flex-wrap gap-x-9 gap-y-1.5 border-t border-steel/15 py-3 text-[13.5px] text-fg-2">
-            <span>
-              <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
-                {props.data.stats.experiences}
-              </b>
-              experiences
-            </span>
-            <span>
-              <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
-                {props.data.stats.newThisWeek}
-              </b>
-              new this week
-            </span>
-            <span>
-              <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
-                {props.data.stats.creators}
-              </b>
-              creators
-            </span>
-          </p>
+          <Show
+            when={info().library.leadsWith === 'health'}
+            fallback={
+              <p class="flex flex-wrap gap-x-9 gap-y-1.5 border-t border-steel/15 py-3 text-[13.5px] text-fg-2">
+                <span>
+                  <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
+                    {props.data.stats.experiences}
+                  </b>
+                  experiences
+                </span>
+                <span>
+                  <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
+                    {props.data.stats.newThisWeek}
+                  </b>
+                  new this week
+                </span>
+                <span>
+                  <b class="mr-1.5 font-display text-[21px] font-bold text-fg">
+                    {props.data.stats.creators}
+                  </b>
+                  creators
+                </span>
+              </p>
+            }
+          >
+            {/* An archive leads with how much of it still loads: a bar, the
+                count, and when the codes were last checked. */}
+            <p class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-steel/15 py-3.5 text-[13px] text-fg-2">
+              <span
+                class="h-1 w-56 max-w-full bg-line-strong"
+                aria-hidden="true"
+              >
+                <span
+                  class="block h-full bg-accent"
+                  style={{
+                    width: `${props.data.stats.listed > 0 ? (100 * props.data.stats.experiences) / props.data.stats.listed : 0}%`,
+                  }}
+                />
+              </span>
+              <span>
+                <b class="font-semibold text-fg">
+                  {props.data.stats.experiences}
+                </b>{' '}
+                of {props.data.stats.listed} experiences still load in game.
+                <Show when={props.data.stats.checkedAt}>
+                  {(checked) => (
+                    <span class="text-fg-3">
+                      {' '}
+                      Codes were last checked{' '}
+                      <DateText value={checked()} now={props.data.now} />.
+                    </span>
+                  )}
+                </Show>
+              </span>
+              <span class="ml-auto">
+                <b class="font-semibold text-fg">{props.data.stats.creators}</b>{' '}
+                creators
+              </span>
+            </p>
+          </Show>
         </div>
       </section>
 

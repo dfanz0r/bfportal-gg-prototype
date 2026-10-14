@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatAgo, formatBytes, formatDate, formatDateTime } from './dates'
+import {
+  formatAgo,
+  formatBytes,
+  formatDate,
+  formatDateTime,
+  formatDayAndMonth,
+} from './dates'
 
 const at = (iso: string) => new Date(iso)
 const NOW = at('2026-10-13T12:00:00Z')
@@ -11,6 +17,16 @@ describe('dates', () => {
     expect(formatDate(late)).toBe('Oct 16, 2026')
     // Already the next day in Tokyo.
     expect(formatDate(late, 'Asia/Tokyo')).toBe('Oct 17, 2026')
+    // The same day as a block: two digits over the month.
+    expect(formatDayAndMonth(late)).toEqual({ day: '16', month: 'Oct' })
+    expect(formatDayAndMonth(late, 'Asia/Tokyo')).toEqual({
+      day: '17',
+      month: 'Oct',
+    })
+    expect(formatDayAndMonth(at('2026-11-02T10:00:00Z'))).toEqual({
+      day: '02',
+      month: 'Nov',
+    })
     expect(formatDateTime(at('2026-10-16T20:30:00Z'))).toBe(
       'Oct 16, 2026, 8:30 PM UTC',
     )

@@ -1,17 +1,16 @@
-import { Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
 import type { Script } from '../functions/scripts'
+import { Byline } from './byline'
 import { CopyText } from './copy-text'
 import { DateText } from './date-text'
 import { Fact } from './fact'
 import { Facts } from './facts'
 import { Icon } from './icon'
 import { PageLayout } from './page-layout'
-import { PersonLink } from './person-link'
 import { RepoLink } from './repo-link'
 import { Section } from './section'
-import { buttonGhost, panel } from './ui'
+import { buttonAccent, panel } from './ui'
 import { UpdatePost } from './update-post'
 
 /** The head of a script's page, for search engines and link previews. */
@@ -35,11 +34,21 @@ export function ScriptPage(props: { data: Script }) {
   return (
     <PageLayout
       title={data().title}
-      lead={data().summary}
-      actions={
-        <Link to="/scripts" class={buttonGhost}>
-          All scripts
-        </Link>
+      crumbs={[
+        { label: 'Scripts', href: '/scripts' },
+        ...(data().category ? [{ label: data().category ?? '' }] : []),
+      ]}
+      meta={
+        <>
+          <Byline person={data().owner} class="text-[13.5px]" />
+          <Show when={data().publishedAt}>
+            {(published) => (
+              <span>
+                Published <DateText value={published()} />
+              </span>
+            )}
+          </Show>
+        </>
       }
     >
       <div class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10">
@@ -47,11 +56,22 @@ export function ScriptPage(props: { data: Script }) {
           <div class={panel}>
             <p class="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 font-mono text-xs text-fg-3">
               <span>Script.ts, {data().lines} lines</span>
-              <CopyText text={data().script} label="Copy script" />
+              <CopyText text={data().script} label="Copy" />
             </p>
-            {/* The script as text. Nothing here runs it. */}
-            <pre class="max-h-[560px] overflow-auto p-4 font-mono text-[13px] leading-[1.6] text-fg-2">
-              <code>{data().script}</code>
+            {/* The script as text, a numbered line at a time. Nothing here
+                runs it, and the numbers are drawn by the page, so copying
+                the text does not pick them up. */}
+            <pre class="max-h-[560px] overflow-auto bg-base py-4 font-mono text-[13px] leading-[1.7] text-fg-2">
+              <code class="block [counter-reset:line]">
+                {/* A file ends with a line break, which is not a line. */}
+                <For each={data().script.replace(/\n$/, '').split('\n')}>
+                  {(line) => (
+                    <span class="block pr-4 before:mr-4 before:inline-block before:w-[46px] before:text-right before:text-fg-3/60 before:content-[counter(line)] before:[counter-increment:line]">
+                      {line || ' '}
+                    </span>
+                  )}
+                </For>
+              </code>
             </pre>
           </div>
 
@@ -72,14 +92,18 @@ export function ScriptPage(props: { data: Script }) {
         </div>
 
         <aside class="grid gap-4">
+          {/* What most visitors came for. */}
+          <div class={`${panel} grid gap-2.5 p-5`}>
+            <CopyText
+              text={data().script}
+              label="Copy script"
+              class={buttonAccent}
+            />
+            <p class="text-[13px] text-fg-3">
+              Paste it into your own script in the Portal editor.
+            </p>
+          </div>
           <Facts>
-            <Show when={data().owner}>
-              {(owner) => (
-                <Fact name="By">
-                  <PersonLink person={owner()} />
-                </Fact>
-              )}
-            </Show>
             <Show when={data().category}>
               {(category) => <Fact name="Category">{category()}</Fact>}
             </Show>

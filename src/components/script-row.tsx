@@ -33,16 +33,16 @@ export function ScriptRow(props: { script: ScriptItem }) {
           </Show>
         </p>
         <p class="truncate text-[13.5px] text-fg-2">{script().excerpt}</p>
+        <Show when={script().owner}>
+          {(owner) => (
+            <p class="mt-0.5 text-[12.5px] text-fg-3">
+              by <PersonLink person={owner()} class="text-fg-2" />
+            </p>
+          )}
+        </Show>
       </div>
-      <Show when={script().owner}>
-        {(owner) => (
-          <span class="text-[13px] text-fg-2">
-            by <PersonLink person={owner()} />
-          </span>
-        )}
-      </Show>
       <span class="inline-flex items-center gap-1.5 font-mono text-xs text-fg-2 tabular-nums">
-        <Icon name="heart" class="size-3.5" />
+        <Icon name="heart" class="size-3.5 fill-current text-accent" />
         {script().likes}
         <span class="sr-only"> likes</span>
       </span>
