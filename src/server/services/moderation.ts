@@ -186,7 +186,8 @@ export async function getSubmissionReview(
       discordId: found.owner.discordId,
       joinedAt: found.owner.joinedAt,
       published: earlier('published'),
-      rejected: earlier('rejected'),
+      changesRequested: earlier('changes_requested'),
+      removed: earlier('removed'),
     },
     checks: {
       /** What Portal says about the code right now. */
@@ -218,8 +219,13 @@ export async function getSubmissionReview(
 }
 
 /**
- * Approves or turns down a waiting submission. Approving publishes it.
- * Turning it down needs a note for its creator. A submission is decided once.
+ * Approves a waiting submission, or sends it back with changes requested.
+ * Approving publishes it. Requesting changes needs a note for its creator,
+ * who can then fix it and send it in again. A submission is decided once each
+ * time it is sent in.
+ *
+ * Not here yet: notes on particular fields (`review_field_notes`), and
+ * removing a submission for good (`removed`).
  */
 export async function decideSubmission(
   actor: Actor | null,
@@ -227,7 +233,8 @@ export async function decideSubmission(
   decision: { approve: boolean; note?: string },
   now = new Date(),
 ): Promise<
-  { ok: true; slug: string; status: 'published' | 'rejected' } | Refusal
+  | { ok: true; slug: string; status: 'published' | 'changes_requested' }
+  | Refusal
 > {
   const refused = refusal(actor)
   if (refused || !actor) return refused ?? refuse('signed-out')
@@ -238,7 +245,7 @@ export async function decideSubmission(
     })
   }
 
-  const status = decision.approve ? 'published' : 'rejected'
+  const status = decision.approve ? 'published' : 'changes_requested'
   // The condition is in the update itself, so two moderators deciding at
   // once cannot both succeed.
   const [decided] = await db

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
   boolean,
   check,
   foreignKey,
@@ -40,6 +41,17 @@ import { user } from './auth-schema'
 // auth-schema.ts do not.
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true })
+
+/**
+ * What a moderator wrote about particular fields when asking for changes,
+ * by field name. It sits beside `review_note`, which is about the whole
+ * thing. The form shows each note at its field.
+ */
+const reviewFieldNotes = () =>
+  jsonb('review_field_notes')
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({})
 
 export const gameEnum = pgEnum('game', games)
 export const contentStatusEnum = pgEnum('content_status', contentStatuses)
@@ -344,6 +356,13 @@ export const experiences = pgTable(
     reviewedBy: text('reviewed_by').references(() => user.id),
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
+    reviewFieldNotes: reviewFieldNotes(),
+    // Set on the copy made to playtest something that is already live: the
+    // experience it was copied from. A playtest never runs on the live row.
+    copiedFromId: integer('copied_from_id').references(
+      (): AnyPgColumn => experiences.id,
+      { onDelete: 'set null' },
+    ),
     // Set when the owner deletes it. The row stays, hidden everywhere.
     deletedAt: timestamptz('deleted_at'),
     metaTitle: text('meta_title'),
@@ -518,6 +537,7 @@ export const revisions = pgTable(
     reviewedBy: text('reviewed_by').references(() => user.id),
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
+    reviewFieldNotes: reviewFieldNotes(),
   },
   (table) => [
     // An experience has at most one pending revision. A second edit replaces
@@ -528,7 +548,10 @@ export const revisions = pgTable(
   ],
 )
 
-/** A Battlefield 6 script snippet. Authored in the admin for now. */
+/**
+ * A Battlefield 6 script snippet: a small piece of script to copy into your
+ * own, pasted in or uploaded as one file. It is reviewed like an experience.
+ */
 export const snippets = pgTable(
   'snippets',
   {
@@ -542,14 +565,16 @@ export const snippets = pgTable(
       .notNull()
       .references(() => user.id),
     categoryId: integer('category_id').references(() => categories.id),
-    // The Portal export, validated before it is stored.
+    // The Portal export a snippet from the old site was made from. Nothing
+    // new sets it: a snippet is submitted as its script alone.
     expJson: jsonb('exp_json'),
-    // The Script.ts attachment, extracted from the export on save. Not
-    // `code`: on an experience and a playtest that is the Portal share code.
+    // The snippet itself. Not `code`: on an experience and a playtest that is
+    // the Portal share code. For one from the old site it is the Script.ts
+    // attachment of its export.
     script: text('script').notNull().default(''),
     vidUrl: text('vid_url'),
     repoUrl: text('repo_url'),
-    // The SDK release the script was last said to work with.
+    // The SDK release that was current when it was submitted.
     sdkVersionId: integer('sdk_version_id').references(() => sdkVersions.id),
     featured: boolean('featured').notNull().default(false),
     trending: boolean('trending').notNull().default(false),
@@ -557,6 +582,11 @@ export const snippets = pgTable(
     submittedAt: timestamptz('submitted_at').notNull().defaultNow(),
     firstPublishedAt: timestamptz('first_published_at'),
     lastPublishedAt: timestamptz('last_published_at'),
+    // The moderator's decision on the submission itself, as on an experience.
+    reviewedBy: text('reviewed_by').references(() => user.id),
+    reviewedAt: timestamptz('reviewed_at'),
+    reviewNote: text('review_note'),
+    reviewFieldNotes: reviewFieldNotes(),
     deletedAt: timestamptz('deleted_at'),
     metaTitle: text('meta_title'),
     metaDescription: text('meta_description'),
@@ -647,6 +677,7 @@ export const updates = pgTable(
     reviewedBy: text('reviewed_by').references(() => user.id),
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
+    reviewFieldNotes: reviewFieldNotes(),
     deletedAt: timestamptz('deleted_at'),
     createdAt: timestamptz('created_at').notNull().defaultNow(),
     updatedAt: timestamptz('updated_at')
@@ -746,6 +777,7 @@ export const playtests = pgTable(
     reviewedBy: text('reviewed_by').references(() => user.id),
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
+    reviewFieldNotes: reviewFieldNotes(),
     // When the site posted it, and its play-together reminder, to Discord.
     // The jobs that post them set these, so neither is ever sent twice.
     announcedAt: timestamptz('announced_at'),

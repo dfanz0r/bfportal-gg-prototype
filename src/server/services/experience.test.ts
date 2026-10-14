@@ -19,8 +19,10 @@ describe('experience', () => {
   })
 
   it('is not there unless it is published and not deleted', async () => {
+    expect(await getExperience('hangar-duel', NOW)).toBeNull() // a draft
     expect(await getExperience('bridge-parkour-trials', NOW)).toBeNull() // pending
-    expect(await getExperience('free-xp-24-7', NOW)).toBeNull() // rejected
+    expect(await getExperience('night-convoy', NOW)).toBeNull() // changes requested
+    expect(await getExperience('free-xp-24-7', NOW)).toBeNull() // removed
     expect(await getExperience('old-test-mode', NOW)).toBeNull() // deleted
     expect(await getExperience('no-such-thing', NOW)).toBeNull()
     // Gone from Portal, but its page stays.
@@ -42,12 +44,25 @@ describe('experience', () => {
     expect(await getExperience(pending, NOW, moderator)).toMatchObject({
       viewer: { isOwner: false, isStaff: true },
     })
-    // Its owner is told why it was turned down; nobody else can open it.
-    const rejected = await getExperience('free-xp-24-7', NOW, {
+    // Its owner is told why it was removed; nobody else can open it.
+    const removed = await getExperience('free-xp-24-7', NOW, {
       id: 'seed-north-sector',
       role: 'user',
     })
-    expect(rejected?.reviewNote).toMatch(/duplicate/)
+    expect(removed).toMatchObject({ status: 'removed' })
+    expect(removed?.reviewNote).toMatch(/duplicate/)
+    // The same for one sent back for changes, and for a draft nobody has
+    // reviewed.
+    const gala = { id: 'seed-gala', role: 'user' } as const
+    expect(await getExperience('night-convoy', NOW, gala)).toMatchObject({
+      status: 'changes_requested',
+      reviewNote: expect.stringMatching(/Two changes/),
+    })
+    expect(await getExperience('hangar-duel', NOW, gala)).toMatchObject({
+      status: 'draft',
+      reviewNote: null,
+    })
+    expect(await getExperience('hangar-duel', NOW, stranger)).toBeNull()
     // Deleted by its owner: gone for everyone.
     expect(await getExperience('old-test-mode', NOW, moderator)).toBeNull()
   })

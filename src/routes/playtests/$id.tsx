@@ -5,7 +5,7 @@ import { fetchPlaytest } from '../../functions/playtests'
 
 export const Route = createFileRoute('/playtests/$id')({
   loader: async ({ params }) => {
-    // Pending and rejected playtests are not there for the public.
+    // Only an approved playtest is there for the public.
     const playtest = /^\d{1,9}$/.test(params.id)
       ? await fetchPlaytest({ data: { id: Number(params.id) } })
       : null

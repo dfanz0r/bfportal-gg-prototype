@@ -1,6 +1,7 @@
 import { For, Show } from 'solid-js'
 
 import type { Experience } from '../functions/experience'
+import { type ContentStatus, contentStatusLabels } from '../shared/content'
 import { formatBytes } from '../shared/dates'
 import { gameInfo } from '../shared/games'
 import { Avatar } from './avatar'
@@ -26,6 +27,16 @@ const FILE_GLYPHS = {
 } as const
 
 const smallButton = `${buttonGhost} h-[34px] px-3 text-xs`
+
+/** What each status means, to the owner looking at a page that is not live. */
+const STATUS_NOTES: Record<ContentStatus, string> = {
+  draft: 'Not submitted yet.',
+  pending: 'Waiting for a moderator.',
+  changes_requested: 'Changes are needed before this can be published.',
+  published: '',
+  unpublished: 'Taken off the listings by a moderator.',
+  removed: 'Removed by a moderator. It cannot be submitted again.',
+}
 
 /** The head of an experience page, for search engines and link previews. */
 export function experienceHead(data: Experience | undefined) {
@@ -170,28 +181,16 @@ export function ExperiencePage(props: { data: Experience }) {
             published. */}
         <Show when={data().status !== 'published'}>
           <div class="mb-6 grid gap-1 border-l-2 border-steel bg-steel/8 px-4 py-3 text-sm text-fg-2">
-            <Show
-              when={data().status === 'rejected'}
-              fallback={
-                <p>
-                  <b class="font-semibold text-fg">
-                    {data().status === 'pending'
-                      ? 'Waiting for a moderator.'
-                      : 'Not published.'}
-                  </b>{' '}
-                  Only its owner and the moderators can see this page.
-                </p>
-              }
-            >
-              <p>
-                <b class="font-semibold text-fg">
-                  A moderator turned this down.
-                </b>{' '}
-                Only its owner and the moderators can see this page.
-              </p>
-              <Show when={data().reviewNote}>
-                {(note) => <p>Their note: {note()}</p>}
-              </Show>
+            <p>
+              <b class="font-semibold text-fg">
+                {contentStatusLabels[data().status]}.
+              </b>{' '}
+              {STATUS_NOTES[data().status]} Only its owner and the moderators
+              can see this page.
+            </p>
+            {/* Headed by what it is, never by who wrote it. */}
+            <Show when={data().reviewNote}>
+              {(note) => <p>Moderator note: {note()}</p>}
             </Show>
           </div>
         </Show>

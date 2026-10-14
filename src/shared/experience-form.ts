@@ -98,8 +98,6 @@ export const experienceFormSchema = z.object({
   filesUrl: optional(
     onHosts(FILE_HOSTS, `Files must be on ${FILE_HOSTS.join(', ')}.`),
   ),
-  /** An SDK release the game has, checked by the service. */
-  sdk: optional(z.string().max(20)),
   /** People to credit by name, who have no account here. */
   credits: lines(MAX_CREDITS, z.string().max(60)).default([]),
 })

@@ -47,9 +47,9 @@ type Credit = { name: string; image: string | null; discordId: string | null }
 
 /**
  * An experience's page, or null if whoever is looking may not see it. The
- * public sees what is published. Its owner and the moderators also see it
- * while it waits for review or after it was turned down. Nobody sees one its
- * owner deleted.
+ * public sees what is published. Its owner and the moderators also see it in
+ * any other status: a draft, in review, with changes requested, taken off the
+ * listings or removed. Nobody sees one its owner deleted.
  */
 export async function getExperience(
   slug: string,
@@ -269,7 +269,8 @@ export async function getExperience(
     updatedAt: experience.lastPublishedAt,
     likes: found.likes,
     status: experience.status,
-    // Shown to its owner when a moderator turned it down.
+    // What a moderator wrote when asking for changes or removing it, for its
+    // owner. Who wrote it is not passed on.
     reviewNote: isOwner || isStaff ? experience.reviewNote : null,
     viewer: {
       signedIn: viewer !== null,

@@ -486,30 +486,6 @@ export function SubmitPage(props: { data: SubmitPageData }) {
 
           <Section title="Credits">
             <div class="grid gap-6">
-              <Show when={data().options.sdkVersions.length > 0}>
-                <FormField
-                  label="Works with SDK"
-                  name="sdk"
-                  optional
-                  hint="The release you last saw it working on."
-                  errors={errors()}
-                >
-                  <select id="sdk" name="sdk" class={field}>
-                    <option value="">Not said</option>
-                    <For each={data().options.sdkVersions}>
-                      {(sdk) => (
-                        <option
-                          value={sdk.version}
-                          selected={start('sdk') === sdk.version}
-                        >
-                          {sdk.version}
-                          {sdk.season ? `, ${sdk.season}` : ''}
-                        </option>
-                      )}
-                    </For>
-                  </select>
-                </FormField>
-              </Show>
               <FormField
                 label="Made with"
                 name="credits"
@@ -530,6 +506,16 @@ export function SubmitPage(props: { data: SubmitPageData }) {
             </button>
             <p class="text-sm text-fg-3">
               Nothing is public until a moderator approves it.
+              {/* Not asked for: a game only runs its latest release. */}
+              <Show when={data().options.currentSdk}>
+                {(sdk) => (
+                  <>
+                    {' '}
+                    It will be listed for Portal SDK {sdk().version}, the
+                    current release.
+                  </>
+                )}
+              </Show>
             </p>
           </div>
         </form>

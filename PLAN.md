@@ -204,8 +204,8 @@ Rules that make this work, to hold from the first real page:
 - **Each indexed page sets its own head:** title, description, a canonical address, and
   Open Graph and Twitter tags with the cover image. A filtered or paged listing points
   its canonical at the unfiltered first page.
-- **Statuses are real.** A missing, pending, rejected or deleted experience answers
-  404 from the server, an old address answers 301, and pages that are not for search
+- **Statuses are real.** An experience that is missing, deleted or in any status but
+  published answers 404 from the server to anyone but its owner and the moderators, an old address answers 301, and pages that are not for search
   carry `noindex`.
 
 Session and caching. The root loader reads the signed-in user on the server, so the
@@ -240,7 +240,9 @@ listing, the old address redirects.
 | `/experiences/`, `/experiences/featured/` | Old listing. Redirect to `/library/` with the matching filter. The old query parameters are honored, `?tag=<name>` above all, since every tag chip on the old site is such a link |
 | `/experiences/<slug>/`, `/experiences/<slug>/edit/` | Detail page; owner's edit form |
 | `/category/<name>/` | Old category listing; `_` stands for a space. Redirects to `/library/` with that category selected |
-| `/submit/` | Submit form (login required) |
+| `/submit/` | Submit form for an experience (login required). The game is the first question; `?draft=true` draws a refused form again |
+| `/submit/snippet/` | New. Submit form for a snippet, Battlefield 6 only. Not built |
+| `/submissions/` | New. The signed-in visitor's own experiences and snippets, with the state of each. Not built |
 | `/users/<discord_id>/`, `…/experiences/`, `…/liked/` | Profile and its two lists |
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
 | `/scripts/`, `/scripts/snippets/`, `/scripts/experiences/`, `/scripts/featured/`, `/scripts/<slug>/` | BF6 scripts section |
@@ -312,7 +314,7 @@ tables use `timestamptz` throughout.
 | `slug` | Unique; kept from the old site |
 | `game` | `bf2042` or `bf6` |
 | `types` | New, Battlefield 6 only. What it is built with: any of `script` (TypeScript), `blocks` (the rules editor) and `spatial` (custom map data), or `verified` alone for a verified mode, which is official settings and a map rotation with none of the three. Read from an uploaded export, otherwise chosen on the form. Shown as tags on cards and pages, and filterable |
-| `status` | `pending`, `published`, `unpublished` or `rejected` |
+| `status` | `draft`, `pending`, `changes_requested`, `published`, `unpublished` or `removed`. See "Submission states" |
 | `title`, `description_md`, `description_html` | Markdown is stored; HTML is rendered and sanitized on write |
 | `owner_id` | The submitter. One per experience; the only one who can delete it or change who else works on it |
 | `category_id` | Main category |
@@ -329,10 +331,12 @@ tables use `timestamptz` throughout.
 | `portal_state`, `portal_checked_at`, `portal_state_since` | New. What the nightly check last saw on Portal, when it looked, and since when the answer has been what it is. See "Whether a code is still published" |
 | `xp_mode` | New. The progression mode gametools reports, stored by the nightly check: `portal-default` earns full XP |
 | `requires_full_game` | New. Whether playing it needs the paid game or the free version will do. Empty when not known, and for 2042, which has no free version. See "Whether a code is still published" for the check that fills it |
-| `sdk_version_id` | New, Battlefield 6 only. The SDK release its creators last said it works with; see "SDK versions" |
+| `sdk_version_id` | New, Battlefield 6 only. The SDK release that was current when it was submitted. Set by the site, not chosen; see "SDK versions" |
 | `is_template` | New. The community's word for what the old site called a prefab: the creator offers the files so others can publish their own version with their own changes. Set on creation; shows a Template tag and makes the files downloadable. The import sets it for every experience in the old Prefab category |
 | `allow_editing` | Stored and exposed by the API today but never enforced; keep the column, decide its meaning later |
-| `reviewed_by`, `reviewed_at`, `review_note` | The moderator's decision on the submission itself; edits are reviewed on their revision |
+| `reviewed_by`, `reviewed_at`, `review_note` | The moderator's decision on the submission itself; edits are reviewed on their revision. `reviewed_by` is for the moderators' screens and is never shown to the creator |
+| `review_field_notes` | New. What the moderator wrote about particular fields when requesting changes, as JSON keyed by the form's field names. The form reopened to fix it shows each note at its field. Empty unless changes were requested |
+| `copied_from_id` | New. On a playtest copy, the live experience it was copied from. Empty on everything else. See "Submission states" |
 | `deleted_at` | Set when the owner deletes it; the row stays and is hidden everywhere |
 | `submitted_at`, `first_published_at`, `last_published_at` | Today "first published" is set at submission (`core/views.py:204`); the new schema separates the two |
 | `announced_at` | When the Discord announcement went out; replaces the `first_publish` flag |
@@ -431,13 +435,147 @@ public sees.
 | `experience_id` | |
 | `kind` | `edit` or `clear_flags` (the owner asking for bugged/broken to be cleared) |
 | `payload` | The editable fields as JSON, including tags and named credits. Credited accounts and their edit access are not in it; the owner changes those immediately. Admin-only fields are never in it, so approving an edit cannot revert a change to `featured` or a health flag made while it waited |
-| `status` | `pending`, `approved` or `rejected` |
+| `status` | `pending`, `approved` or `changes_requested` |
 | `submitted_by`, `submitted_at` | |
-| `reviewed_by`, `reviewed_at`, `review_note` | |
+| `reviewed_by`, `reviewed_at`, `review_note`, `review_field_notes` | As on an experience |
 
 An experience has at most one pending revision, enforced by the database; a second edit
 replaces the first. Approving applies the payload to the experience in one transaction. A new submission
 needs no revision: it is simply an experience with status `pending`.
+
+An edit that a moderator sends back is not thrown away. Its payload stays on the
+revision, with the notes, and its owner reopens it from there, fixes it and sends it
+again; the live page is unchanged throughout.
+
+### Submission states
+
+Set out by the owner on 2026-10-13 and worked through in the mockups the same day.
+This is the model; "Submitting, and following a submission: the mockups" under
+"Visual direction" is how it is drawn.
+
+The pipeline, in the owner's words:
+
+```
+Draft
+├─ Submitted, in review for publishing
+│  ├─ Live
+│  │  ├─ Delisted: gone from the game, or delisted by hand. Much like a draft again
+│  │  ├─ Edit in review
+│  │  └─ Update post in review
+│  └─ Changes requested ─→ back to in review when resubmitted
+├─ Draft submitted for playtest review
+│  ├─ Playtest approved ─→ playtest completed, and it is a draft again
+│  └─ Playtest changes requested ─→ back to playtest review when resubmitted
+└─ Removed by a moderator: spam, or something badly wrong. No resubmission
+```
+
+**Three things are said about an item, and kept apart.** What it is, what was sent to
+the moderators about it, and where that stands. They were first drawn as one row of
+labels, then as "type" and "state", and settled as three columns:
+
+| Column | What it says | Values |
+|---|---|---|
+| Status | What the item is right now | Draft, Playtest, Live, Delisted, Removed |
+| Request | What was sent to the moderators about it, if anything | Submission, Edit, Update |
+| Review | Where that request stands | In review, Changes requested |
+
+So a live page with an edit waiting reads "Live, Edit, In review". A draft whose
+playtest brief was sent back reads "Playtest, Submission, Changes requested". A review
+word means the same thing whatever the request: anything waiting on a moderator is
+"In review" and nothing more specific. An item with nothing sent in has a status and
+nothing else.
+
+**How each is kept.** The status column is not one stored value; it is read from
+several.
+
+| On the screen | In the database |
+|---|---|
+| Status: Draft | `status = 'draft'` on the experience or snippet. Also `pending` and `changes_requested`: something not yet approved is a draft to its owner, with a request beside it |
+| Status: Playtest | A draft with a playtest that is not over: `playtests.status` is `pending`, `changes_requested`, or `approved` and not yet closed. Read from the playtest, not stored on the experience |
+| Status: Live | `status = 'published'` |
+| Status: Delisted | `status = 'unpublished'`, or `published` with `portal_state` `unpublished` or `missing` |
+| Status: Removed | `status = 'removed'` |
+| Request: Submission | The item itself is `pending` or `changes_requested`; or its playtest brief is |
+| Request: Edit | A row in `revisions` that is `pending` or `changes_requested` |
+| Request: Update | A row in `updates` that is `pending` or `changes_requested` |
+| Review: In review | `pending` on whichever row the request is |
+| Review: Changes requested | `changes_requested` on that row, with `review_note` and `review_field_notes` |
+
+The values behind `status`, as of migration 0023:
+
+| Value | Meaning | The site's word |
+|---|---|---|
+| `draft` | Saved by its owner and not sent in. Only they see it | Draft |
+| `pending` | Sent in, waiting for a moderator | In review |
+| `changes_requested` | Sent back with notes. The owner fixes it and sends it again, which makes it `pending` once more. Was `rejected`, which was an end state | Changes requested |
+| `published` | Public | Live |
+| `unpublished` | Taken off the listings by a moderator | Delisted |
+| `removed` | Ended by a moderator, with a note, for spam or something badly wrong. It cannot be sent in again. Its owner still sees it in their list, so they know what happened | Removed |
+
+`revisions.status` and `playtests.status` had `rejected` too, and it is
+`changes_requested` there as well. A playtest has no "completed" status: an approved
+playtest is over when it is closed, which `closes_at` says.
+
+**A moderator's notes.** A decision to request changes carries a note about the whole
+thing (`review_note`) and notes on particular fields (`review_field_notes`, JSON by
+field name). The creator sees them on the form reopened to fix it, each at its field,
+and never sees who wrote them.
+
+**Playtests.** A draft that goes to playtest is shown as "Playtest", not "Draft", from
+the brief being sent in until the playtest is over. Then it is a draft again, and its
+line says when the playtest was completed.
+
+**Playtesting something that is already live.** Agreed 2026-10-13. A playtest is never
+run on the live listing. Its owner opens the live experience and chooses "Playtest";
+that clones it as a new submission, which starts as a draft and records what it was
+copied from (`copied_from_id`). The copy is its own row in the owner's list ("Playtest
+copy"), goes through playtest like any draft, and when the playtest is over is marked
+completed and can be discarded. The live page is untouched throughout.
+
+**What is in place, and what is not.** The database holds all of the above as of
+migration 0023, which also gave snippets the review columns experiences have. The
+site does the least it must to agree with it:
+
+| Piece | State |
+|---|---|
+| The six statuses, and `changes_requested` in place of `rejected` everywhere | Done. The experience page names the status to its owner; the moderators' button is "Request changes" |
+| The SDK release set at submit and not asked for | Done |
+| Sample data with a draft, one with changes requested and field notes, and one removed | Done, in the seed |
+| Saving a draft without submitting | Not built. Submitting still creates `pending` |
+| Fixing something with changes requested and sending it again | Not built. Nothing moves `changes_requested` back to `pending` yet |
+| Writing notes against fields, and removing something for good | Not built. The review screen has one note box and two buttons |
+| "Your submissions" | Not built |
+| Submitting a snippet | Not built |
+| The playtest copy | Not built. No playtest can be started from the site yet |
+| A snippet held to a size | Not built. `snippets.script` has no limit; the 400 lines in the mockup is a placeholder |
+
+`submission_drafts` is not the draft status. It keeps one refused form per user so a
+page posted with no script can be drawn again filled in, and may hold values a real
+row would refuse. Once drafts are built it may fold into them.
+
+**Not decided.** Raised on 2026-10-13 and left open:
+
+- **Several requests at once.** A live page can have an edit and an update post both
+  in review, and an open playtest copy besides. The mockup's row shows one request,
+  the most recent.
+- **Who can delist, and who can undo it.** The outline has "delisted by hand" without
+  saying whose hand. Portal no longer having the code undoes itself when the code is
+  back; a moderator's unpublish exists; an owner delisting their own, and listing it
+  again, is drawn in the mockup and is not in the schema.
+- **The owner's own way out:** withdrawing something from review back to a draft, and
+  what deleting keeps.
+- **How what a playtest copy taught reaches the live page.** The copy is discarded, so
+  presumably by an ordinary edit to the live one. Nothing carries the changes across.
+- **The copy's code.** A build under test is usually a different experience on Portal
+  with its own code, so the copied code would need replacing before the playtest.
+- **What discarding a copy keeps:** the playtest's page and its feedback, or not.
+- **A live page with a mark on it:** bugged, broken or XP farm, and the owner's request
+  to have a mark cleared, which is reviewed too, are not in the three columns.
+- **A history of decisions.** `review_note` holds the last note only, so a moderator
+  looking at something sent in again does not see what was asked for before. The
+  `moderation_log` table suggested under "Shown in the mockups, not yet in the
+  schema" would hold it.
+- **What a legacy "rejected" becomes at import:** `changes_requested` or `removed`.
 
 The alternative is a fully relational versions table, where an experience points at its
 live version and every join hangs off a version. It gives history for free, but every
@@ -625,7 +763,12 @@ Where the version comes from:
 
 - **Nothing reports it per experience.** Neither the export nor the gametools lookup
   carries an SDK version; the `version` fields in an export are attachment revision
-  numbers. So the creator chooses it on the form, with the latest release preselected.
+  numbers. Changed 2026-10-13: the form does not ask. Battlefield 6 only ever runs the
+  latest release, so anything submitted is for the latest one, and the site records
+  that release on the submission itself. The form says which release that is. This
+  holds for snippets and experiences alike. The experience form had a "Works with
+  SDK" choice; it came out the same day, and `submitExperience` sets the game's
+  newest release. A game with no releases recorded, as 2042 is, gets none.
 - **Portal names only the latest release.** `https://download.portal.battlefield.com/versions.json`
   answered on 2026-10-13 with one entry, `1.4.3.0`, and a file size. It has no history,
   dates or season names. It answered without a browser user-agent from here, but it is
@@ -650,8 +793,8 @@ Where the version comes from:
 | `released_at` | When the job first saw it. Empty for the releases entered by hand |
 
 `experiences.sdk_version_id` and `snippets.sdk_version_id` point at one release: the
-one its creators last said it works with. The database refuses a release from another
-game. This is its own table and not a tag group, although it is shown as a tag,
+one that was current when it was submitted, set by the site and not chosen on the
+form. The database refuses a release from another game. This is its own table and not a tag group, although it is shown as a tag,
 because it has an order, a latest and a date, and because scripts need it and scripts
 have no tags.
 
@@ -665,7 +808,9 @@ What the site does with it:
   changes nothing on experiences; only a creator says an experience works with a
   release.
 - **After a release,** owners see "still works on 1.4.3.0?" on their own pages, one
-  press to confirm. The change is immediate and is not held for a moderator. It is
+  press to confirm. Proposed before the form stopped asking, and not confirmed since:
+  with a game that only runs its latest release, this press is the only way a page's
+  release moves forward without being submitted again. The change is immediate and is not held for a moderator. It is
   not part of an edit's payload, so a pending edit neither carries nor reverts it.
 - **Not asked for** where it means nothing: a verified mode has no script or custom
   map, so it has no SDK version.
@@ -786,14 +931,32 @@ status, featured, trending, publish dates, embed overrides) and adds:
 | Field | Note |
 |---|---|
 | `category_id` | A `script_main` category |
-| `exp_json` | The Portal export, validated against a Zod port of `bf6/models/bf_experience_export.py` |
-| `script` | The decoded `Script.ts` attachment, extracted from `exp_json` on save. The old site calls this column `code`; it is renamed because `code` on an experience and a playtest is the Portal share code |
+| `exp_json` | The Portal export a snippet from the old site was made from. Kept for those; nothing new sets it |
+| `script` | The snippet itself. For one from the old site it is the decoded `Script.ts` attachment of its export. The old site calls this column `code`; it is renamed because `code` on an experience and a playtest is the Portal share code |
 | `vid_url` | |
-| `sdk_version_id` | New. The SDK release the script works with |
+| `sdk_version_id` | New. The SDK release that was current when it was submitted. Set by the site, not chosen |
+| `reviewed_by`, `reviewed_at`, `review_note`, `review_field_notes` | New in migration 0023. The moderator's decision, as on an experience. Snippets had none, since nobody outside the admin could submit one |
 
-With `snippet_creators`, which holds named credits and collaborators as for experiences, and `snippet_likes`. Snippets have no tags, no subcategories and
-no public submit form today; they are authored in the admin, and their edit route is a
-"coming soon" page (`bf6/models/scripts_page/snippets.py:154`).
+With `snippet_creators`, which holds named credits and collaborators as for experiences, and `snippet_likes`. Snippets have no tags and no subcategories. On the old site
+they have no public submit form: they are authored in the admin, and their edit route
+is a "coming soon" page (`bf6/models/scripts_page/snippets.py:154`).
+
+What a snippet is, agreed 2026-10-13:
+
+- **A small, reusable piece of script to copy into your own.** Not a whole
+  experience: that is submitted as an experience, where its files can be offered as
+  a template.
+- **Battlefield 6 only.** 2042's Portal had no TypeScript. Whether a game has
+  snippets is a field of its entry in `src/shared/games.ts`, not a test of its name.
+- **Anyone signed in can submit one,** at `/submit/snippet/`. It is pasted in or
+  uploaded as one `.ts` file, and nothing else: no Portal export. The form asks for a
+  title, a description, the snippet and a category.
+- **It is reviewed like an experience,** with the same statuses, and counts against
+  the same limits on how many may be waiting.
+- **It is held to a size.** The mockup shows 400 lines; the number is not decided.
+
+Still to read from production before the form is built: which `script_main`
+categories exist.
 
 Experiences and snippets stay separate tables. A shared "content item" table with
 per-type detail tables would make likes, creators and moderation generic, but it is the
@@ -1105,13 +1268,19 @@ The site keeps that shape:
 | `regions` | Any of EU, NA, SA, Asia and OCE. Each maps to a Tester role to mention |
 | `opens_at`, `closes_at` | A playtest can be posted at a set time, and stays open until an end date or until the host closes it |
 | `together_at` | Optional. For modes that need a full lobby: when to play it together |
-| `status`, `reviewed_by`, `reviewed_at`, `review_note` | Held as `pending` until a moderator approves it; nothing is shown or posted before that |
+| `status`, `reviewed_by`, `reviewed_at`, `review_note`, `review_field_notes` | Held as `pending` until a moderator approves it; nothing is shown or posted before that. `changes_requested` sends the brief back to be fixed and sent again. There is no "completed": an approved playtest is over when it closes |
 | `announced_at`, `reminded_at` | The Discord post and the play-together reminder, each sent once |
 | `discord_url` | The Discord thread where testers report back |
 | `result_update_id` | The update post with what changed |
 
 Feedback stays in Discord, agreed 2026-10-12. Each playtest has a thread there, and the
 site links to it. The site stores no reports of its own.
+
+What is tested is a draft, agreed 2026-10-13. While its playtest is under way a draft
+is shown to its owner as "Playtest"; when the playtest is over it is a draft again. A
+live experience is never the thing under test: its owner chooses "Playtest" on its
+page, which makes a draft copy that goes to playtest and is discarded afterwards. See
+"Submission states".
 
 Where it shows:
 
@@ -1171,16 +1340,20 @@ event can gain a list of experiences then.
 
 ## Moderation flow
 
-The states and who moves between them. This is the behavior today, with the
-exceptions listed under "Behavior not carried over".
+The states and who moves between them. This is the old site's behavior, with the
+exceptions listed under "Behavior not carried over" and the rows marked new. The
+statuses are defined under "Submission states".
 
 | Action | Who | Effect |
 |---|---|---|
-| Submit | Logged-in user | Experience created as `pending`; approval request posted to the Discord approval channel |
+| Save a draft | Logged-in user | New, 2026-10-13. An experience or snippet as `draft`, seen only by its owner. Not built |
+| Submit | Logged-in user | Experience or snippet as `pending`; approval request posted to the Discord approval channel. Limits: 5 waiting and 10 a day for an account that is not staff |
 | Approve submission | Moderator, admin | `published`; first approval posts the announcement to the Discord success channel, once |
-| Reject submission | Moderator, admin | `rejected`; the review note is new |
+| Request changes | Moderator, admin | New, 2026-10-13, in place of "reject". `changes_requested`, with a note and notes on particular fields. It is not an end: see the next row |
+| Fix and resubmit | Owner, collaborator | New, 2026-10-13. Back to `pending`, on the same row and address. Not built |
+| Remove | Moderator, admin | New, 2026-10-13. `removed`, with a note. For spam or something badly wrong; it cannot be submitted again. Not built |
 | Edit | Owner, collaborator | A pending revision; the live page is unchanged; edit request posted to Discord |
-| Approve or reject edit | Moderator, admin | Payload applied, or discarded |
+| Approve an edit, or request changes to it | Moderator, admin | Payload applied; or the revision is `changes_requested` and its owner fixes it and sends it again |
 | Mark own experience bugged or broken | Owner, collaborator | Immediate |
 | Add or remove a credited account | Owner | New. Immediate. The account is shown only once that user accepts |
 | Give or withdraw edit access | Owner | New. Immediate, and always explicit. Off by default |
@@ -1192,10 +1365,12 @@ exceptions listed under "Behavior not carried over".
 | Set featured, trending or any health flag | Admin | Immediate |
 | Unpublish | Moderator, admin | `unpublished` |
 | Post an update | Owner, collaborator | New. On a published project only. Held for approval, like a submission |
-| Start a playtest | Owner, collaborator; any user for something with no page | New. Held for approval; approving it posts it to Discord |
+| Start a playtest | The owner of a draft; any user for something with no page | New. Held for approval; approving it posts it to Discord. A brief can be sent back with changes requested, like a submission |
+| Playtest something live | Owner | New, 2026-10-13. "Playtest" on the live page clones it as a draft, which goes to playtest; the live page is not touched. Not built |
+| Complete a playtest, and discard its copy | Owner | New, 2026-10-13. Closing the playtest makes the draft a draft again; a copy made for the playtest can then be discarded. Not built |
 | Remove an update | Its author; moderator, admin | New. The author's delete is immediate; a moderator's removal carries a note |
 | Create or end an event or a banner | Moderator, admin | New. Immediate; a banner shows and hides by its own start and end |
-| Say which SDK release it works with | Owner, collaborator | New. Immediate, with no moderation, like marking your own experience bugged. It is a choice from a fixed list |
+| Say which SDK release it works with | The site, at submit | Changed 2026-10-13. Not a choice: a game only runs its latest release, so the submission is recorded against that one. Whether an owner later confirms it still works on a newer release is not decided |
 | Scheduled validation | Job | Sets `portal_state` from gametools.network: published, unpublished or missing. It does not touch `broken` |
 
 The exact permissions of the "Moderators" group exist only in the production database;
@@ -1272,16 +1447,28 @@ What "feature complete" means, by area.
 **Submitting and editing**
 
 - The submit form asks for the game first, because that decides what can be supplied.
+  Game first is a rule for every flow where the game matters, restated 2026-10-13.
   Both games can start from the experience code, which gametools.network looks up.
   Battlefield 6 can also add the export; Battlefield 2042 has almost nothing to export.
+- The second question is what is being shared: an experience or a snippet. A snippet
+  is offered for Battlefield 6 only; with 2042 chosen it stays in view with the
+  reason and cannot be chosen.
+- Submitting a snippet: a title, a description, the snippet pasted in or uploaded as
+  one `.ts` file, and a category. See "BF6 snippets".
+- Saving a draft without submitting, and a list of the signed-in visitor's own
+  experiences and snippets with the state of each, most recently changed first. From
+  the list, one "Edit" button per row opens the item to take its next step.
+- When a moderator requests changes, the form reopens filled in, with each of the
+  moderator's notes at the field it is about, to fix and submit again.
 - Submit form: category, the code or either of the experience's Portal links, whether
   others may copy it in the Portal editor, title, markdown description (the markdownx
   editor today), named credits for people without an account, accounts to credit (user autocomplete)
   each with an edit access switch that starts off, tags (autocomplete), players,
-  bots, style, the SDK release it works with (Battlefield 6, latest preselected), cover
+  bots, style, cover
   image URL, more image URLs for the gallery, video URL, repository
   link, and a link to larger files hosted elsewhere. A card preview updates beside the
-  form.
+  form. The SDK release is not asked for: the form says which release the submission
+  will be listed for.
 - Style replaces the old subcategories, as a tag group: Casual, Competitive, Showcase
   and Example.
   Portal Jam was a one-off and is no longer offered.
@@ -1300,7 +1487,9 @@ What "feature complete" means, by area.
   was updated, the experience it comes from and its likes.
 - A script page: the code with line numbers and a copy button, the description, its
   update posts, a download of the export, the repository link, and the experiences
-  that use it.
+  that use it. The export download is for snippets from the old site only: a snippet
+  submitted here is its script alone. The mockups of the scripts list and the script
+  page still show the old site's export details and have not been brought in line.
 - Navigation with eight sections: Scripts, Maps, Tools & Plugins, Guides & Docs, Library,
   Updates, Events and Forum. Maps, Tools, Guides and Forum are placeholders. Below
   1280px the bar collapses into a menu that works without JavaScript.
@@ -1361,7 +1550,11 @@ What "feature complete" means, by area.
 - Reviewing a submission shows the page as it will appear, beside automatic checks: the
   code is published on Portal and its name matches, no other page uses the code, the
   export is valid and "built with" matches it, the cover image loads and its size, and
-  how the submitter's earlier submissions went. Approve, or reject with a note.
+  how the submitter's earlier submissions went. Approve, or request changes with a
+  note about the whole thing and notes against particular fields; the creator fixes
+  it and submits it again. Separately, remove it for good, for spam or something
+  badly wrong.
+- What a creator sees of a review never says which moderator made it.
 - A warning when what is being reviewed loads pictures from elsewhere, agreed
   2026-10-13: "Loads pictures from i.imgur.com, tracker.example". Descriptions,
   update posts and playtest briefs may include HTTPS pictures, as on the old site, and
@@ -1574,7 +1767,7 @@ Screens mocked up:
 
 | Area | Pages |
 |---|---|
-| Public | Home, the library for each game, an experience page, the updates feed, the scripts list and a script page, the submit form, a profile, events, the playtests list, one playtest and the form to start one |
+| Public | Home, the library for each game, an experience page, the updates feed, the scripts list and a script page, the submit forms for an experience and for a snippet, a creator's own submissions and the form reopened to fix one, a profile, events, the playtests list, one playtest and the form to start one |
 | Admin | Overview, review queue, reviewing a submission, reviewing an edit, reports, the experience list |
 | Placeholders | Maps, tools, guides, forum |
 
@@ -1627,6 +1820,85 @@ Look:
   All of it is off for people who ask for reduced motion.
 - Hero and cover artwork in the mockups is placeholder. The site needs artwork it may
   use; see "Open decisions".
+
+### Submitting, and following a submission: the mockups
+
+Mocked up 2026-10-13 as `submit.html`, `submit-snippet.html`, `submissions.html` and
+`resubmit.html`, with a "Playtest" button added to `experience.html`. This section is
+what the screens show and why. The model behind them, the statuses and what the
+database holds, is "Submission states" under "Data model". The screens themselves are
+not built; "Order of work" says what comes first.
+
+- **The game comes first, then what is being shared.** Agreed 2026-10-13: the game is
+  the first question on submit, and what follows is what that game allows. Snippets
+  are Battlefield 6 only, because 2042's Portal had no TypeScript. With 2042 chosen,
+  "A snippet" stays in view with that reason and cannot be chosen. Whether a game has
+  snippets is a field of its entry in `src/shared/games.ts`, not a test of its name.
+- **An experience and a snippet are separate forms** at their own addresses,
+  `/submit/` and `/submit/snippet/`, so the choice is two links and needs no script.
+  On the snippet form the other game is a link to the experience form for that game.
+  Snippets have had no public form until now; they were written in the admin.
+- **The two forms are one page to the eye.** The head ("Submit" and one lead), the
+  game choice, the kind choice and the first panel of the side column are the same on
+  both, word for word, so choosing a kind changes what is below and moves nothing
+  above. What a kind is, is said in its choice, not in the page head.
+- **A snippet is pasted in or uploaded as one `.ts` file, and nothing else.** Agreed
+  2026-10-13. It is a piece of script to copy into your own, not a whole experience,
+  so the form does not take a Portal export: that is what submitting an experience
+  as a template is for. The form is one section: in order, a title, a description, the
+  snippet and a category. The snippet box has an upload button in its bar ("Upload a
+  .ts file", drawn as a button, with "or paste it below" beside it), line numbers, and
+  a count of lines against the limit. The mockup shows 400 lines to keep whole
+  experiences out; the number is a placeholder.
+- **The SDK release is not asked for.** Agreed 2026-10-13. Battlefield 6 only ever
+  runs the latest release, so the form states which release the submission will be
+  listed for and does not offer a choice. See "SDK versions".
+- **"Your submissions"** at `/submissions/`, for the signed-in visitor only. One flat
+  list of every experience and snippet they have made, ordered by when its state last
+  changed, newest first. Agreed 2026-10-13, after a first version in three groups
+  ("needs you, waiting, live") was dropped: the states do not sort into three piles.
+- **Three columns say where a row is:** Status, Request and Review. They are defined
+  under "Submission states". The request is drawn as a plain small-caps word and the
+  review as a colored label, so the two are not read as one thing. On a narrow window
+  the three sit on one line under the name, in the same order.
+- **Each row has one line under them:** what last happened and when, as one short
+  plain statement. "Submitted 5 hours ago. 4th of 7 in the queue." "Reviewed
+  yesterday." "Removed Sep 30. Cannot be resubmitted." No names, no asides.
+- **The list does not show a moderator's notes.** A row with changes requested has
+  the amber label, an amber edge and an amber "Edit" button, and that is all; the
+  notes were tried in the row and made the list too busy.
+- **Every row has the same one button, "Edit",** which opens that item's edit page.
+  Whatever state it is in, the next step is taken there: fixing what a moderator
+  asked for, submitting a draft, discarding a playtest copy. Something removed for
+  good has no button. This puts weight on the edit page, which is not mocked up as
+  its own screen yet; the submit form stands in for it.
+- **The form reopened to fix something** (`resubmit.html`) is the submit form filled
+  in with what was sent. The game and the kind are settled and not asked again. The
+  top says changes were requested and links to each field that has a note; each of
+  those fields shows what the moderator wrote about it, under the field, headed
+  "Moderator note". Sending it puts the same row back in review: same address, same
+  place in the creator's list.
+- **A creator is never shown which moderator reviewed something.** Agreed 2026-10-13.
+  Not in the list and not on the notes. The moderators' own screens still record who
+  decided.
+- **A playtest of something live starts on its page.** The owner's actions on
+  `experience.html` include "Playtest", which makes a draft copy to test. The form to
+  start a playtest sends anyone testing a live experience there.
+- **Reached from** the creator's own profile, a panel beside every submit form, and
+  the line under the submit button. The panel says how many have changes requested,
+  how many are in review, and how many of the 5 waiting submissions are used.
+- **The words on these screens are short and plain.** One fact a line, said the
+  ordinary way. Several lines were sent back for being clipped, chatty or carried
+  over from habit: a rule about secrets in a script, for one, which means nothing in
+  Portal, where a script cannot make a web request.
+
+What the screens need that is not built is listed under "Submission states", with
+what the database already holds for it.
+
+Not mocked up yet, and needed by what is: the edit page every row's button opens;
+the moderators' review screen with a way to write a note against a field, to request
+changes on an edit or a playtest brief, and to remove something for good; and a row
+with two requests at once.
 
 ### Shown in the mockups, not yet in the schema
 
@@ -1735,9 +2007,9 @@ was settled first, so the screens are built against seed data and the import fol
    submit page takes the game and a code or Portal link in its address, shows what
    Portal says, and starts the form from it. On submit the code is looked up again,
    so the rotation, Portal's tags and the paid-game flag come from Portal and not from
-   the form; if gametools does not answer, the submission still goes in. A pending or
-   rejected experience can be opened by its owner and the moderators, with a note
-   saying so.
+   the form; if gametools does not answer, the submission still goes in. An
+   experience that is not published can be opened by its owner and the moderators,
+   with a note naming its status.
 
    Tightened after review, 2026-10-13:
 
@@ -1765,8 +2037,35 @@ was settled first, so the screens are built against seed data and the import fol
 
    Not in submit yet: uploading the Portal export and a template's files; inviting
    accounts as collaborators, which is done from the page after approval; checking
-   that a cover address is really a picture; a place for someone to see their own
-   waiting submissions; and a live card preview.
+   that a cover address is really a picture; and a live card preview.
+
+   Changed with the submission states, 2026-10-13: migration 0023 (the six statuses,
+   `changes_requested` in place of `rejected`, notes by field, the review columns on
+   snippets, `copied_from_id`); the experience page names any status to its owner;
+   the SDK release is set at submit and the form no longer asks for it.
+
+   What the mockups of 2026-10-13 add to this step, in the order to build it. Each
+   is a write with its service, its refusal tests and its screen:
+
+   1. **The edit page,** for the owner of an experience. It is what every row of
+      "Your submissions" opens, so the rest hangs from it. For something published
+      it makes a revision; for anything else it changes the row. It needs mocking up
+      first: only the submit form stands in for it.
+   2. **Drafts.** Save without submitting, as `draft`; submit a draft. The submit
+      form gets a second button.
+   3. **Fix and resubmit.** The edit page for something with changes requested shows
+      the notes at their fields and sends it back to `pending`. The same for an edit
+      that was sent back, from its revision.
+   4. **"Your submissions"** at `/submissions/`: the list, its three columns and the
+      one button. Linked from the profile, the submit forms and the header menu.
+   5. **Submitting a snippet** at `/submit/snippet/`, with "what are you sharing?"
+      added to the experience form, and `hasSnippets` or the like on the games
+      registry. Needs the size limit decided and the production categories read.
+   6. **Playtests:** starting one for a draft, the "Playtest" button that copies a
+      live experience, completing one, and discarding a copy. Depends on the
+      playtest screens, which are read-only so far.
+
+   The moderators' half of 3 and 5 is in step 6 below.
 6. **Admin:** the review queue and the two review screens first, then reports, the
    experience list, and the rest of the side menu.
    Built so far, 2026-10-13: the review queue at `/admin`, listing new submissions the
@@ -1775,8 +2074,8 @@ was settled first, so the screens are built against seed data and the import fol
    now, whether Portal calls it something else, other pages using the same code,
    unfamiliar hosts its description, cover or gallery load pictures from, a missing
    cover, a thin description, and how the submitter's earlier submissions went.
-   Approving publishes it; turning it down needs a note, which its owner then sees on
-   its page, and a few common notes can be started with a press. A submission is
+   Approving publishes it; requesting changes needs a note, which its owner then sees
+   on its page, and a few common notes can be started with a press. A submission is
    decided once, even if two moderators press at the same moment. The queue shows the
    100 longest waits with a count of everything waiting, and marks a submission whose
    code another page already has.
@@ -1787,6 +2086,14 @@ was settled first, so the screens are built against seed data and the import fol
    other kinds (edits, update posts, playtests, flag clears), the featured and
    trending switches, the Discord announcement on approval, a count beside the
    header's Review link, and a record of decisions.
+
+   Added by the submission states, 2026-10-13, and not built: a note against a
+   particular field when requesting changes, stored in `review_field_notes`, started
+   from the screen's own checks where one applies; "Remove" as a third decision,
+   separate from requesting changes, with a note and a confirmation, since it cannot
+   be undone by its owner; reviewing snippets; and seeing, on something submitted
+   again, what was asked for last time. The review screen's mockup has none of these
+   yet.
 7. **Edges:** public API, Atom feeds, sitemap, robots, redirects from the old
    addresses, scheduled jobs.
 8. **Cutover:** rehearsals, then the switch.
@@ -1825,7 +2132,15 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Tags | **Direction set 2026-10-13:** flexible, shaped by admins per game, and ready for a later title. Tag groups and tags are data; no game's filters are written in code. See "The tag system". **Agreed 2026-10-13,** and the schema is built this way |
 | How a new game is added | **Agreed 2026-10-13:** a registry entry in code and one new value in the database's `game` list, with categories and tags entered by an admin. Not a `games` table, because a new title needs code for its lookup and files either way |
 | Style as a tag group | **Agreed 2026-10-13.** Style is a tag group per game, not a second kind of category. The subcategory join table is gone |
-| SDK version on an experience | Built 2026-10-13 as one release per experience or script, chosen by its creators, in an `sdk_versions` table. **Agreed 2026-10-13:** changing it needs no moderation. Open: whether one "works with" release is enough or creators need to mark a range |
+| SDK version on an experience | Built 2026-10-13 as one release per experience or script in an `sdk_versions` table. **Agreed later the same day:** it is not chosen. Battlefield 6 only runs the latest release, so the site records the current one at submit and the form does not ask. Open: whether an owner later confirms it still works on a newer release, and how the page shows one that has not been confirmed |
+| Game first | **Agreed 2026-10-13:** in any flow where the game matters, the game is the first question and what follows is what that game allows. On submit: the game, then what is being shared, then the form |
+| What a snippet is | **Agreed 2026-10-13:** a small, reusable piece of script, Battlefield 6 only, pasted in or uploaded as one `.ts` file by anyone signed in, and reviewed like an experience. Not a Portal export and not a whole experience. Open: the size limit, shown as 400 lines in the mockup |
+| Submission states | **Agreed 2026-10-13,** and the schema is built this way: draft, in review, changes requested, live, delisted, removed. A moderator requests changes instead of rejecting, and the creator fixes it and submits it again; "removed" is the separate end for spam. See "Submission states" for what is still open there |
+| What a creator sees of a review | **Agreed 2026-10-13:** the notes, each at the field it is about, and never which moderator wrote them |
+| The creator's own list | **Agreed 2026-10-13:** one flat list at `/submissions/`, most recently changed first, with Status, Request and Review as separate columns, one line of what last happened, and one "Edit" button per row |
+| Playtesting something live | **Agreed 2026-10-13:** never on the live listing. "Playtest" on its page makes a draft copy, which is tested and then discarded. Open: how the copy's changes reach the live page, whether the copy needs its own code, and what discarding keeps |
+| Who can delist | Open. A moderator can, and Portal losing the code does. Whether an owner can delist their own and list it again is drawn in the mockup and not decided |
+| Withdrawing from review | Open. Whether an owner can pull something back from review to a draft |
 | Flagging experiences no longer published | Built 2026-10-13 as `portal_state` on experiences, separate from the `broken` flag people set. Proposed, not yet agreed: the page stays up with a banner, listings hide it by default, a template with files stays listed, and nothing is removed automatically |
 | Checking projects against an SDK release | Out of scope for now, noted 2026-10-13. For templates and snippets, where the site has the files: three separate checks, for the script, the blocks and the spatial objects, each against what a release offers. See the end of "SDK versions" |
 | Creators and collaborators | **Asked for 2026-10-13,** and the schema is built this way: a creator is a name with no account or an account, both credited, and an account can be given edit access by the owner. **Agreed 2026-10-13:** edit access is always explicit and off by default. Proposed, not yet agreed: a newly added account must accept before it is shown; a collaborator cannot delete the experience or manage other creators; ownership changes hands only through an admin |

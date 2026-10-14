@@ -84,7 +84,9 @@ describe('moderation', () => {
 
     const titles = queue.items.map((item) => item.title)
     expect(titles).toContain('Bridge Parkour Trials')
-    expect(titles).not.toContain('Free XP 24/7') // already turned down
+    expect(titles).not.toContain('Free XP 24/7') // removed
+    expect(titles).not.toContain('Night Convoy') // sent back for changes
+    expect(titles).not.toContain('Hangar Duel') // a draft, never sent in
     expect(titles).not.toContain('Gun Master 2.0') // published
     const waits = queue.items.map((item) => item.submittedAt.getTime())
     expect(waits).toEqual([...waits].sort((a, b) => a - b))
@@ -178,7 +180,7 @@ describe('moderation', () => {
     })
   })
 
-  it('turns one down only with a note, which its owner then sees', async () => {
+  it('requests changes only with a note, which its owner then sees', async () => {
     const id = await submit('Turn me down')
 
     expect(
@@ -193,11 +195,11 @@ describe('moderation', () => {
         approve: false,
         note: 'The code does not load.',
       }),
-    ).toMatchObject({ ok: true, status: 'rejected' })
+    ).toMatchObject({ ok: true, status: 'changes_requested' })
 
     expect(await getExperience('turn-me-down', NOW)).toBeNull()
     expect(await getExperience('turn-me-down', NOW, someone)).toMatchObject({
-      status: 'rejected',
+      status: 'changes_requested',
       reviewNote: 'The code does not load.',
     })
   })

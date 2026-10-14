@@ -32,7 +32,7 @@ describe('seed', () => {
     const second = await seed(db, NOW)
 
     expect(second).toEqual(first)
-    expect(first.experiences).toBe(34 + 19)
+    expect(first.experiences).toBe(34 + 21)
     const [real] = await db
       .select({ value: count() })
       .from(user)
@@ -108,5 +108,44 @@ describe('seed', () => {
     expect(
       creators.filter((row) => row.userId && !row.acceptedAt),
     ).toHaveLength(1)
+  })
+
+  it('has one of every status that is not public, each as that status is kept', async () => {
+    const rows = await db
+      .select({
+        slug: experiences.slug,
+        status: experiences.status,
+        reviewedBy: experiences.reviewedBy,
+        reviewNote: experiences.reviewNote,
+        reviewFieldNotes: experiences.reviewFieldNotes,
+      })
+      .from(experiences)
+      .where(ne(experiences.status, 'published'))
+    const bySlug = Object.fromEntries(rows.map((row) => [row.slug, row]))
+
+    // Nobody has reviewed a draft or one that is waiting.
+    expect(bySlug['hangar-duel']).toMatchObject({
+      status: 'draft',
+      reviewedBy: null,
+      reviewFieldNotes: {},
+    })
+    expect(bySlug['bridge-parkour-trials']).toMatchObject({
+      status: 'pending',
+      reviewedBy: null,
+    })
+    // Sent back: a note about the whole thing, and one for each field.
+    expect(bySlug['night-convoy']).toMatchObject({
+      status: 'changes_requested',
+      reviewNote: expect.any(String),
+    })
+    expect(Object.keys(bySlug['night-convoy'].reviewFieldNotes).sort()).toEqual(
+      ['coverImgUrl', 'description'],
+    )
+    // Removed for good, with why.
+    expect(bySlug['free-xp-24-7']).toMatchObject({
+      status: 'removed',
+      reviewNote: expect.stringMatching(/duplicate/),
+      reviewFieldNotes: {},
+    })
   })
 })

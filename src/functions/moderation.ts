@@ -26,7 +26,7 @@ export const fetchSubmissionReview = createServerFn({ method: 'GET' })
     getSubmissionReview(await currentActor(), data.id),
   )
 
-/** Approves a waiting submission, or turns it down with a note. */
+/** Approves a waiting submission, or sends it back with changes requested. */
 export const decide = createServerFn({ method: 'POST' })
   .validator(
     formOr(

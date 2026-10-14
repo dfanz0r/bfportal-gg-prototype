@@ -469,6 +469,7 @@ export async function seed(db: Db, now = new Date()) {
       const game: Game = item.game
       const status = item.status ?? 'published'
       const published = status === 'published'
+      const unreviewed = status === 'pending' || status === 'draft'
       const created = ago(item.age)
       const firstMap = item.rotation?.[0]
       const cover =
@@ -515,9 +516,11 @@ export async function seed(db: Db, now = new Date()) {
           firstPublishedAt: published ? created : null,
           lastPublishedAt: published ? created : null,
           announcedAt: published ? created : null,
-          reviewedBy: status === 'pending' ? null : moderator,
-          reviewedAt: status === 'pending' ? null : created,
+          // Nobody has looked at a draft or at one still waiting.
+          reviewedBy: unreviewed ? null : moderator,
+          reviewedAt: unreviewed ? null : created,
           reviewNote: item.reviewNote,
+          reviewFieldNotes: item.reviewFieldNotes ?? {},
           deletedAt: item.deleted ? ago(1) : null,
         },
         tagIds: [

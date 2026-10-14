@@ -93,6 +93,8 @@ export type SampleExperience = {
   repoUrl?: string
   filesUrl?: string
   reviewNote?: string
+  /** A moderator's notes on particular fields, by the form's field names. */
+  reviewFieldNotes?: Record<string, string>
   deleted?: boolean
   reports?: Partial<Record<ReportType, number>>
 }
@@ -330,10 +332,47 @@ export const experiences: SampleExperience[] = [
     code: '19tq2',
     players: 64,
     cover: 2,
-    status: 'rejected',
+    // Not to be fixed and sent in again: there is nothing to fix.
+    status: 'removed',
     age: 2,
     likes: 0,
     reviewNote: 'A duplicate of an existing page, and an XP farm.',
+  },
+  // Sent back by a moderator, with a note on each field that needs changing.
+  {
+    slug: 'night-convoy',
+    game: 'bf6',
+    title: 'Night Convoy',
+    description: 'Escort a convoy at night.',
+    owner: 'gala',
+    category: 'Co-op',
+    code: '1nc4v',
+    players: 4,
+    status: 'changes_requested',
+    age: 3,
+    likes: 0,
+    types: ['script'],
+    reviewNote: 'Two changes are needed before this can be approved.',
+    reviewFieldNotes: {
+      description:
+        'The description is a single sentence. Describe what the escorts and the attackers each do, and how a round ends.',
+      coverImgUrl: 'There is no cover. Provide a 16:9 image.',
+    },
+  },
+  // Saved and not sent in. Only its owner sees it.
+  {
+    slug: 'hangar-duel',
+    game: 'bf6',
+    title: 'Hangar Duel',
+    description: 'One on one in a closed hangar. Still being built.',
+    owner: 'gala',
+    category: 'Multiplayer',
+    code: null,
+    players: 2,
+    cover: 3,
+    status: 'draft',
+    age: 5,
+    likes: 0,
   },
   {
     slug: 'old-test-mode',

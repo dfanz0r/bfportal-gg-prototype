@@ -27,8 +27,10 @@ describe('library', () => {
     // longer loads.
     expect(library.total).toBe(34 + 7)
     for (const hidden of [
+      'Hangar Duel', // a draft
       'Bridge Parkour Trials', // pending
-      'Free XP 24/7', // rejected
+      'Night Convoy', // changes requested
+      'Free XP 24/7', // removed
       'Old test mode', // deleted
       'Rooftop Gun Game', // no longer on Portal
       'Rush Classic: Arica Harbor', // the other game

@@ -149,15 +149,15 @@ export async function submitExperience(
         ),
       )
       .limit(1),
-    form.sdk
-      ? db
-          .select({ id: sdkVersions.id })
-          .from(sdkVersions)
-          .where(
-            and(eq(sdkVersions.game, game), eq(sdkVersions.version, form.sdk)),
-          )
-          .limit(1)
-      : [],
+    // The release it is for is not asked: a game only ever runs its latest,
+    // so whatever is submitted today is for that one. A game with no
+    // releases recorded has none to set.
+    db
+      .select({ id: sdkVersions.id })
+      .from(sdkVersions)
+      .where(eq(sdkVersions.game, game))
+      .orderBy(desc(sdkVersions.sortOrder))
+      .limit(1),
     // Only tags of this game, from groups creators may choose from. Anything
     // else in the list is not a tag here, and is left out.
     form.tags.length > 0
@@ -190,7 +190,6 @@ export async function submitExperience(
       .where(eq(maps.game, game)),
   ])
   if (!category) errors.category = 'Choose one of the categories offered.'
-  if (form.sdk && !sdk) errors.sdk = 'Choose one of the SDK releases offered.'
   // A group an admin set to one choice takes one.
   for (const group of groupBy(chosenTags, (tag) => tag.groupId).values()) {
     if (group[0].pick === 'one' && group.length > 1) {
@@ -433,11 +432,12 @@ export async function readDraft(actor: Actor) {
 }
 
 /**
- * What the submit form offers for a game: its categories, the tags a creator
- * may choose, and its SDK releases, newest first.
+ * What the submit form offers for a game: its categories and the tags a
+ * creator may choose. With them, the game's current SDK release, which the
+ * form states and does not ask for.
  */
 export async function getSubmitOptions(game: Game) {
-  const [categoryRows, tagRows, sdkRows] = await Promise.all([
+  const [categoryRows, tagRows, [currentSdk]] = await Promise.all([
     db
       .select({ name: categories.name, slug: categories.slug })
       .from(categories)
@@ -473,7 +473,8 @@ export async function getSubmitOptions(game: Game) {
       .select({ version: sdkVersions.version, season: sdkVersions.season })
       .from(sdkVersions)
       .where(eq(sdkVersions.game, game))
-      .orderBy(desc(sdkVersions.sortOrder)),
+      .orderBy(desc(sdkVersions.sortOrder))
+      .limit(1),
   ])
   return {
     categories: categoryRows,
@@ -489,6 +490,6 @@ export async function getSubmitOptions(game: Game) {
         })),
       }),
     ),
-    sdkVersions: sdkRows,
+    currentSdk: currentSdk ?? null,
   }
 }

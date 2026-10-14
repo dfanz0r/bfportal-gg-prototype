@@ -9,7 +9,8 @@ import { fetchExperience } from '../../functions/experience'
 export const Route = createFileRoute('/experiences/$slug')({
   loader: async ({ params }) => {
     const experience = await fetchExperience({ data: { slug: params.slug } })
-    // Pending, rejected and deleted experiences are not there for the public.
+    // Only a published experience is there for the public. A draft, one in
+    // review, sent back or removed, and a deleted one are not.
     if (!experience) {
       throw notFound()
     }

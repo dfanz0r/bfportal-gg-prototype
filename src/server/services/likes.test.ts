@@ -49,8 +49,10 @@ describe('liking', () => {
 
   it('has nothing to like that the public cannot see', async () => {
     for (const hidden of [
+      'hangar-duel', // a draft
       'bridge-parkour-trials', // pending
-      'free-xp-24-7', // rejected
+      'night-convoy', // changes requested
+      'free-xp-24-7', // removed
       'old-test-mode', // deleted
       'no-such-experience',
     ]) {

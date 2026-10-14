@@ -9,6 +9,7 @@ import {
   experienceImages,
   experiences,
   experienceTags,
+  sdkVersions,
   submissionDrafts,
   tagGroups,
   tags,
@@ -113,7 +114,8 @@ describe('submitting an experience', () => {
         images: 'https://i.example/a.png\nhttps://i.example/b.png',
         credits: 'Coupe',
         copyAllowed: 'true',
-        sdk: '1.4.3.0',
+        // Not a field any more; a form that still sends one is not obeyed.
+        sdk: '1.0.1.0',
       }),
       answers(found),
     )
@@ -142,7 +144,12 @@ describe('submitting an experience', () => {
       requiresFullGame: true,
       portalState: 'published',
     })
-    expect(row.sdkVersionId).not.toBeNull()
+    // The release is not asked for. It is the game's current one.
+    const [release] = await db
+      .select({ version: sdkVersions.version })
+      .from(sdkVersions)
+      .where(eq(sdkVersions.id, row.sdkVersionId ?? 0))
+    expect(release?.version).toBe('1.4.3.0')
     expect(tagged.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
       { name: 'Casual', source: 'creator' },
       { name: 'Custom Logic', source: 'portal' },
@@ -177,7 +184,6 @@ describe('submitting an experience', () => {
     expect(await errorsOf({ built: ['verified', 'script'] })).toHaveProperty(
       'built',
     )
-    expect(await errorsOf({ sdk: '9.9.9.9' })).toHaveProperty('sdk')
     expect(await errorsOf({ title: 'x' })).toHaveProperty('title')
     expect(
       await errorsOf({

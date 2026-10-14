@@ -35,7 +35,7 @@ const QUICK_NOTES = [
 ]
 
 const NOTE_NEEDED =
-  'Turning it down needs a note, so its creator knows what to change.'
+  'Requesting changes needs a note, so its creator knows what to change.'
 
 /** Reviewing one submission: what it is, what to check, and the decision. */
 export function AdminReview(props: {
@@ -307,11 +307,12 @@ export function AdminReview(props: {
                 disabled={sending()}
                 class={buttonGhost}
               >
-                Turn down
+                Request changes
               </button>
             </div>
             <p class="text-[13px] text-fg-3">
-              Approving publishes the page. Turning it down needs a note.
+              Approving publishes the page. Requesting changes needs a note; its
+              creator can fix it and submit it again.
             </p>
           </form>
 
@@ -334,7 +335,8 @@ export function AdminReview(props: {
             <p class="text-sm text-fg-2">
               Joined <DateText value={data().submitter.joinedAt} />.{' '}
               {data().submitter.published} published before,{' '}
-              {data().submitter.rejected} turned down.
+              {data().submitter.changesRequested} with changes requested,{' '}
+              {data().submitter.removed} removed.
             </p>
           </div>
         </aside>

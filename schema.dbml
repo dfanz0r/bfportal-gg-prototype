@@ -1,5 +1,5 @@
 // bfportal.gg rewrite: the database schema.
-// Generated from the development database as of migration 0022. It is a
+// Generated from the development database as of migration 0023. It is a
 // snapshot: regenerate it after the schema changes.
 // Paste into https://dbdiagram.io/d
 
@@ -15,10 +15,12 @@ Enum category_kind {
 }
 
 Enum content_status {
+  "draft"
   "pending"
+  "changes_requested"
   "published"
   "unpublished"
-  "rejected"
+  "removed"
 }
 
 Enum experience_type {
@@ -45,7 +47,7 @@ Enum game {
 Enum playtest_status {
   "pending"
   "approved"
-  "rejected"
+  "changes_requested"
   "canceled"
 }
 
@@ -70,7 +72,7 @@ Enum revision_kind {
 Enum revision_status {
   "pending"
   "approved"
-  "rejected"
+  "changes_requested"
 }
 
 Enum tag_group_filter {
@@ -194,6 +196,8 @@ Table "experiences" {
   "reviewed_by" text
   "reviewed_at" timestamptz
   "review_note" text
+  "review_field_notes" jsonb [not null, default: `'{}'`, note: 'A moderator\'s notes on particular fields, by field name.']
+  "copied_from_id" integer [note: 'On a playtest copy: the live experience it was copied from.']
   "deleted_at" timestamptz [note: 'The owner\'s delete. The row stays, hidden.']
   "meta_title" text
   "meta_description" text
@@ -316,6 +320,7 @@ Table "revisions" {
   "reviewed_by" text
   "reviewed_at" timestamptz
   "review_note" text
+  "review_field_notes" jsonb [not null, default: `'{}'`]
 
   Note: '''
   A proposed edit waiting for a moderator. At most one pending per experience.
@@ -504,6 +509,10 @@ Table "snippets" {
   "submitted_at" timestamptz [not null, default: `now()`]
   "first_published_at" timestamptz
   "last_published_at" timestamptz
+  "reviewed_by" text
+  "reviewed_at" timestamptz
+  "review_note" text
+  "review_field_notes" jsonb [not null, default: `'{}'`]
   "deleted_at" timestamptz
   "meta_title" text
   "meta_description" text
@@ -569,6 +578,7 @@ Table "updates" {
   "reviewed_by" text
   "reviewed_at" timestamptz
   "review_note" text
+  "review_field_notes" jsonb [not null, default: `'{}'`]
   "deleted_at" timestamptz
   "created_at" timestamptz [not null, default: `now()`]
   "updated_at" timestamptz [not null, default: `now()`]
@@ -605,6 +615,7 @@ Table "playtests" {
   "reviewed_by" text
   "reviewed_at" timestamptz
   "review_note" text
+  "review_field_notes" jsonb [not null, default: `'{}'`]
 
   Note: '''
   A call for testers: a brief, regions and a Discord thread. Held for a moderator.
@@ -720,6 +731,8 @@ Ref: "account"."user_id" > "user"."id" [delete: cascade]
 Ref: "experiences"."category_id" > "categories"."id"
 Ref: "experiences"."owner_id" > "user"."id"
 Ref: "experiences"."reviewed_by" > "user"."id"
+Ref: "experiences"."copied_from_id" > "experiences"."id" [delete: set null]
+Ref: "snippets"."reviewed_by" > "user"."id"
 Ref: "experiences".("sdk_version_id", "game") > "sdk_versions".("id", "game")
 Ref: "experience_creators"."experience_id" > "experiences"."id" [delete: cascade]
 Ref: "experience_creators"."user_id" > "user"."id" [delete: cascade]

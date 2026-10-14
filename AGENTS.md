@@ -14,7 +14,18 @@ documentation, commit messages and the site's own text. `color`, `behavior`, `ce
 
 Use the community's words. An experience offered for others to build on is a
 "template", never a "prefab". A playtest is a brief that testers play in their own
-time, not a scheduled session.
+time, not a scheduled session. A "snippet" is a small, reusable piece of script for
+Battlefield 6, not a whole experience.
+
+Write the site's own text short and plain: one fact a line, said the ordinary way.
+No asides, no reassurance, nothing clipped or clever. "Submitted 5 hours ago. 4th of
+7 in the queue." Before adding a rule or a warning, check it is true of Battlefield
+Portal: a Portal script cannot make a web request, so it has no secrets to leak.
+
+A submission's status has one word each, from `contentStatusLabels` in
+`src/shared/content.ts`: Draft, In review, Changes requested, Live, Delisted, Removed.
+A moderator "requests changes"; nothing is "rejected" or "turned down". Never show a
+creator which moderator reviewed something: a note is a "Moderator note".
 
 ## Commands
 
@@ -200,6 +211,9 @@ change the mockup or the plan in the same piece of work so the two do not drift.
 
 ## Data
 
+- **The game comes first.** In any flow where the game matters, it is the first
+  question, and what follows is what that game allows. On submit: the game, then what
+  is being shared, then the form.
 - **What differs by game is data, not code.** Tags, tag groups, categories, maps and
   SDK versions are rows scoped to a game that an admin can edit. Do not branch on a
   game's name, and do not name a column or an enum after one game's concept. A new
