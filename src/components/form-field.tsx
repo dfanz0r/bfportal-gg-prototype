@@ -16,7 +16,9 @@ export function FormField(props: {
   children: JSX.Element
 }) {
   return (
-    <div class="grid gap-1.5">
+    // Packed to the top: beside a taller field in a row, the spare height
+    // must not be shared out between the label, the box and the hint.
+    <div class="grid content-start gap-1.5">
       <label for={props.name} class="text-sm font-semibold">
         {props.label}
         <Show when={props.optional}>

@@ -30,6 +30,8 @@ export type GameInfo = {
   builtWith: readonly ExperienceType[]
   /** Whether there is a free version, so "needs the full game" means something. */
   hasFreeVersion: boolean
+  /** What can be submitted for it, said under its name on the submit form. */
+  submitNote: string
   library: {
     title: string
     lead: string
@@ -58,6 +60,7 @@ export const gameList: readonly GameInfo[] = [
     editor: { prefix: '/bf6/experience', param: 'id' },
     builtWith: ['script', 'blocks', 'spatial', 'verified'],
     hasFreeVersion: true,
+    submitNote: 'Experiences and templates.',
     library: {
       title: 'Experience library',
       lead: 'Every Battlefield 6 experience shared with the community. Filter by mode, size and tags, or paste a code to check it before you load in.',
@@ -76,6 +79,8 @@ export const gameList: readonly GameInfo[] = [
     editor: { prefix: '/experience', param: 'playgroundId' },
     builtWith: [],
     hasFreeVersion: false,
+    submitNote:
+      'Experiences only. Its Portal has no TypeScript and no export to upload.',
     library: {
       title: 'Battlefield 2042 library',
       lead: "Every experience the community shared for 2042's Portal, from Bad Company Rush to wingsuit races. Still here, still searchable, and checked every night against the game.",

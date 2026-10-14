@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/solid-router'
 import { createEffect, createSignal, For, Show } from 'solid-js'
 
+import type { Library } from '../functions/library'
 import type { SubmitPageData } from '../functions/submit'
 import { submitForReview } from '../functions/submit'
 import { experienceTypeLabels } from '../shared/content'
@@ -8,14 +9,27 @@ import { MAX_CREDITS, MAX_IMAGES, VIDEO_HOSTS } from '../shared/experience-form'
 import { formFields } from '../shared/form-input'
 import { gameInfo, gameList } from '../shared/games'
 import { Check } from './check'
-import { FieldError } from './field-error'
+import { Choice } from './choice'
+import { ChoiceGroup } from './choice-group'
+import { ExperienceCard } from './experience-card'
 import { FormField } from './form-field'
+import { FormSection } from './form-section'
+import { Icon } from './icon'
 import { PageLayout } from './page-layout'
-import { Section } from './section'
-import { body, buttonAccent, buttonSteel, field, label, panel } from './ui'
+import { buttonAccent, buttonGhost, field, label, panel } from './ui'
 
 const LEAD =
-  'Share something you built in Portal. A moderator looks at every submission before it appears.'
+  'Share something you built in Portal. A moderator looks at every new submission before it goes live, usually within a day.'
+
+type Card = Library['items'][number]
+
+const RULES = [
+  'The code or link must open your experience in Portal.',
+  'The cover image must be yours to use and safe for work.',
+  'XP farms are listed, but marked as such.',
+  'Submit each experience once. If you change it later, edit its page instead of submitting it again.',
+  'Only offer files as a template if you made them, or have permission to share them.',
+]
 
 /** What to say when a lookup did not come back with an experience. */
 const LOOKUP_NOTES: Partial<
@@ -64,7 +78,10 @@ function LookupNote(props: { data: SubmitPageData }) {
             )}
           </Show>
           <div class="min-w-0 text-sm text-fg-2">
-            <p class={label}>Found on Portal</p>
+            <p class={`${label} inline-flex items-center gap-1.5`}>
+              <Icon name="check" class="size-3.5 text-fg" />
+              Found on Portal
+            </p>
             <p class="mt-1 text-[15px] font-semibold text-fg">
               {found().title}
             </p>
@@ -114,6 +131,69 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   const fromPortal = (tag: { portalId: string | null }) =>
     tag.portalId !== null && portalTags().includes(tag.portalId)
 
+  // What is in the form right now, once anything in it has been changed. Until
+  // then the card beside the form is drawn from what the form started with,
+  // which is also what the server draws.
+  const [typed, setTyped] = createSignal<ReturnType<typeof formFields>>()
+  const now = (name: string, otherwise: string | number = '') => {
+    const fields = typed()
+    return fields ? String(fields[name] ?? '') : String(start(name, otherwise))
+  }
+  const nowChosen = (name: string, initially: string[]) => {
+    const fields = typed()
+    return fields ? [fields[name] ?? []].flat().map(String) : initially
+  }
+  /** The card this would be in a listing, as far as the form says so far. */
+  const preview = (): Card => {
+    const allTags = data().options.tagGroups.flatMap((group) => group.tags)
+    const tags = nowChosen(
+      'tags',
+      allTags
+        .filter((tag) => ticked('tags', tag.slug, fromPortal(tag)))
+        .map((tag) => tag.slug),
+    )
+    const category = now(
+      'category',
+      data().options.categories.find((item, index) =>
+        ticked('category', item.slug, index === 0),
+      )?.slug,
+    )
+    const built = nowChosen(
+      'built',
+      info().builtWith.filter((type) => ticked('built', type)),
+    )
+    return {
+      id: 0,
+      game: data().game,
+      slug: '',
+      title: now('title', data().found?.title) || 'Your title',
+      excerpt: now('description', data().found?.description).slice(0, 140),
+      coverImgUrl:
+        now('coverImgUrl') || (data().found?.thumbnailUrl ?? null) || null,
+      category:
+        data().options.categories.find((item) => item.slug === category)
+          ?.name ?? '',
+      maxPlayers: Number(now('maxPlayers', data().found?.players || 0)) || 0,
+      maxBots: Number(now('maxBots', 0)) || 0,
+      types: info().builtWith.filter((type) => built.includes(type)),
+      isTemplate: nowChosen(
+        'isTemplate',
+        ticked('isTemplate', 'true') ? ['true'] : [],
+      ).includes('true'),
+      code: data().code,
+      likes: 0,
+      featured: false,
+      bugged: false,
+      unavailable: false,
+      requiresFullGame: null,
+      owner: null,
+      tags: allTags
+        .filter((tag) => tags.includes(tag.slug))
+        .slice(0, 2)
+        .map((tag) => ({ name: tag.name, slug: tag.slug })),
+    }
+  }
+
   const fail = (form: HTMLFormElement, problems: Record<string, string>) => {
     setErrors(problems)
     setSending(false)
@@ -152,270 +232,311 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   }
 
   return (
-    <PageLayout title="Submit an experience" lead={LEAD}>
-      <div class="grid max-w-[52rem] gap-8" data-game={data().game}>
-        {/* A GET form: the game and the code go in the address, and the page
-            comes back with what Portal says about them. */}
-        <form method="get" action="/submit" class={`${panel} grid gap-4 p-5`}>
-          <fieldset>
-            <legend class={`${label} mb-2`}>Game</legend>
-            <div class="flex flex-wrap gap-x-6">
-              <For each={gameList}>
-                {(game) => (
-                  <Check
-                    radio
-                    name="game"
-                    value={game.id}
-                    checked={game.id === data().game}
-                  >
-                    {game.name}
-                  </Check>
-                )}
-              </For>
-            </div>
-          </fieldset>
-          <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <FormField label="Experience code" name="lookup-code">
-              <input
-                id="lookup-code"
-                name="code"
-                value={data().code ?? ''}
-                autocomplete="off"
-                spellcheck={false}
-                class={`${field} font-mono tracking-[0.12em] uppercase`}
-              />
-            </FormField>
-            <FormField
-              label="Or a link to it on Portal"
-              name="lookup-link"
-              optional
-            >
-              <input
-                id="lookup-link"
-                name="link"
-                type="url"
-                value={data().link ?? ''}
-                class={field}
-              />
-            </FormField>
-          </div>
-          <div>
-            <button type="submit" class={buttonSteel}>
-              Fetch details
-            </button>
-          </div>
-        </form>
-
-        <LookupNote data={data()} />
-
-        <form
-          method="post"
-          action={submitForReview.url}
-          onSubmit={submit}
-          class="grid gap-6"
-        >
-          <input type="hidden" name="game" value={data().game} />
-          <input type="hidden" name="code" value={data().code ?? ''} />
-          <input type="hidden" name="link" value={data().link ?? ''} />
-
-          {/* What is wrong with no field of its own to sit under. */}
-          <Show
-            when={
-              errors().form ?? errors().code ?? errors().link ?? errors().game
-            }
-          >
-            {(message) => (
-              <p
-                class="border-l-2 border-danger bg-danger/8 px-4 py-3 text-sm text-fg"
-                role="alert"
-              >
-                {message()}
-              </p>
-            )}
-          </Show>
-          <Show when={!data().code && !data().link}>
-            <p class={`${body} text-sm`}>
-              No code yet. Fetch one above, or tick “Offer it as a template” to
-              share files without a code.
-            </p>
-          </Show>
-
-          <FormField label="Title" name="title" errors={errors()}>
-            <input
-              id="title"
-              name="title"
-              required
-              minlength={3}
-              maxlength={80}
-              value={start('title', data().found?.title)}
-              class={field}
-            />
-          </FormField>
-
-          <fieldset>
-            <legend class="mb-1.5 text-sm font-semibold">Category</legend>
-            <div class="flex flex-wrap gap-x-6">
-              <For each={data().options.categories}>
-                {(category, index) => (
-                  <Check
-                    radio
-                    name="category"
-                    value={category.slug}
-                    checked={ticked('category', category.slug, index() === 0)}
-                  >
-                    {category.name}
-                  </Check>
-                )}
-              </For>
-            </div>
-            <FieldError message={errors().category} />
-          </fieldset>
-
-          <FormField
-            label="Description"
-            name="description"
-            hint="Markdown works: headings, lists, links and pictures."
-            errors={errors()}
-          >
-            <textarea
-              id="description"
-              name="description"
-              rows={8}
-              maxlength={10000}
-              class={field}
-            >
-              {start('description', data().found?.description)}
-            </textarea>
-          </FormField>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <FormField
-              label="Players"
-              name="maxPlayers"
-              hint="The most a match holds."
-              errors={errors()}
-            >
-              <input
-                id="maxPlayers"
-                name="maxPlayers"
-                type="number"
-                required
-                min={1}
-                max={256}
-                value={start('maxPlayers', data().found?.players || '')}
-                class={field}
-              />
-            </FormField>
-            <FormField label="Bots" name="maxBots" errors={errors()}>
-              <input
-                id="maxBots"
-                name="maxBots"
-                type="number"
-                min={0}
-                max={256}
-                value={start('maxBots', 0)}
-                class={field}
-              />
-            </FormField>
-          </div>
-
-          <Show when={info().builtWith.length > 0}>
-            <fieldset>
-              <legend class="mb-1.5 text-sm font-semibold">Built with</legend>
-              <div class="flex flex-wrap gap-x-6">
-                <For each={info().builtWith}>
-                  {(type) => (
-                    <Check
-                      name="built"
-                      value={type}
-                      checked={ticked('built', type)}
-                    >
-                      {experienceTypeLabels[type]}
-                    </Check>
+    <PageLayout title="Submit" lead={LEAD}>
+      <div
+        class="grid items-start gap-8 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10"
+        data-game={data().game}
+      >
+        <div class="min-w-0">
+          {/* The game comes first, then the code. A GET form: both go in the
+              address, and the page comes back for that game with what Portal
+              says about the code. */}
+          <form method="get" action="/submit">
+            <FormSection title="Which game is it for?">
+              <div class="grid gap-2.5 sm:grid-cols-2">
+                <For each={gameList}>
+                  {(game) => (
+                    <label class="relative grid cursor-pointer gap-0.5 border border-line-strong px-3.5 pt-[11px] pb-3 hover:border-steel has-checked:border-accent has-checked:bg-accent/12 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+                      <input
+                        type="radio"
+                        name="game"
+                        value={game.id}
+                        checked={game.id === data().game}
+                        class="sr-only"
+                      />
+                      <b class="text-[15px] font-semibold">{game.name}</b>
+                      <small class="text-[13px] text-fg-3">
+                        {game.submitNote}
+                      </small>
+                    </label>
                   )}
                 </For>
               </div>
-              <FieldError message={errors().built} />
-            </fieldset>
-          </Show>
+            </FormSection>
 
-          <For each={data().options.tagGroups}>
-            {(group) => (
-              <fieldset>
-                <legend class="text-sm font-semibold">{group.name}</legend>
-                <Show when={group.description}>
-                  <p class="mb-1 text-[13px] text-fg-3">{group.description}</p>
-                </Show>
-                {/* Portal's own tags for the code start chosen. A group that
-                    takes one choice is a list to pick from, which a browser
-                    holds to one without any script. */}
-                <Show
-                  when={group.pick === 'one'}
-                  fallback={
-                    <div class="flex flex-wrap gap-x-6">
-                      <For each={group.tags}>
-                        {(tag) => (
-                          <Check
-                            name="tags"
-                            value={tag.slug}
-                            checked={ticked('tags', tag.slug, fromPortal(tag))}
-                          >
-                            {tag.name}
-                          </Check>
-                        )}
-                      </For>
-                    </div>
-                  }
-                >
-                  <select
-                    name="tags"
-                    aria-label={group.name}
-                    class={`${field} mt-1.5 max-w-xs`}
-                  >
-                    <option value="">Not said</option>
-                    <For each={group.tags}>
-                      {(tag) => (
-                        <option
-                          value={tag.slug}
-                          selected={ticked('tags', tag.slug, fromPortal(tag))}
-                        >
-                          {tag.name}
-                        </option>
-                      )}
-                    </For>
-                  </select>
-                </Show>
-              </fieldset>
-            )}
-          </For>
-          <FieldError message={errors().tags} />
-
-          <fieldset class="grid gap-1">
-            <legend class="mb-1.5 text-sm font-semibold">Building on it</legend>
-            <Check
-              name="isTemplate"
-              value="true"
-              checked={ticked('isTemplate', 'true')}
+            <FormSection
+              title="Start from your code"
+              note="We fill in most of the form from it."
             >
-              Offer it as a template: others may take it and publish their own
-              version
-            </Check>
-            <Check
-              name="copyAllowed"
-              value="true"
-              checked={ticked('copyAllowed', 'true')}
-            >
-              It can be copied in the Portal editor
-            </Check>
-          </fieldset>
-
-          <Section title="Pictures and links">
-            <div class="grid gap-6">
               <FormField
-                label="Cover picture"
+                label="Experience code"
+                name="lookup-code"
+                hint="No code yet? A template can be shared as files alone: tick “Offer it as a template” below."
+              >
+                <div class="flex gap-2">
+                  <input
+                    id="lookup-code"
+                    name="code"
+                    value={data().code ?? ''}
+                    autocomplete="off"
+                    spellcheck={false}
+                    class={`${field} font-mono tracking-[0.12em] uppercase`}
+                  />
+                  <button type="submit" class={`${buttonGhost} h-[42px]`}>
+                    Fetch details
+                  </button>
+                </div>
+              </FormField>
+              <FormField
+                label="Or a link to it on Portal"
+                name="lookup-link"
+                optional
+              >
+                <input
+                  id="lookup-link"
+                  name="link"
+                  type="url"
+                  value={data().link ?? ''}
+                  placeholder="https://portal.battlefield.com/..."
+                  class={field}
+                />
+              </FormField>
+              <LookupNote data={data()} />
+            </FormSection>
+          </form>
+
+          <form
+            method="post"
+            action={submitForReview.url}
+            onSubmit={submit}
+            onInput={(event) =>
+              setTyped(formFields(new FormData(event.currentTarget)))
+            }
+          >
+            <input type="hidden" name="game" value={data().game} />
+            <input type="hidden" name="code" value={data().code ?? ''} />
+            <input type="hidden" name="link" value={data().link ?? ''} />
+
+            {/* What is wrong with no field of its own to sit under. */}
+            <Show
+              when={
+                errors().form ?? errors().code ?? errors().link ?? errors().game
+              }
+            >
+              {(message) => (
+                <p
+                  class="mb-8 border-l-2 border-danger bg-danger/8 px-4 py-3 text-sm text-fg"
+                  role="alert"
+                >
+                  {message()}
+                </p>
+              )}
+            </Show>
+
+            <FormSection title="How it is listed">
+              <ChoiceGroup label="Category" error={errors().category}>
+                <For each={data().options.categories}>
+                  {(category, index) => (
+                    <Choice
+                      radio
+                      name="category"
+                      value={category.slug}
+                      checked={ticked('category', category.slug, index() === 0)}
+                    >
+                      {category.name}
+                    </Choice>
+                  )}
+                </For>
+              </ChoiceGroup>
+              <Show when={info().builtWith.length > 0}>
+                <ChoiceGroup
+                  label="Built with"
+                  hint="A verified mode uses none of the first three."
+                  error={errors().built}
+                >
+                  <For each={info().builtWith}>
+                    {(type) => (
+                      <Choice
+                        name="built"
+                        value={type}
+                        checked={ticked('built', type)}
+                      >
+                        {experienceTypeLabels[type]}
+                      </Choice>
+                    )}
+                  </For>
+                </ChoiceGroup>
+              </Show>
+              <div class="grid gap-1">
+                <Check
+                  name="isTemplate"
+                  value="true"
+                  checked={ticked('isTemplate', 'true')}
+                >
+                  Offer it as a template: others may take it and publish their
+                  own version
+                </Check>
+                <Check
+                  name="copyAllowed"
+                  value="true"
+                  checked={ticked('copyAllowed', 'true')}
+                >
+                  It can be copied in the Portal editor
+                </Check>
+              </div>
+            </FormSection>
+
+            <FormSection title="What it is">
+              <FormField label="Title" name="title" errors={errors()}>
+                <input
+                  id="title"
+                  name="title"
+                  required
+                  minlength={3}
+                  maxlength={80}
+                  value={start('title', data().found?.title)}
+                  class={field}
+                />
+              </FormField>
+              <FormField
+                label="Description"
+                name="description"
+                hint="Markdown works: headings, lists, links and pictures."
+                errors={errors()}
+              >
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={8}
+                  maxlength={10000}
+                  class={field}
+                >
+                  {start('description', data().found?.description)}
+                </textarea>
+              </FormField>
+
+              {/* Portal's own tags for the code start chosen. A group that
+                  takes one choice is a list to pick from, which a browser
+                  holds to one without any script. */}
+              <For each={data().options.tagGroups}>
+                {(group) => (
+                  <Show
+                    when={group.pick === 'one'}
+                    fallback={
+                      <ChoiceGroup
+                        label={group.name}
+                        optional
+                        hint={group.description ?? undefined}
+                      >
+                        <For each={group.tags}>
+                          {(tag) => (
+                            <Choice
+                              name="tags"
+                              value={tag.slug}
+                              checked={ticked(
+                                'tags',
+                                tag.slug,
+                                fromPortal(tag),
+                              )}
+                            >
+                              {tag.name}
+                            </Choice>
+                          )}
+                        </For>
+                      </ChoiceGroup>
+                    }
+                  >
+                    <FormField
+                      label={group.name}
+                      name={`tags-${group.name}`}
+                      optional
+                      hint={group.description ?? undefined}
+                    >
+                      <select
+                        id={`tags-${group.name}`}
+                        name="tags"
+                        class={`${field} max-w-xs`}
+                      >
+                        <option value="">Not said</option>
+                        <For each={group.tags}>
+                          {(tag) => (
+                            <option
+                              value={tag.slug}
+                              selected={ticked(
+                                'tags',
+                                tag.slug,
+                                fromPortal(tag),
+                              )}
+                            >
+                              {tag.name}
+                            </option>
+                          )}
+                        </For>
+                      </select>
+                    </FormField>
+                  </Show>
+                )}
+              </For>
+              <Show when={errors().tags}>
+                {(message) => (
+                  <p class="text-[13px] text-danger" role="alert">
+                    {message()}
+                  </p>
+                )}
+              </Show>
+
+              <FormField
+                label="Made with"
+                name="credits"
+                optional
+                hint={`Names to credit, one per line, up to ${MAX_CREDITS}. For people with an account here, add them from the experience's page once it is approved.`}
+                errors={errors()}
+              >
+                <textarea id="credits" name="credits" rows={3} class={field}>
+                  {start('credits')}
+                </textarea>
+              </FormField>
+            </FormSection>
+
+            <FormSection title="Setup">
+              <div class="grid items-start gap-x-5 gap-y-[18px] sm:grid-cols-2">
+                <FormField
+                  label="Players"
+                  name="maxPlayers"
+                  hint="The most a match holds."
+                  errors={errors()}
+                >
+                  <input
+                    id="maxPlayers"
+                    name="maxPlayers"
+                    type="number"
+                    required
+                    min={1}
+                    max={256}
+                    value={start('maxPlayers', data().found?.players || '')}
+                    class={field}
+                  />
+                </FormField>
+                <FormField label="Bots" name="maxBots" errors={errors()}>
+                  <input
+                    id="maxBots"
+                    name="maxBots"
+                    type="number"
+                    min={0}
+                    max={256}
+                    value={start('maxBots', 0)}
+                    class={field}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
+
+            <FormSection title="Media and links">
+              <FormField
+                label="Cover image"
                 name="coverImgUrl"
                 optional
-                hint="An https:// address. Leave it empty to use the thumbnail from Portal."
+                hint="A direct https:// link to an image. 16:9 works best. Leave it empty to use the thumbnail from Portal."
                 errors={errors()}
               >
                 <input
@@ -427,45 +548,49 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 />
               </FormField>
               <FormField
-                label="More pictures"
+                label="More images"
                 name="images"
                 optional
-                hint={`One https:// address per line, up to ${MAX_IMAGES}.`}
+                hint={`One https:// link per line, up to ${MAX_IMAGES}. Shown in a gallery on the page, in this order.`}
                 errors={errors()}
               >
                 <textarea id="images" name="images" rows={3} class={field}>
                   {start('images')}
                 </textarea>
               </FormField>
-              <FormField
-                label="Video"
-                name="vidUrl"
-                optional
-                hint={`A link to it on ${VIDEO_HOSTS.join(', ')}.`}
-                errors={errors()}
-              >
-                <input
-                  id="vidUrl"
+              <div class="grid items-start gap-x-5 gap-y-[18px] sm:grid-cols-2">
+                <FormField
+                  label="Video"
                   name="vidUrl"
-                  type="url"
-                  value={start('vidUrl')}
-                  class={field}
-                />
-              </FormField>
-              <FormField
-                label="Source repository"
-                name="repoUrl"
-                optional
-                errors={errors()}
-              >
-                <input
-                  id="repoUrl"
+                  optional
+                  hint={`A link to it on ${VIDEO_HOSTS.join(', ')}.`}
+                  errors={errors()}
+                >
+                  <input
+                    id="vidUrl"
+                    name="vidUrl"
+                    type="url"
+                    value={start('vidUrl')}
+                    placeholder="https://youtu.be/..."
+                    class={field}
+                  />
+                </FormField>
+                <FormField
+                  label="Source repository"
                   name="repoUrl"
-                  type="url"
-                  value={start('repoUrl')}
-                  class={field}
-                />
-              </FormField>
+                  optional
+                  errors={errors()}
+                >
+                  <input
+                    id="repoUrl"
+                    name="repoUrl"
+                    type="url"
+                    value={start('repoUrl')}
+                    placeholder="https://github.com/..."
+                    class={field}
+                  />
+                </FormField>
+              </div>
               <FormField
                 label="Larger files"
                 name="filesUrl"
@@ -481,44 +606,58 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   class={field}
                 />
               </FormField>
-            </div>
-          </Section>
+            </FormSection>
 
-          <Section title="Credits">
-            <div class="grid gap-6">
-              <FormField
-                label="Made with"
-                name="credits"
-                optional
-                hint={`Names to credit, one per line, up to ${MAX_CREDITS}. For people with an account here, add them from the experience's page once it is approved.`}
-                errors={errors()}
+            <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
+              <button
+                type="submit"
+                class={`${buttonAccent} h-11 px-6`}
+                disabled={sending()}
               >
-                <textarea id="credits" name="credits" rows={3} class={field}>
-                  {start('credits')}
-                </textarea>
-              </FormField>
+                {sending() ? 'Submitting' : 'Submit for review'}
+              </button>
+              <a href="/" class={`${buttonGhost} h-11 px-6`}>
+                Cancel
+              </a>
+              <p class="max-w-[34em] text-[13.5px] text-fg-3">
+                Nothing is public until a moderator approves it.
+                {/* Not asked for: a game only runs its latest release. */}
+                <Show when={data().options.currentSdk}>
+                  {(sdk) => (
+                    <>
+                      {' '}
+                      It will be listed for Portal SDK {sdk().version}, the
+                      current release.
+                    </>
+                  )}
+                </Show>
+              </p>
             </div>
-          </Section>
+          </form>
+        </div>
 
-          <div class="flex flex-wrap items-center gap-4 border-t border-line pt-6">
-            <button type="submit" class={buttonAccent} disabled={sending()}>
-              {sending() ? 'Submitting' : 'Submit for review'}
-            </button>
-            <p class="text-sm text-fg-3">
-              Nothing is public until a moderator approves it.
-              {/* Not asked for: a game only runs its latest release. */}
-              <Show when={data().options.currentSdk}>
-                {(sdk) => (
-                  <>
-                    {' '}
-                    It will be listed for Portal SDK {sdk().version}, the
-                    current release.
-                  </>
-                )}
-              </Show>
-            </p>
+        <aside class="grid gap-4 min-[1100px]:sticky min-[1100px]:top-20">
+          <div>
+            <h2 class={`${label} mb-3`}>How it will look</h2>
+            {/* A picture of the card, not the card: it has no page to open
+                yet, so nothing in it can be pressed or tabbed to. */}
+            <div inert aria-hidden="true">
+              <ExperienceCard experience={preview()} />
+            </div>
           </div>
-        </form>
+          <div class={`${panel} p-5`}>
+            <h2 class={`${label} mb-3`}>Before you submit</h2>
+            <ul class="grid gap-2">
+              <For each={RULES}>
+                {(rule) => (
+                  <li class="relative pl-[18px] text-[13.5px] text-fg-2 before:absolute before:top-2 before:left-0 before:size-1.5 before:bg-accent">
+                    {rule}
+                  </li>
+                )}
+              </For>
+            </ul>
+          </div>
+        </aside>
       </div>
     </PageLayout>
   )

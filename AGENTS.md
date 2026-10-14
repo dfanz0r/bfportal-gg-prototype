@@ -107,6 +107,8 @@ Reach for what exists before writing markup:
 | Text someone wrote, as HTML | the `prose` class |
 | A link to a game's Library tab, with filters | `LibraryLink` |
 | A field of a form, with its label, hint and error | `FormField`; a checkbox or radio is `Check`; an error with no field of its own is `FieldError` |
+| A titled part of a form | `FormSection` |
+| A row of choices drawn as boxes that fill in | `ChoiceGroup` with `Choice`s inside, radio or checkbox |
 | Anything that differs by game | its entry in `src/shared/games.ts` |
 
 How we write them:

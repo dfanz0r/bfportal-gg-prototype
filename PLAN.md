@@ -2074,7 +2074,17 @@ was settled first, so the screens are built against seed data and the import fol
 
    Not in submit yet: uploading the Portal export and a template's files; inviting
    accounts as collaborators, which is done from the page after approval; checking
-   that a cover address is really a picture; and a live card preview.
+   that a cover address is really a picture.
+
+   Rebuilt to its mockup, 2026-10-13: the head says "Submit"; the form is in the
+   mockup's sections, each under a display-face legend (which game, start from your
+   code, how it is listed, what it is, setup, media and links); the game is a pair
+   of cards; categories, "built with" and tags are boxes that fill in when chosen;
+   the code has its "Fetch details" button beside it; and a side column holds "How
+   it will look", a card that follows the form as it is typed, and "Before you
+   submit". Still in the mockup and not on the page, because they are not built:
+   "What are you sharing?", the export upload, the "Your submissions" panel, the
+   Markdown editor's preview tab, and tags typed in freely.
 
    Changed with the submission states, 2026-10-13: migration 0023 (the six statuses,
    `changes_requested` in place of `rejected`, notes by field, the review columns on

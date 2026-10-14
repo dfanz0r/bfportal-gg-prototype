@@ -37,4 +37,4 @@ export const pill =
 
 /** A text field. A `<select>` and a `<textarea>` take it too. */
 export const field =
-  'w-full border border-line-strong bg-surface-1 px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-3 focus:border-steel'
+  'min-h-[42px] w-full border border-line-strong bg-base px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-3 focus:border-steel'
