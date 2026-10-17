@@ -1,4 +1,4 @@
-import { and, count, eq, isNull, like, or, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
 
 import { experienceFormSchema, formErrors } from '../../shared/experience-form'
 import { gameInfo } from '../../shared/games'
@@ -43,8 +43,18 @@ const draftSchema = experienceFormSchema.pick({
   credits: true,
 })
 
-/** One of their drafts, by its address, or null. */
-export async function ownDraft(
+/**
+ * What its owner edits in the form before it is sent: a draft, and one a
+ * moderator sent back with changes requested. One in review waits for its
+ * review; one that is live is changed by an edit a moderator approves.
+ */
+const EDITABLE = ['draft', 'changes_requested'] as const
+
+/**
+ * One of theirs to go on with in the form, by its address, or null: a draft,
+ * or one sent back with changes requested.
+ */
+export async function ownEditable(
   actor: Actor,
   slug: string,
   executor: Executor = db,
@@ -54,10 +64,18 @@ export async function ownDraft(
       id: experiences.id,
       slug: experiences.slug,
       game: experiences.game,
+      status: experiences.status,
       title: experiences.title,
       descriptionMd: experiences.descriptionMd,
       coverImgUrl: experiences.coverImgUrl,
       isTemplate: experiences.isTemplate,
+      copyAllowed: experiences.copyAllowed,
+      code: experiences.code,
+      teamSetup: experiences.teamSetup,
+      types: experiences.types,
+      repoUrl: experiences.repoUrl,
+      filesUrl: experiences.filesUrl,
+      reviewNote: experiences.reviewNote,
       category: categories.slug,
       draftForm: experiences.draftForm,
       updatedAt: experiences.updatedAt,
@@ -68,7 +86,7 @@ export async function ownDraft(
       and(
         eq(experiences.slug, slug),
         eq(experiences.ownerId, actor.id),
-        eq(experiences.status, 'draft'),
+        inArray(experiences.status, EDITABLE),
         isNull(experiences.deletedAt),
       ),
     )
@@ -104,7 +122,7 @@ export async function saveExperienceDraft(
   const read = draftSchema.safeParse(fields)
   if (!read.success) return refuse('invalid', formErrors(read.error))
   const form = read.data
-  const draft = form.editing ? await ownDraft(actor, form.editing) : null
+  const draft = form.editing ? await ownEditable(actor, form.editing) : null
   if (form.editing && !draft) return refuse('not-found')
   const game = draft?.game ?? form.game
   const [category] = await db
@@ -141,11 +159,16 @@ export async function saveExperienceDraft(
 
   if (draft) {
     return db.transaction(async (tx) => {
+      // Saved as it is: a draft stays a draft, and one sent back stays sent
+      // back until it is submitted again.
       const [saved] = await tx
         .update(experiences)
         .set(values)
         .where(
-          and(eq(experiences.id, draft.id), eq(experiences.status, 'draft')),
+          and(
+            eq(experiences.id, draft.id),
+            inArray(experiences.status, EDITABLE),
+          ),
         )
         .returning({ id: experiences.id })
       if (!saved) return refuse('not-found')
@@ -220,8 +243,9 @@ export async function deleteExperienceDraft(
   now = new Date(),
 ): Promise<{ ok: true } | Refusal> {
   if (!actor) return refuse('signed-out')
-  const draft = await ownDraft(actor, slug)
-  if (!draft) return refuse('not-found')
+  const draft = await ownEditable(actor, slug)
+  // Only a draft is deleted here; something sent in has been seen.
+  if (draft?.status !== 'draft') return refuse('not-found')
   await db.transaction(async (tx) => {
     await tx
       .update(experiences)

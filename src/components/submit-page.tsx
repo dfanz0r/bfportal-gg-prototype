@@ -543,16 +543,24 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   }
 
   const savedNow = () => data().now
+  /** Sent back by a moderator, to fix and send again. */
+  const sentBack = () => data().editing?.status === 'changes_requested'
 
   return (
     <PageLayout
       title={data().editing?.title ?? 'Submit'}
-      lead={data().editing ? 'A draft. Only you can see it.' : submitLead}
+      lead={
+        sentBack()
+          ? 'Changes were requested. Fix what the note says and resubmit it.'
+          : data().editing
+            ? 'A draft. Only you can see it.'
+            : submitLead
+      }
       crumbs={
         data().editing
           ? [
               { label: 'Your submissions', href: '/submissions' },
-              { label: 'Edit' },
+              { label: sentBack() ? 'Fix and resubmit' : 'Edit' },
             ]
           : undefined
       }
@@ -562,6 +570,16 @@ export function SubmitPage(props: { data: SubmitPageData }) {
         data-game={data().game}
       >
         <div class="min-w-0">
+          {/* What the moderator wrote, headed by what it is, never by who
+              wrote it. */}
+          <Show when={data().editing?.reviewNote}>
+            {(note) => (
+              <div class="mb-8 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
+                <b class="font-semibold text-fg">Moderator note</b>
+                <p class="whitespace-pre-line">{note()}</p>
+              </div>
+            )}
+          </Show>
           {/* The game comes first, and choosing one goes to its form. A
               draft's game and kind were settled when it was first saved. */}
           <Show when={!data().editing}>
@@ -680,6 +698,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   readUrl={readProjectFiles.url}
                   reading={reading()}
                   onChoose={readFiles}
+                  submitted={data().editing?.submittedFiles}
                 />
                 <FormField
                   label="Larger files"
@@ -952,7 +971,11 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 class={`${buttonAccent} h-11 px-6`}
                 disabled={sending() !== null}
               >
-                {sending() === 'submit' ? 'Submitting' : 'Submit'}
+                {sending() === 'submit'
+                  ? 'Submitting'
+                  : sentBack()
+                    ? 'Resubmit'
+                    : 'Submit'}
                 <Icon name="arrow-right" />
               </button>
               {/* The same form, kept as a draft for now. Only a title is
@@ -967,7 +990,8 @@ export function SubmitPage(props: { data: SubmitPageData }) {
               >
                 {sending() === 'save' ? 'Saving' : 'Save'}
               </button>
-              <Show when={data().editing}>
+              {/* Only a draft: something sent in has been seen. */}
+              <Show when={data().editing?.status === 'draft'}>
                 <button
                   ref={deleteButton}
                   type="submit"

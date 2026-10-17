@@ -77,7 +77,7 @@ describe('holding files for the submit form', () => {
         ...exportFile(''),
         sizeBytes: MAX_EXPORT_BYTES + 1,
       }),
-    ).toEqual({ exportFile: 'An export can be up to 6 MB.' })
+    ).toEqual({ exportFile: 'An export can be up to 10 MB.' })
     expect(await errorsFor(added('picture.png'))).toEqual({
       addedFiles: 'Only .tscn, .ts, .json files can be added.',
     })

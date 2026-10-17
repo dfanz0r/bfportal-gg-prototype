@@ -6,7 +6,7 @@ import { assertFromThisSite, currentActor } from '../server/auth/actor'
 import { keepDraft } from '../server/services/drafts'
 import {
   deleteExperienceDraft,
-  ownDraft,
+  ownEditable,
   saveExperienceDraft,
 } from '../server/services/experience-drafts'
 import {
@@ -97,7 +97,7 @@ async function draftIdOf(actor: Actor | null, fields: Record<string, unknown>) {
   if (!actor || typeof fields.editing !== 'string' || !fields.editing) {
     return null
   }
-  return (await ownDraft(actor, fields.editing))?.id ?? null
+  return (await ownEditable(actor, fields.editing))?.id ?? null
 }
 
 /**

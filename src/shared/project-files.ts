@@ -8,7 +8,7 @@ import type { ExperienceType, FileKind } from './content'
  * twice, so one with many custom maps is several megabytes: the Custom
  * Conquest template, with 20, is 5 MB.
  */
-export const MAX_EXPORT_BYTES = 6 * 1024 * 1024
+export const MAX_EXPORT_BYTES = 10 * 1024 * 1024
 /** The largest file added beside the export, such as a Godot scene. */
 export const MAX_FILE_BYTES = 2 * 1024 * 1024
 /** How many files may be added beside the export. */

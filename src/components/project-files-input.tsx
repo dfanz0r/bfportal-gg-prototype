@@ -145,6 +145,16 @@ export function ProjectFilesInput(props: {
   /** The names of files being read now, if any. */
   reading: string | null
   onChoose: (input: HTMLInputElement, slot: FileSlot) => void
+  /**
+   * What it was submitted with before, for one sent back. These stay unless
+   * new files are chosen, which take their place.
+   */
+  submitted?: {
+    id: string
+    kind: HeldFile['kind']
+    filename: string
+    sizeBytes: number
+  }[]
 }) {
   const hydrated = createHydrated()
   // Taken off with the script. What is offered can change under it when the
@@ -159,8 +169,49 @@ export function ProjectFilesInput(props: {
   const error = () =>
     props.errors.exportFile ?? props.errors.addedFiles ?? props.errors.files
 
+  const submitted = () => props.submitted ?? []
+
   return (
     <div class="grid gap-2">
+      <Show when={submitted().length > 0}>
+        <div class={`${panel} divide-y divide-line`}>
+          <p class="px-3 py-2.5 text-[13px] text-fg-2">
+            <Show
+              when={shown().length === 0}
+              fallback={
+                <>
+                  <b class="font-semibold text-fg">Submitted before.</b> The
+                  files chosen below take their place when it is resubmitted.
+                </>
+              }
+            >
+              <b class="font-semibold text-fg">Submitted with these.</b> They
+              stay unless you choose new files below.
+            </Show>
+          </p>
+          <For each={submitted()}>
+            {(file) => (
+              <div class={`${row} ${shown().length > 0 ? 'opacity-50' : ''}`}>
+                <span class={fileGlyph} aria-hidden="true">
+                  {fileGlyphs[file.kind]}
+                </span>
+                <span class="min-w-[min(14rem,60%)] flex-1 truncate text-[15px] font-semibold">
+                  {file.filename}
+                </span>
+                <span class="font-mono text-xs text-fg-3">
+                  {formatBytes(file.sizeBytes)}
+                </span>
+                <a
+                  href={`/files/${file.id}`}
+                  class="text-sm text-steel-hi underline"
+                >
+                  View
+                </a>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
       <div class={`${panel} divide-y divide-line`}>
         <Show
           when={exported()}

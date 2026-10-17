@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { and, desc, eq, inArray, isNull, like, or } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNull, like, or } from 'drizzle-orm'
 
 import type { Game } from '../../shared/content'
 import {
@@ -30,7 +30,7 @@ import {
 import { lookupExperience } from '../integrations/gametools'
 import { renderMarkdown } from '../markdown'
 import { discardDraft } from './drafts'
-import { ownDraft } from './experience-drafts'
+import { ownEditable } from './experience-drafts'
 import {
   heldFilesFor,
   letGoOfDraftFiles,
@@ -68,7 +68,7 @@ export async function submitExperience(
   const form = parsed.data
   // A draft of theirs being sent in, rather than something new. Its game was
   // settled when it was first saved.
-  const draft = form.editing ? await ownDraft(actor, form.editing) : null
+  const draft = form.editing ? await ownEditable(actor, form.editing) : null
   if (form.editing && !draft) return refuse('not-found')
   const game: Game = draft?.game ?? form.game
   const info = gameInfo(game)
@@ -139,9 +139,17 @@ export async function submitExperience(
     errors.files = 'Add one export.'
   }
   const fromExport = exported[0]?.summary ?? null
+  // What one sent back was submitted with, which it keeps unless new files
+  // are sent.
+  const [{ value: storedFiles }] = draft
+    ? await db
+        .select({ value: count() })
+        .from(projectFiles)
+        .where(eq(projectFiles.experienceId, draft.id))
+    : [{ value: 0 }]
   // A template with no code is taken as its files, so it needs some.
   if (offered && !form.code && !form.link && !errors.files) {
-    if (held.length === 0 && !form.filesUrl) {
+    if (held.length === 0 && storedFiles === 0 && !form.filesUrl) {
       errors.files =
         'A template with no code needs its export, or a link to its files.'
     }
@@ -376,16 +384,32 @@ export async function submitExperience(
           portalStateSince: found ? now : null,
           submittedAt: now,
         }
-        // A draft becomes the submission, at the address it already has.
-        // Anything it was saved with is replaced by what was just checked.
+        // Sent back and sent again with no code and no new export: its maps
+        // are still what its files said, so they stay.
+        if (draft && !found && !fromExport && storedFiles > 0) {
+          delete values.mapRotation
+          delete values.gameMode
+          delete values.requiresFullGame
+        }
+        // A draft, or one sent back, becomes the submission at the address it
+        // already has. What it had is replaced by what was just checked.
         const [created] = draft
           ? await tx
               .update(experiences)
-              .set({ ...values, draftForm: null })
+              // The last decision was about what was sent before. What is
+              // sent now waits for its own.
+              .set({
+                ...values,
+                draftForm: null,
+                reviewedBy: null,
+                reviewedAt: null,
+                reviewNote: null,
+                reviewFieldNotes: {},
+              })
               .where(
                 and(
                   eq(experiences.id, draft.id),
-                  eq(experiences.status, 'draft'),
+                  inArray(experiences.status, ['draft', 'changes_requested']),
                 ),
               )
               .returning({ id: experiences.id })
@@ -399,9 +423,15 @@ export async function submitExperience(
             experienceTags,
             experienceMedia,
             experienceCreators,
-            projectFiles,
           ]) {
             await tx.delete(table).where(eq(table.experienceId, draft.id))
+          }
+          // Files sent before stay unless new ones are sent: one sent back
+          // keeps what it was submitted with when only its text changes.
+          if (held.length > 0) {
+            await tx
+              .delete(projectFiles)
+              .where(eq(projectFiles.experienceId, draft.id))
           }
         }
 

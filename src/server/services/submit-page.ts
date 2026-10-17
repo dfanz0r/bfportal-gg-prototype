@@ -2,13 +2,24 @@ import { and, asc, desc, eq, isNull, or } from 'drizzle-orm'
 
 import { type Game, games } from '../../shared/content'
 import { defaultGame, normalizeCode, parsePortalLink } from '../../shared/games'
+import { teamSetupSchema } from '../../shared/teams'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
-import { categories, sdkVersions, tagGroups, tags } from '../db/schema'
+import {
+  categories,
+  experienceCreators,
+  experienceMedia,
+  experienceTags,
+  projectFiles,
+  sdkVersions,
+  tagGroups,
+  tags,
+  user,
+} from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { allow } from '../rate-limit'
 import { type Draft, readDraft } from './drafts'
-import { ownDraft } from './experience-drafts'
+import { ownEditable } from './experience-drafts'
 import { heldFilesFor, heldIdsIn } from './held-files'
 import { ownSubmissionTally } from './own-submissions'
 import { peopleByDiscordId } from './people'
@@ -47,9 +58,10 @@ export async function getSubmitPage(
 }
 
 /**
- * The form for one of their drafts, as it was saved, or as it was last sent
- * and refused when `search.draft` says so. `not-found` for a draft that is not
- * theirs, or is no longer a draft.
+ * The form for one of theirs to go on with: a draft, or one a moderator sent
+ * back. As it was last saved, or as it was last sent and refused when
+ * `search.draft` says so, or else as it was submitted. `not-found` for one
+ * that is not theirs, or not theirs to edit now.
  */
 export async function getDraftEditPage(
   actor: Actor | null,
@@ -58,31 +70,82 @@ export async function getDraftEditPage(
   options: { lookup?: typeof lookupExperience } = {},
 ) {
   if (!actor) return { state: 'login' as const }
-  const saved = await ownDraft(actor, slug)
+  const saved = await ownEditable(actor, slug)
   if (!saved) return { state: 'not-found' as const }
   const kept = search.draft ? await readDraft(actor, 'experience') : null
-  // A draft saved before drafts kept their form, such as one from the
-  // seed, starts from what its row says.
-  const fromRow = {
-    fields: {
-      title: saved.title,
-      description: saved.descriptionMd,
-      category: saved.category,
-      ...(saved.coverImgUrl ? { coverImgUrl: saved.coverImgUrl } : {}),
-      ...(saved.isTemplate ? { isTemplate: 'true' } : {}),
-    },
-    errors: {},
-  }
   const draft =
-    kept?.fields.editing === slug ? kept : (saved.draftForm ?? fromRow)
+    kept?.fields.editing === slug
+      ? kept
+      : (saved.draftForm ?? { fields: await formFromRow(saved), errors: {} })
   return pageFor(actor, search, draft, saved, options)
+}
+
+type Editable = NonNullable<Awaited<ReturnType<typeof ownEditable>>>
+
+/**
+ * The form as its row says it was filled in: for one sent back, everything
+ * that was submitted; for a draft saved before drafts kept their form, such
+ * as one from the seed, what it has.
+ */
+async function formFromRow(saved: Editable) {
+  const [tagRows, mediaRows, creatorRows] = await Promise.all([
+    db
+      .select({ slug: tags.slug })
+      .from(experienceTags)
+      .innerJoin(tags, eq(tags.id, experienceTags.tagId))
+      .where(
+        and(
+          eq(experienceTags.experienceId, saved.id),
+          eq(experienceTags.source, 'creator'),
+        ),
+      ),
+    db
+      .select({ url: experienceMedia.url })
+      .from(experienceMedia)
+      .where(eq(experienceMedia.experienceId, saved.id))
+      .orderBy(asc(experienceMedia.position)),
+    db
+      .select({
+        name: experienceCreators.name,
+        discordId: user.discordId,
+      })
+      .from(experienceCreators)
+      .leftJoin(user, eq(user.id, experienceCreators.userId))
+      .where(eq(experienceCreators.experienceId, saved.id))
+      .orderBy(asc(experienceCreators.position)),
+  ])
+  const teams = teamSetupSchema.safeParse(saved.teamSetup).data ?? []
+  const fields: Record<string, string | string[]> = {
+    game: saved.game,
+    title: saved.title,
+    description: saved.descriptionMd,
+    category: saved.category,
+    code: saved.code ?? '',
+    coverImgUrl: saved.coverImgUrl ?? '',
+    repoUrl: saved.repoUrl ?? '',
+    filesUrl: saved.filesUrl ?? '',
+    built: saved.types,
+    tags: tagRows.map((row) => row.slug),
+    media: mediaRows.map((row) => row.url),
+    credits: creatorRows.flatMap((row) => (row.name ? [row.name] : [])),
+    creditAccounts: creatorRows.flatMap((row) =>
+      row.discordId ? [row.discordId] : [],
+    ),
+  }
+  if (teams.length > 0) {
+    fields.teamPlayers = teams.map((team) => String(team.players))
+    fields.teamBots = teams.map((team) => String(team.bots))
+  }
+  if (saved.isTemplate) fields.isTemplate = 'true'
+  if (saved.copyAllowed) fields.copyAllowed = 'true'
+  return fields
 }
 
 async function pageFor(
   actor: Actor,
   search: SubmitSearch,
   draft: Draft | null,
-  editing: NonNullable<Awaited<ReturnType<typeof ownDraft>>> | null,
+  editing: Editable | null,
   options: { lookup?: typeof lookupExperience },
 ) {
   // A kept form says what it was for, where the address does not.
@@ -167,6 +230,30 @@ async function pageFor(
       slug: editing.slug,
       title: editing.title,
       savedAt: editing.updatedAt,
+      status: editing.status,
+      // What a moderator wrote when sending it back. Who wrote it is not
+      // passed on.
+      reviewNote:
+        editing.status === 'changes_requested' ? editing.reviewNote : null,
+      // The export and files it was submitted with, which stay unless new
+      // ones are chosen.
+      submittedFiles: editing
+        ? await db
+            .select({
+              id: projectFiles.publicId,
+              kind: projectFiles.kind,
+              filename: projectFiles.filename,
+              sizeBytes: projectFiles.sizeBytes,
+            })
+            .from(projectFiles)
+            .where(
+              and(
+                eq(projectFiles.experienceId, editing.id),
+                eq(projectFiles.fromExport, false),
+              ),
+            )
+            .orderBy(asc(projectFiles.id))
+        : [],
     },
   }
 }

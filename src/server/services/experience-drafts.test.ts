@@ -15,6 +15,7 @@ import {
 } from './experience-drafts'
 import { submitExperience } from './experience-submissions'
 import { heldFilesFor, holdFiles } from './held-files'
+import { decideSubmission } from './moderation'
 import { listOwnSubmissions } from './own-submissions'
 import { getDraftEditPage } from './submit-page'
 
@@ -251,6 +252,119 @@ describe('drafts', () => {
     })
     expect((await row('thrown-away')).deletedAt).not.toBeNull()
     expect(await getExperience('thrown-away', NOW, owner)).toBeNull()
+  })
+
+  it('opens one sent back as it was submitted, and resubmits it at the same address', async () => {
+    const owner = writer(29)
+    const held = await holdFiles(
+      owner,
+      [
+        {
+          slot: 'export',
+          filename: 'mode.json',
+          text: portalExport({ maps: ['MP_Abbasid'] }),
+        },
+      ],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the export to be held')
+    await submitExperience(
+      owner,
+      form({
+        title: 'Sent Back',
+        description: 'The first try.',
+        isTemplate: 'true',
+        teamPlayers: ['16', '16'],
+        tags: ['casual'],
+        media: ['https://i.example/a.png'],
+        credits: ['Coupe'],
+        files: held.held.map((file) => file.id),
+      }),
+      { ...nobody, now: NOW },
+    )
+    const { id } = await row('sent-back')
+    const decided = await decideSubmission(
+      moderator,
+      id,
+      { approve: false, note: 'Say how a round is won.' },
+      NOW,
+    )
+    expect(decided.ok).toBe(true)
+
+    // Listed with Edit, and opened with everything it was submitted with.
+    const listed = await listOwnSubmissions(owner)
+    expect(
+      listed.ok && listed.items.find((item) => item.title === 'Sent Back'),
+    ).toMatchObject({
+      review: 'Changes requested',
+      editHref: '/experiences/sent-back/edit',
+    })
+    const page = await getDraftEditPage(owner, 'sent-back', {}, nobody)
+    if (page.state !== 'ok') throw new Error('expected the edit page')
+    expect(page.editing).toMatchObject({
+      status: 'changes_requested',
+      reviewNote: 'Say how a round is won.',
+      submittedFiles: [{ kind: 'export', filename: 'mode.json' }],
+    })
+    expect(page.draft?.fields).toMatchObject({
+      title: 'Sent Back',
+      description: 'The first try.',
+      isTemplate: 'true',
+      teamPlayers: ['16', '16'],
+      tags: ['casual'],
+      media: ['https://i.example/a.png'],
+      credits: ['Coupe'],
+    })
+    // Not something to delete: it has been seen.
+    expect(await deleteExperienceDraft(owner, 'sent-back', NOW)).toEqual({
+      ok: false,
+      reason: 'not-found',
+    })
+
+    // Resubmitted with a better description and no new files: in review
+    // again, with the files and maps it had.
+    expect(
+      await submitExperience(
+        owner,
+        form({
+          ...page.draft?.fields,
+          editing: 'sent-back',
+          description: 'First to three captures wins the round.',
+        }),
+        { ...nobody, now: NOW },
+      ),
+    ).toEqual({ ok: true, slug: 'sent-back' })
+    const [after] = await db
+      .select({
+        status: experiences.status,
+        descriptionMd: experiences.descriptionMd,
+        mapRotation: experiences.mapRotation,
+        reviewNote: experiences.reviewNote,
+      })
+      .from(experiences)
+      .where(eq(experiences.id, id))
+    expect(after).toMatchObject({
+      status: 'pending',
+      descriptionMd: 'First to three captures wins the round.',
+      mapRotation: [{ map: 'MP_Abbasid' }],
+      // The note was about what was sent before.
+      reviewNote: null,
+    })
+    expect(
+      await db
+        .select({ kind: projectFiles.kind })
+        .from(projectFiles)
+        .where(
+          and(
+            eq(projectFiles.experienceId, id),
+            eq(projectFiles.kind, 'export'),
+          ),
+        ),
+    ).toHaveLength(1)
+    // In review now, so not opened in the form until it is decided.
+    expect((await getDraftEditPage(owner, 'sent-back', {}, nobody)).state).toBe(
+      'not-found',
+    )
   })
 
   it('lists its owner’s things, each with where it stands', async () => {

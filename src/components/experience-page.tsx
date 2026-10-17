@@ -169,7 +169,8 @@ export function ExperiencePage(props: { data: Experience }) {
           status={data().status}
           note={data().reviewNote}
           edit={
-            data().viewer.isOwner && data().status === 'draft'
+            data().viewer.isOwner &&
+            (data().status === 'draft' || data().status === 'changes_requested')
               ? `/experiences/${data().slug}/edit`
               : undefined
           }

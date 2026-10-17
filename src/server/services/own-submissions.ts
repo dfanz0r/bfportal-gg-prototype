@@ -181,10 +181,12 @@ export async function listOwnSubmissions(actor: Actor | null) {
         game: item.game,
         title: item.title,
         href: `/experiences/${item.slug}`,
-        // Drafts are edited here. Fixing what a moderator sent back, and
-        // editing what is live, are not built yet.
+        // A draft, and one a moderator sent back, are edited in the form.
+        // Editing what is live is not built yet.
         editHref:
-          item.status === 'draft' ? `/experiences/${item.slug}/edit` : null,
+          item.status === 'draft' || item.status === 'changes_requested'
+            ? `/experiences/${item.slug}/edit`
+            : null,
         image: item.coverImgUrl,
         listing: LISTINGS[item.status],
         request: edit ? 'Edit' : reviewOf(item.status) ? 'Submission' : null,

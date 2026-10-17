@@ -548,7 +548,7 @@ site does the least it must to agree with it:
 | The SDK release set at submit and not asked for | Done |
 | Sample data with a draft, one with changes requested and field notes, and one removed | Done, in the seed |
 | Saving a draft without submitting | Done for experiences, 2026-10-16. The form's two buttons are Submit and Save. Save needs a title and a category, and holds links and text to the same rules as Submit; the rest is kept as typed in `experiences.draft_form` and checked on Submit. Its title, description and cover are copied into their columns for its page. A saved draft opens at `/experiences/<slug>/edit`, the same form with Submit, Save and Delete; Submit sends it to review at the same address. Only its owner sees a draft, moderators included out. Up to 20 drafts an account (`MAX_DRAFTS`). Files saved with a draft are held as long as the draft is (`held_files.experience_id`). Snippets cannot be saved as drafts yet |
-| Fixing something with changes requested and sending it again | Not built. Nothing moves `changes_requested` back to `pending` yet |
+| Fixing something with changes requested and sending it again | Done for experiences, 2026-10-17. "Your submissions" and its page open it at `/experiences/<slug>/edit`, the draft's form, filled in with what was submitted and the moderator's note at the top. Save keeps it sent back; Resubmit puts it back to `pending` at the same address and clears the last decision. Its files stay unless new ones are chosen, and with them its map rotation. The note against each field is not built, so it is not shown at its field. Snippets cannot be resubmitted yet |
 | Writing notes against fields, and removing something for good | Not built. The review screen has one note box and two buttons |
 | "Your submissions" | Done, 2026-10-16, at `/submissions/`, from the header's account menu and the submit form's side: every experience and snippet of the visitor's, most recently changed first, each with its status, request and review, what last happened, and its place in the queue while it waits. Edit is on drafts only, until fixing and editing something live are built. The mockup's filters are not built |
 | Submitting a snippet | Done, 2026-10-13. It is created `pending`; its owner sees it at its own address with its status, and nobody else does until it is approved |
@@ -1093,8 +1093,8 @@ Rules:
 - 2 MB per file, and only `.json`, `.ts` and `.tscn`. A larger file, typically a big
   Godot scene, is hosted elsewhere and linked through `experiences.files_url`, which
   accepts Dropbox, Google Drive and GitHub addresses. The export itself may be up to
-  6 MB, changed 2026-10-16: real ones are larger than 2 MB, and Portal can only
-  import one whole.
+  10 MB, changed 2026-10-16 and raised from 6 MB on 2026-10-17: real ones are
+  larger than 2 MB, and Portal can only import one whole.
 - Files are part of what a moderator reviews, on submission and on every edit.
 - A template with no code needs its export or a link to its files.
 
@@ -1426,7 +1426,7 @@ statuses are defined under "Submission states".
 | Submit | Logged-in user | Experience or snippet as `pending`; approval request posted to the Discord approval channel. Limits: 5 waiting and 10 a day for an account that is not staff |
 | Approve submission | Moderator, admin | `published`; first approval posts the announcement to the Discord success channel, once |
 | Request changes | Moderator, admin | New, 2026-10-13, in place of "reject". `changes_requested`, with a note and notes on particular fields. It is not an end: see the next row |
-| Fix and resubmit | Owner, collaborator | New, 2026-10-13. Back to `pending`, on the same row and address. Not built |
+| Fix and resubmit | Owner, collaborator | New, 2026-10-13. Back to `pending`, on the same row and address. Built for an experience's owner 2026-10-17 |
 | Remove | Moderator, admin | New, 2026-10-13. `removed`, with a note. For spam or something badly wrong; it cannot be submitted again. Not built |
 | Edit | Owner, collaborator | A pending revision; the live page is unchanged; edit request posted to Discord |
 | Approve an edit, or request changes to it | Moderator, admin | Payload applied; or the revision is `changes_requested` and its owner fixes it and sends it again |
@@ -2295,7 +2295,9 @@ was settled first, so the screens are built against seed data and the import fol
       form gets a second button. Built for experiences 2026-10-16.
    3. **Fix and resubmit.** The edit page for something with changes requested shows
       the notes at their fields and sends it back to `pending`. The same for an edit
-      that was sent back, from its revision.
+      that was sent back, from its revision. Built for an experience 2026-10-17, with
+      the note at the top rather than at its fields; not yet for an edit or a
+      snippet.
    4. **"Your submissions"** at `/submissions/`: the list, its three columns and the
       one button. Linked from the profile, the submit forms and the header menu.
       Built 2026-10-16, linked from the header menu and the experience form; not
@@ -2372,7 +2374,7 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Project stage | Not built. A "work in progress / released / discontinued" label on a project would let unfinished tools be listed honestly; decide when tools get their own section |
 | Announcing updates | Do not post every update to the public Discord channel; the feed is the place for them |
 | Where uploaded files are stored | In the database. They are text, small, and rarely read, and it keeps the site free of file storage. Move to object storage only if binary files are ever allowed |
-| File size limits | **Agreed 2026-10-12:** 2 MB per file, Godot scenes included. Anything larger is hosted elsewhere and linked, as some existing experiences already do with Dropbox, Google Drive or GitHub. **Changed 2026-10-16:** the export itself up to 6 MB, since real ones are over 2 MB (Custom Conquest is 5 MB) and are only of use whole |
+| File size limits | **Agreed 2026-10-12:** 2 MB per file, Godot scenes included. Anything larger is hosted elsewhere and linked, as some existing experiences already do with Dropbox, Google Drive or GitHub. **Changed 2026-10-16:** the export itself up to 10 MB (6 MB at first, raised 2026-10-17), since real ones are over 2 MB (Custom Conquest is 5 MB) and are only of use whole |
 | Sharing uploaded files | **Agreed 2026-10-12:** sharing files is what makes an experience a template, a tag the creator sets on creation. There is no separate "share" switch |
 | Code on a template | **Agreed 2026-10-12:** optional. A template may exist only as files, and tools and add-ons will not need a code either when they get pages. An experience that is not a template still needs one |
 | The Discord playtest bot | **Agreed 2026-10-12, for now:** the site replaces it. A playtest is a brief, posted on the site and announced in Discord by webhook; there are no sign-ups. Revisit if people miss starting one from inside Discord |
