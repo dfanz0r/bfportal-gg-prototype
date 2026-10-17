@@ -8,6 +8,10 @@ const likeExperience = vi.hoisted(() =>
   Object.assign(vi.fn(), { url: '/like' }),
 )
 vi.mock('../functions/likes', () => ({ likeExperience }))
+// The page it is pressed on, which a form with no script returns to.
+vi.mock('@tanstack/solid-router', () => ({
+  useLocation: () => () => ({ href: '/library?sort=new' }),
+}))
 
 function mount(signedIn = true) {
   const host = document.createElement('div')
@@ -86,5 +90,29 @@ describe('LikeButton', () => {
     const event = press(mount(false))
     expect(event.defaultPrevented).toBe(false)
     expect(likeExperience).not.toHaveBeenCalled()
+  })
+
+  it('returns a form to the page it was pressed on', () => {
+    const host = mount()
+    expect(
+      host.querySelector<HTMLInputElement>('input[name=back]')?.value,
+    ).toBe('/library?sort=new')
+  })
+
+  it('sends someone to sign in from a card, which does not know whether they are', async () => {
+    likeExperience.mockResolvedValueOnce({ ok: false, reason: 'signed-out' })
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    const host = document.body.appendChild(document.createElement('div'))
+    render(
+      () => (
+        <LikeButton slug="gun-master" likes={4} liked={false} look="card" />
+      ),
+      host,
+    )
+    press(host)
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/login'))
+    expect(shown(host)).toBe(4)
+    vi.unstubAllGlobals()
   })
 })
