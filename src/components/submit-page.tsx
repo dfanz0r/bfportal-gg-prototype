@@ -32,7 +32,14 @@ import { PageLayout } from './page-layout'
 import { type FileSlot, ProjectFilesInput } from './project-files-input'
 import { SubmitStart } from './submit-start'
 import { TeamSetupInput } from './team-setup-input'
-import { buttonAccent, buttonGhost, field, label, panel } from './ui'
+import {
+  buttonAccent,
+  buttonDanger,
+  buttonGhost,
+  field,
+  label,
+  panel,
+} from './ui'
 
 type Card = Library['items'][number]
 
@@ -997,7 +1004,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   type="submit"
                   formaction={deleteDraft.url}
                   formnovalidate
-                  class={`${buttonGhost} h-11 px-5 text-danger hover:border-danger/60 hover:bg-danger/8`}
+                  class={`${buttonDanger} h-11 px-5`}
                   disabled={sending() !== null}
                 >
                   Delete

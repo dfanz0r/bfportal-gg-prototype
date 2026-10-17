@@ -1427,7 +1427,7 @@ statuses are defined under "Submission states".
 | Approve submission | Moderator, admin | `published`; first approval posts the announcement to the Discord success channel, once |
 | Request changes | Moderator, admin | New, 2026-10-13, in place of "reject". `changes_requested`, with a note and notes on particular fields. It is not an end: see the next row |
 | Fix and resubmit | Owner, collaborator | New, 2026-10-13. Back to `pending`, on the same row and address. Built for an experience's owner 2026-10-17 |
-| Remove | Moderator, admin | New, 2026-10-13. `removed`, with a note. For spam or something badly wrong; it cannot be submitted again. Not built |
+| Remove | Moderator, admin | New, 2026-10-13. `removed`, with a note. For spam or something badly wrong; it cannot be submitted again. Built for experiences 2026-10-17, under "Manage" at the foot of its page: a note is needed, and its owner sees it there and in their list. Not from the review screen yet, and not for snippets |
 | Edit | Owner, collaborator | A pending revision; the live page is unchanged; edit request posted to Discord |
 | Approve an edit, or request changes to it | Moderator, admin | Payload applied; or the revision is `changes_requested` and its owner fixes it and sends it again |
 | Mark own experience bugged or broken | Owner, collaborator | Immediate |
@@ -1436,7 +1436,7 @@ statuses are defined under "Submission states".
 | Give or withdraw edit access | Owner | New. Immediate, and always explicit. Off by default |
 | Accept or decline an invitation, or leave | The invited user | New. Immediate |
 | Add or change a named credit | Owner | New. Part of an edit, so it goes to moderation |
-| Delete | Owner | A soft delete. Collaborators cannot |
+| Delete | Owner | A soft delete. Collaborators cannot. Built for experiences 2026-10-17, in any state, under "Manage" at the foot of its page with a box to tick; a draft also has Delete on its form. An edit waiting on it goes with it |
 | Ask to clear bugged and broken | Owner, collaborator | Goes to moderation |
 | Report bugged, broken or XP farm | Any other logged-in user | A report row; no flag changes |
 | Set featured, trending or any health flag | Admin | Immediate |

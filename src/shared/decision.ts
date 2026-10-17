@@ -7,6 +7,10 @@ import { z } from 'zod'
 export const NOTE_NEEDED =
   'Requesting changes needs a note, so its creator knows what to change.'
 
+/** What is said when something is removed with no note. */
+export const REMOVE_NOTE_NEEDED =
+  'Removing needs a note, so its creator knows why.'
+
 /** The longest note a moderator may write. */
 export const MAX_NOTE = 1000
 

@@ -123,6 +123,8 @@ Reach for what exists before writing markup:
 | The square that says what kind of file a row is | `fileGlyph` from `ui.ts`, with `fileGlyphs` from `src/shared/project-files.ts` |
 | A project's files for a moderator, each to download | `ProjectFileList` |
 | The owner's switch for offering files as a template | `TemplateOffer` |
+| Deleting an experience, or a moderator removing it | `ExperienceManage`, at the foot of its page |
+| A button that ends something, such as Delete | `buttonDanger` from `ui.ts` |
 | The experience form for a draft | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which draft |
 | Everything someone has made, and where each stands | `YourSubmissions`, from `listOwnSubmissions` |
 | A moderator's screen for a pending edit, each change beside what is live | `AdminEdit`; what an edit may change is `editPayloadSchema` in `src/server/services/template-offers.ts` |

@@ -7,6 +7,7 @@ import { fileGlyphs } from '../shared/project-files'
 import { Avatar } from './avatar'
 import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
+import { ExperienceManage } from './experience-manage'
 import { ExperienceSide } from './experience-side'
 import { Gallery } from './gallery'
 import { LibraryLink } from './library-link'
@@ -351,6 +352,18 @@ export function ExperiencePage(props: { data: Experience }) {
                 </div>
               </Section>
             </Show>
+
+            {/* For its owner and the moderators. Here, under the page, rather
+                than in the side column, which stays in view and would hide
+                whatever is opened at its foot. */}
+            <div class="mt-10 max-w-xl">
+              <ExperienceManage
+                slug={data().slug}
+                status={data().status}
+                isOwner={data().viewer.isOwner}
+                isStaff={data().viewer.isStaff}
+              />
+            </div>
           </div>
 
           <ExperienceSide data={data()} />

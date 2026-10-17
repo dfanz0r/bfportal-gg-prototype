@@ -11,6 +11,9 @@ export const buttonSteel = `${button} bg-steel text-steel-ink hover:bg-steel-hi`
 
 export const buttonGhost = `${button} border border-line-strong text-fg hover:border-steel hover:bg-steel/6`
 
+/** For what ends something: deleting, removing. */
+export const buttonDanger = `${button} border border-danger/50 text-danger hover:border-danger hover:bg-danger/8`
+
 export const iconButton =
   'grid size-9 shrink-0 place-items-center border border-line text-fg-2 transition-colors hover:border-line-strong hover:bg-surface-2 hover:text-fg'
 
