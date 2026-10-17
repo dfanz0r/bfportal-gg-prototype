@@ -65,6 +65,36 @@ describe('reading a Portal export', () => {
     expect(filesInExport(read.export)[0].body).toBe('let a = 1')
   })
 
+  it('keeps every attachment with something in it, whatever its type', () => {
+    const json = JSON.parse(portalExport({ script: 'let a = 1', maps: [] }))
+    for (const attachment of json.attachments) {
+      // Strings under a type this reader has not seen, kept only as compiled.
+      if (attachment.filename === 'bundle.strings.json') {
+        attachment.attachmentType = 9
+        attachment.attachmentData.compiled = attachment.attachmentData.original
+        attachment.attachmentData.original = ''
+      }
+    }
+    json.attachments.push({
+      ...json.attachments[0],
+      filename: 'notes.json',
+      attachmentType: 7,
+      attachmentData: {
+        original: Buffer.from('{"a": 1}').toString('base64'),
+        compiled: '',
+      },
+    })
+    const read = readExport(JSON.stringify(json))
+    if (!read) throw new Error('expected an export')
+    expect(
+      filesInExport(read.export).map((file) => [file.kind, file.filename]),
+    ).toEqual([
+      ['script', 'bundle.ts'],
+      ['strings', 'bundle.strings.json'],
+      ['other', 'notes.json'],
+    ])
+  })
+
   it('reads nothing from what is not an export', () => {
     expect(readExport('not json')).toBeNull()
     expect(readExport('{"name": "No mode"}')).toBeNull()

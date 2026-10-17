@@ -36,7 +36,13 @@ export async function profilesNeedLogin() {
 }
 
 /** Null if there is no such account. */
-export async function getProfile(discordId: string, tab: ProfileTab, page = 1) {
+export async function getProfile(
+  discordId: string,
+  tab: ProfileTab,
+  page = 1,
+  /** Who is looking, for the experiences they like. */
+  viewer: string | null = null,
+) {
   const [person] = await db
     .select({
       id: user.id,
@@ -126,6 +132,7 @@ export async function getProfile(discordId: string, tab: ProfileTab, page = 1) {
           where: tab === 'liked' ? liked : theirs,
           orderBy: [desc(likes), desc(experiences.id)],
           limit,
+          viewer,
         })
   const scriptItems =
     tab === 'scripts'

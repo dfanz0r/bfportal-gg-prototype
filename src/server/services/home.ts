@@ -19,7 +19,11 @@ import { listUpdates } from './updates'
 
 const DAY = 24 * 60 * 60 * 1000
 
-export async function getHome(now = new Date()) {
+export async function getHome(
+  now = new Date(),
+  /** Who is looking, for the experiences they like. */
+  viewer: string | null = null,
+) {
   const [
     [banner],
     [experienceStats],
@@ -62,6 +66,7 @@ export async function getHome(now = new Date()) {
         desc(experiences.id),
       ],
       limit: 8,
+      viewer,
     }),
     listUpdates({ limit: 3 }),
     listPlaytests({ state: 'open', limit: 3 }, now),

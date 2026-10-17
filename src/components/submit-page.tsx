@@ -342,6 +342,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
         (listedIn?.marksTemplate ?? false),
       code: now('code', data().code || found()?.code || '') || null,
       likes: 0,
+      liked: false,
       featured: false,
       bugged: false,
       unavailable: false,

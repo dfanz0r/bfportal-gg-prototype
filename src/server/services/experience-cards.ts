@@ -71,7 +71,13 @@ export async function listCards(options: {
   where: SQL | undefined
   orderBy: SQL[]
   limit: number
+  /** Who is looking, if anyone, for whether they like each one. */
+  viewer?: string | null
 }) {
+  const viewer = options.viewer
+  const liked = viewer
+    ? sql<boolean>`exists (select 1 from ${experienceLikes} where ${experienceLikes.experienceId} = ${experiences.id} and ${experienceLikes.userId} = ${viewer})`
+    : sql<boolean>`false`
   const rows = await db
     .select({
       id: experiences.id,
@@ -93,6 +99,7 @@ export async function listCards(options: {
       requiresFullGame: experiences.requiresFullGame,
       owner: personColumns,
       likes,
+      liked,
     })
     .from(experiences)
     .innerJoin(user, eq(user.id, experiences.ownerId))
@@ -141,6 +148,7 @@ export async function listCards(options: {
     isTemplate: row.isTemplate,
     code: row.code,
     likes: row.likes,
+    liked: row.liked,
     featured: row.featured,
     bugged: row.bugged,
     unavailable: isUnavailable(row),

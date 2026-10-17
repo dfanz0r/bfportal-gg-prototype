@@ -84,6 +84,8 @@ export async function getLibrary(
   game: Game,
   search: LibrarySearch,
   now = new Date(),
+  /** Who is looking, for the experiences they like. */
+  viewer: string | null = null,
 ) {
   const info = gameInfo(game)
   const weekAgo = new Date(now.getTime() - 7 * DAY)
@@ -225,6 +227,7 @@ export async function getLibrary(
       where,
       orderBy: [...order, desc(experiences.id)],
       limit: page * PAGE_SIZE,
+      viewer,
     }),
     db
       .select({ value: count() })

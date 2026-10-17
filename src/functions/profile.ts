@@ -3,6 +3,7 @@ import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 
 import { auth } from '../server/auth'
+import { currentActor } from '../server/auth/actor'
 import { getProfile, profilesNeedLogin } from '../server/services/profiles'
 import { FEED_MAX_PAGES, profileTabs } from '../shared/feed-search'
 
@@ -29,6 +30,7 @@ export const fetchProfile = createServerFn({ method: 'GET' })
       data.discordId,
       data.tab ?? 'experiences',
       data.page ?? 1,
+      (await currentActor())?.id ?? null,
     )
     return profile && { state: 'ok' as const, profile }
   })

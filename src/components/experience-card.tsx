@@ -7,6 +7,7 @@ import { BuiltWithTags } from './built-with-tags'
 import { CopyCode } from './copy-code'
 import { Icon } from './icon'
 import { LibraryLink } from './library-link'
+import { LikeButton } from './like-button'
 import { PersonLink } from './person-link'
 import { tag } from './ui'
 
@@ -52,11 +53,14 @@ export function ExperienceCard(props: {
         <span class={`${chip} absolute top-2.5 left-2.5 border-steel text-fg`}>
           {experience().category}
         </span>
-        <span class="absolute top-2.5 right-2.5 inline-flex h-[22px] items-center gap-1.5 bg-base/80 px-2 font-mono text-[11.5px] text-fg tabular-nums backdrop-blur-sm">
-          <Icon name="heart" class="size-3" />
-          {experience().likes}
-          <span class="sr-only"> likes</span>
-        </span>
+        {/* Above the title's link, which covers the picture. */}
+        <LikeButton
+          slug={experience().slug}
+          likes={experience().likes}
+          liked={experience().liked}
+          look="card"
+          class="absolute top-2 right-2 z-10"
+        />
         {/* One state at most, the one that matters most to someone about to
             type the code in. */}
         <Show

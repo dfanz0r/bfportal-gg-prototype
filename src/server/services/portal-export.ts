@@ -70,8 +70,11 @@ const exportSchema = z.object({
 type Export = z.infer<typeof exportSchema>
 type Attachment = z.infer<typeof attachmentSchema>
 
+const decodeText = (base64: string) =>
+  Buffer.from(base64, 'base64').toString('utf8')
+
 const decode = (attachment: Attachment) =>
-  Buffer.from(attachment.attachmentData.original, 'base64').toString('utf8')
+  decodeText(attachment.attachmentData.original)
 
 /**
  * The blocks in the rules editor. Every mod has one `modBlock` holding the
@@ -149,10 +152,21 @@ export function readExport(
     : null
 }
 
+/** What an attachment is by its name, where its type is not one known. */
+function kindByName(filename: string): FileKind {
+  const name = filename.toLowerCase()
+  if (name.endsWith('.ts')) return 'script'
+  if (name.endsWith('.strings.json')) return 'strings'
+  if (name.endsWith('.spatial.json')) return 'spatial'
+  return 'other'
+}
+
 /**
  * The files inside an export, each as its own text, to share beside it: the
- * script, its strings and each map's spatial layout, in the rotation's order.
- * Empty ones are left out.
+ * script, its strings, each map's spatial layout in the rotation's order, and
+ * anything else it carries. Every attachment with something in it is kept,
+ * whatever its type: one whose type is not known goes by its name. Only empty
+ * ones are left out.
  */
 export function filesInExport(read: Export) {
   const kinds: Record<number, FileKind> = {
@@ -160,11 +174,15 @@ export function filesInExport(read: Export) {
     [ATTACHMENT.strings]: 'strings',
     [ATTACHMENT.spatial]: 'spatial',
   }
-  const order: FileKind[] = ['script', 'strings', 'spatial']
+  const order: FileKind[] = ['script', 'strings', 'spatial', 'other']
   const files = read.attachments.flatMap((attachment) => {
-    const kind = kinds[attachment.attachmentType]
-    const body = attachment.attachmentData.original ? decode(attachment) : ''
-    if (!kind || !body) return []
+    const kind =
+      kinds[attachment.attachmentType] ?? kindByName(attachment.filename)
+    // Portal writes what was uploaded as the original. Where only the
+    // compiled copy has anything, that is what there is.
+    const { original, compiled } = attachment.attachmentData
+    const body = decodeText(original || compiled)
+    if (!body.trim()) return []
     const index = attachment.metadata?.match(/^mapIdx=(\d+)$/)?.[1]
     return [
       {

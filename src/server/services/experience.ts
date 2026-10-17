@@ -213,6 +213,7 @@ export async function getExperience(
       ),
       orderBy: [desc(likes), desc(experiences.id)],
       limit: 3,
+      viewer: viewer?.id ?? null,
     }),
     viewer
       ? db
