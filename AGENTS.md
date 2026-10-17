@@ -188,6 +188,12 @@ which pages get what. The rules when writing a page:
   GET form, actions are forms that post.
 - **Await only what the page is about.** Side content may stream in with `Await`.
   Never wait on a third-party service while rendering.
+- **The server never fetches an address a user gave.** It calls out only to fixed
+  services it names itself: gametools.network for Portal lookups, and Discord to
+  sign in. A cover, a gallery link, a video or a file link is loaded by visitors'
+  browsers, never by the server: fetching it would show the server's address to
+  whoever chose the link, and let them point the server at anything. A check that
+  a link works is made in the browser, as `ImagePreview` does.
 - **Wrap what cannot render on the server** in `ClientOnly`, with a fallback of the
   same size. Load heavy widgets when they are used.
 - **Give every indexed page its head:** title, description, canonical address, Open

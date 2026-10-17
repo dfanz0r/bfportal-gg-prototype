@@ -2235,8 +2235,11 @@ was settled first, so the screens are built against seed data and the import fol
      a Twitch or Vimeo link is refused rather than taken for a picture.
 
    Not in submit yet: inviting accounts as collaborators, which is done from the
-   page after approval; checking that a cover address is really a picture. The
-   export and a template's files were added 2026-10-16; see "Project files".
+   page after approval; checking that a cover address is really a picture. That
+   check is the browser's, never the server's: the server does not fetch an
+   address a user gave (see AGENTS.md), and the form's preview already shows a
+   cover that does not load. The export and a template's files were added
+   2026-10-16; see "Project files".
 
    Rebuilt to its mockup, 2026-10-13: the head says "Submit"; the form is in the
    mockup's sections, each under a display-face legend (which game, start from your
