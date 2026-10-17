@@ -19,6 +19,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx seed/run.ts",
+    "db:reference": "tsx seed/reference-run.ts",
     "auth:generate": "pnpm dlx auth@latest generate --config src/server/auth/index.ts --output src/server/db/auth-schema.ts --yes && biome format --write src/server/db/auth-schema.ts"
   },
   "dependencies": {

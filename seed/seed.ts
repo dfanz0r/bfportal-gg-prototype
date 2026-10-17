@@ -10,16 +10,7 @@ import { renderMarkdown } from '../src/server/markdown'
 import type { ExperienceType, Game } from '../src/shared/content'
 import type { Role } from '../src/shared/roles'
 import { slugify } from '../src/shared/slug'
-import {
-  bf6Maps,
-  bf2042Maps,
-  eraTagIds,
-  experienceCategories,
-  scriptCategories,
-  sdkReleases,
-  tagAliases,
-  tagGroups,
-} from './reference'
+import { loadReference } from './load-reference'
 import * as sample from './sample'
 
 // Fills an empty development database with sample content: the rows the site
@@ -69,19 +60,6 @@ const bf6Schema = z.object({
   ),
 })
 
-const portalTagsSchema = z.object({
-  bf2042: z.array(
-    z.object({ id: z.string(), name: z.string(), description: z.string() }),
-  ),
-  bf6: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      nameFrom: z.enum(['ea', 'guess']),
-    }),
-  ),
-})
-
 function readJson<T>(file: string, shape: z.ZodType<T>) {
   const text = readFileSync(new URL(file, import.meta.url), 'utf8')
   return shape.parse(JSON.parse(text))
@@ -121,16 +99,12 @@ function typesOf(experience: {
 export async function seed(db: Db, now = new Date()) {
   const ago = (days: number) => new Date(now.getTime() - days * DAY)
   const bf6 = readJson('./bf6-experiences.json', bf6Schema)
-  const portalTags = readJson('./portal-tags.json', portalTagsSchema)
   const {
     user,
     categories,
     sdkVersions,
     tagGroups: tagGroupsTable,
-    tags,
-    tagAliases: tagAliasesTable,
     maps,
-    mapTags,
     experiences,
     experienceTags,
     experienceMedia,
@@ -194,109 +168,18 @@ export async function seed(db: Db, now = new Date()) {
       )
     }
 
-    // Categories.
-    const categoryRows = await tx
-      .insert(categories)
-      .values([
-        ...experienceCategories.map((category, index) => ({
-          kind: 'experience_main' as const,
-          game: category.game,
-          name: category.name,
-          slug: slugify(category.name),
-          marksTemplate: category.marksTemplate ?? false,
-          sortOrder: index,
-        })),
-        ...scriptCategories.map((name, index) => ({
-          kind: 'script_main' as const,
-          game: 'bf6' as const,
-          name,
-          slug: slugify(name),
-          sortOrder: index,
-        })),
-      ])
-      .returning()
+    // The rows every database needs, the same as a server gets them, and
+    // lookups into them for the content below.
+    const reference = await loadReference(tx)
     const categoryId = lookup(
       'the category',
-      categoryRows.map((row) => [row.name, row.id]),
+      reference.categoryRows.map((row) => [row.name, row.id]),
     )
-
-    // SDK releases.
-    const releases = sdkReleases.flatMap((release) =>
-      release.versions.map((version) => ({ version, season: release.season })),
-    )
-    const sdkRows = await tx
-      .insert(sdkVersions)
-      .values(
-        releases.map((release, index) => ({
-          game: 'bf6' as const,
-          version: release.version,
-          season: release.season,
-          sortOrder: index + 1,
-        })),
-      )
-      .returning()
     const sdkId = lookup(
       'the SDK release',
-      sdkRows.map((row) => [row.version, row.id]),
+      reference.sdkRows.map((row) => [row.version, row.id]),
     )
-
-    // Tag groups, then Portal's tags and the ones an admin would add.
-    const groupRows = await tx
-      .insert(tagGroupsTable)
-      .values(
-        tagGroups.map((group, index) => ({
-          game: group.game,
-          name: group.name,
-          slug: slugify(group.name),
-          description: group.description,
-          sortOrder: index,
-          filter: group.filter,
-          creatorSelectable: group.creatorSelectable,
-          showOnCard: group.showOnCard,
-        })),
-      )
-      .returning()
-    const groupId = lookup(
-      'the tag group',
-      groupRows.map((row) => [`${row.game}/${row.name}`, row.id]),
-    )
-    const tagRows = await tx
-      .insert(tags)
-      .values([
-        ...portalTags.bf2042.map((tag, index) => ({
-          game: 'bf2042' as const,
-          groupId: groupId(
-            eraTagIds.includes(tag.id) ? 'bf2042/Era' : 'bf2042/Rules',
-          ),
-          name: tag.name,
-          slug: slugify(tag.name),
-          portalId: tag.id,
-          portalName: tag.name,
-          description: tag.description,
-          sortOrder: index,
-        })),
-        ...portalTags.bf6.map((tag, index) => ({
-          game: 'bf6' as const,
-          groupId: groupId('bf6/Rules'),
-          name: tag.name,
-          slug: slugify(tag.name),
-          portalId: tag.id,
-          // Portal publishes no English name for some of these, and a guess
-          // at one is not Portal's name.
-          portalName: tag.nameFrom === 'ea' ? tag.name : null,
-          sortOrder: index,
-        })),
-        ...tagGroups.flatMap((group) =>
-          group.tags.map((name, index) => ({
-            game: group.game,
-            groupId: groupId(`${group.game}/${group.name}`),
-            name,
-            slug: slugify(name),
-            sortOrder: index,
-          })),
-        ),
-      ])
-      .returning()
+    const tagRows = reference.tagRows
     const portalTagId = lookup(
       "Portal's tag",
       tagRows
@@ -309,49 +192,11 @@ export async function seed(db: Db, now = new Date()) {
         .filter((row) => !row.portalId)
         .map((row) => [`${row.game}/${row.name}`, row.id]),
     )
-    await tx.insert(tagAliasesTable).values(
-      tagAliases.map((alias) => ({
-        game: alias.game,
-        alias: alias.alias,
-        tagId: portalTagId(`${alias.game}/${alias.portalId}`),
-      })),
-    )
-
-    // Maps. A Battlefield 2042 map carries the tag of the era it came from.
-    const mapRows = await tx
-      .insert(maps)
-      .values([
-        ...bf6Maps.map((map, index) => ({
-          game: 'bf6' as const,
-          levelId: map.levelId,
-          // A map can turn up in a rotation before Portal names it.
-          name: map.name ?? map.levelId,
-          imageUrl: map.image,
-          requiresFullGame: map.requiresFullGame,
-          sortOrder: index,
-        })),
-        ...bf2042Maps.map((map, index) => ({
-          game: 'bf2042' as const,
-          levelId: map.levelId,
-          name: map.name,
-          imageUrl: map.image,
-          sortOrder: index,
-        })),
-      ])
-      .returning()
     const mapOf = lookup(
       'the map',
-      mapRows.map((row) => [`${row.game}/${row.levelId}`, row]),
+      reference.mapRows.map((row) => [`${row.game}/${row.levelId}`, row]),
     )
-    const eraOfMap = new Map(
-      bf2042Maps.map((map) => [
-        mapOf(`bf2042/${map.levelId}`).id,
-        portalTagId(`bf2042/${map.era}`),
-      ]),
-    )
-    await tx
-      .insert(mapTags)
-      .values([...eraOfMap].map(([mapId, tagId]) => ({ mapId, tagId })))
+    const eraOfMap = reference.eraOfMap
 
     /**
      * Whether a rotation needs the paid game: one paid map is enough, and it
@@ -749,7 +594,7 @@ export async function seed(db: Db, now = new Date()) {
       users: people.length,
       experiences: experienceIds.size,
       tags: tagRows.length,
-      maps: mapRows.length,
+      maps: reference.mapRows.length,
       scripts: snippetRows.length,
       updates: updateRows.length,
       playtests: sample.playtests.length,

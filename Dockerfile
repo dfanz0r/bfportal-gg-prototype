@@ -13,10 +13,12 @@ RUN pnpm build
 
 # drizzle-kit is a dev dependency, so migrations run from the build stage,
 # which still has it. NODE_ENV=production keeps drizzle.config.ts from looking
-# for .env.local.
+# for .env.local. After the migrations, the rows the site needs before it has
+# any content (categories, tags, maps, SDK releases) are added where missing;
+# that never deletes or changes a row.
 FROM build AS migrate
 ENV NODE_ENV=production
-CMD ["pnpm", "db:migrate"]
+CMD ["sh", "-c", "pnpm db:migrate && pnpm db:reference"]
 
 # Nitro bundles what the server needs into .output, so the site runs without
 # node_modules or the source.
