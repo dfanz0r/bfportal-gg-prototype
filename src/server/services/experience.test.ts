@@ -218,4 +218,37 @@ describe('experience', () => {
         .where(eq(experiences.id, file.experienceId ?? 0))
     }
   })
+
+  it('sends the link to its larger files only to whoever may take them', async () => {
+    const [row] = await db
+      .select({
+        id: experiences.id,
+        slug: experiences.slug,
+        ownerId: experiences.ownerId,
+      })
+      .from(experiences)
+      .where(eq(experiences.slug, 'rooftop-gun-game'))
+    const link = 'https://www.dropbox.com/s/private/files.zip'
+    await db
+      .update(experiences)
+      .set({ filesUrl: link, isTemplate: false })
+      .where(eq(experiences.id, row.id))
+    const owner = { id: row.ownerId, role: 'user' } as const
+    const moderator = { id: 'seed-kestrel', role: 'moderator' } as const
+
+    // In the page's data, not only its markup.
+    expect((await getExperience(row.slug, NOW))?.filesUrl).toBeNull()
+    expect(
+      (await getExperience(row.slug, NOW, { id: 'seed-vantage', role: 'user' }))
+        ?.filesUrl,
+    ).toBeNull()
+    expect((await getExperience(row.slug, NOW, owner))?.filesUrl).toBe(link)
+    expect((await getExperience(row.slug, NOW, moderator))?.filesUrl).toBe(link)
+
+    await db
+      .update(experiences)
+      .set({ isTemplate: true })
+      .where(eq(experiences.id, row.id))
+    expect((await getExperience(row.slug, NOW))?.filesUrl).toBe(link)
+  })
 })
