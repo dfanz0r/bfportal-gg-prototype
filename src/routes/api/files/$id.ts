@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 
+import { currentActor } from '../../../server/auth/actor'
 import { getProjectFile } from '../../../server/services/experience'
 
 const notFound = () => new Response('Not found', { status: 404 })
@@ -11,7 +12,10 @@ export const Route = createFileRoute('/api/files/$id')({
     handlers: {
       GET: async ({ params }) => {
         if (!/^\d{1,9}$/.test(params.id)) return notFound()
-        const file = await getProjectFile(Number(params.id))
+        const file = await getProjectFile(
+          Number(params.id),
+          await currentActor(),
+        )
         if (!file) return notFound()
 
         const filename = file.filename.replace(/[^\w.-]+/g, '_')

@@ -547,10 +547,10 @@ site does the least it must to agree with it:
 | The six statuses, and `changes_requested` in place of `rejected` everywhere | Done. The experience page names the status to its owner; the moderators' button is "Request changes" |
 | The SDK release set at submit and not asked for | Done |
 | Sample data with a draft, one with changes requested and field notes, and one removed | Done, in the seed |
-| Saving a draft without submitting | Not built. Submitting still creates `pending` |
+| Saving a draft without submitting | Done for experiences, 2026-10-16. The form's two buttons are Submit and Save. Save needs a title and a category, and holds links and text to the same rules as Submit; the rest is kept as typed in `experiences.draft_form` and checked on Submit. Its title, description and cover are copied into their columns for its page. A saved draft opens at `/experiences/<slug>/edit`, the same form with Submit, Save and Delete; Submit sends it to review at the same address. Only its owner sees a draft, moderators included out. Up to 20 drafts an account (`MAX_DRAFTS`). Files saved with a draft are held as long as the draft is (`held_files.experience_id`). Snippets cannot be saved as drafts yet |
 | Fixing something with changes requested and sending it again | Not built. Nothing moves `changes_requested` back to `pending` yet |
 | Writing notes against fields, and removing something for good | Not built. The review screen has one note box and two buttons |
-| "Your submissions" | Not built |
+| "Your submissions" | Done, 2026-10-16, at `/submissions/`, from the header's account menu and the submit form's side: every experience and snippet of the visitor's, most recently changed first, each with its status, request and review, what last happened, and its place in the queue while it waits. Edit is on drafts only, until fixing and editing something live are built. The mockup's filters are not built |
 | Submitting a snippet | Done, 2026-10-13. It is created `pending`; its owner sees it at its own address with its status, and nobody else does until it is approved |
 | Reviewing a snippet | Done, the least of it: waiting snippets are in the review queue, and Approve and Request changes are on the snippet's own page for a moderator |
 | The playtest copy | Not built. No playtest can be started from the site yet |
@@ -558,9 +558,10 @@ site does the least it must to agree with it:
 
 `submission_drafts` is not the draft status. It keeps one refused form per user so a
 page posted with no script can be drawn again filled in, and may hold values a real
-row would refuse. Once drafts are built it may fold into them. Both submit forms use
-it, so the kept form says which it was for (`kind: 'snippet'`), and each page ignores
-the other's.
+row would refuse. Both submit forms use it, so the kept form says which it was for
+(`kind: 'snippet'`), and each page ignores the other's. A form from a draft's edit
+page says which draft in its `editing` field, and only that draft's page shows it
+again. Saving or submitting lets it go.
 
 **Not decided.** Raised on 2026-10-13 and left open:
 
@@ -1044,8 +1045,23 @@ one real export (`movement_probe_experience.json`), it gives:
 | Script, rules, strings | The `Script.ts` attachment, the block tree under `workspace.mod.blocks`, and `Strings.json` |
 
 It does not contain the experience code, the Portal link, tags, a category or a cover
-image. The code lookup below supplies most of those. Bots were absent from the one export examined; that needs
-checking against an experience that has them.
+image. The code lookup below supplies most of those.
+
+Checked 2026-10-16 against two more real exports, Custom Conquest (blocks only, 20
+maps, 5 MB) and Payload (TypeScript, 6 maps, 1.6 MB):
+
+- An attachment is told by its `attachmentType`, not its name: 1 is a spatial layout,
+  with `metadata` `mapIdx=<n>` saying which map; 2 the script (`bundle.ts`, or an
+  empty `blank.ts` when there is none); 3 `blacklist.json`; 4 the strings
+  (`bundle.strings.json`). The old site's validator looked for `Script.ts`, which
+  neither has.
+- Each team in `teamComposition` has `humanCapacity`, and in the newer export
+  `aiCapacity` for its bots, so bots are read per team.
+- Every mod's blocks sit in one `modBlock`. An export built with blocks has rules
+  inside it; one built with TypeScript has that block alone.
+- A rotation entry's id is the level id with a suffix: `MP_Abbasid-ModBuilderCustom0`.
+- Each spatial layout is in the export twice, in its rotation entry and in
+  `attachments`, which is why an export with many custom maps is large.
 
 Storage. Every one of these files is text, so they are stored in the database:
 
@@ -1065,14 +1081,49 @@ Rules:
 
 - The export is validated against a Zod port of `bf6/models/bf_experience_export.py`
   before anything is read from it. This is the validator snippets already need.
-- Files are shared when the creator offers the experience as a template. Otherwise the
-  export only fills the form and nothing is stored.
+- Files are shared when the creator offers the experience as a template. Changed
+  2026-10-16: they are kept either way, so the owner can offer them later; until then
+  only the owner and the moderators can download them. Taking the offer back is
+  immediate. Offering the files of something published waits for a moderator, as an
+  edit; before it is published, its review covers the files already, so the switch
+  is immediate both ways. In a game with no export a template is its category, which
+  an edit changes.
 - Files are served as downloads or shown as escaped text, never as a page: a fixed
   plain-text or JSON content type, `nosniff`, and `Content-Disposition: attachment`.
 - 2 MB per file, and only `.json`, `.ts` and `.tscn`. A larger file, typically a big
   Godot scene, is hosted elsewhere and linked through `experiences.files_url`, which
-  accepts Dropbox, Google Drive and GitHub addresses.
+  accepts Dropbox, Google Drive and GitHub addresses. The export itself may be up to
+  6 MB, changed 2026-10-16: real ones are larger than 2 MB, and Portal can only
+  import one whole.
 - Files are part of what a moderator reviews, on submission and on every edit.
+- A template with no code needs its export or a link to its files.
+
+Built 2026-10-16, on the submit form's "Project files" section:
+
+- A file chosen on the form is held in `held_files` for whoever chose it until the
+  form is sent, for a day at most, and the form sends its id. That is what lets a
+  refused form posted with no script keep its files, and an export be read into the
+  form before it is sent. An account holds an export and up to 10 files beside it.
+- Reading an export fills in the title and description where they are empty, and the
+  teams and what it is built with. With the page's script a file is read as soon as
+  it is chosen; with none, "Upload files" posts the form to be read, and a file
+  chosen and submitted directly is held and submitted with it.
+- With no code, the export's maps are the map rotation.
+- On submission, the export, each file inside it and each file added are stored in
+  `project_files`. Owners and moderators can download a submission's files before
+  it is published, and the review screen lists them.
+- The owner switches the offer above the files on the experience's page: "Offer as a
+  template", "Cancel request" while a moderator has not decided, "Stop offering".
+  A request is a pending revision of kind `edit` whose payload is `{ isTemplate:
+  true }`, joining the experience's one pending edit if there is one. It is in the
+  review queue as an edit and decided at `/admin/edits/<id>`, which shows each change
+  beside what is live, and the files. A note sent back shows to the owner above the
+  files.
+- The queue offers only edits whose every change the site can apply, which is the
+  template offer alone for now. Any other edit waits for the edit form: approving it
+  here would mark it approved and change nothing.
+- Not yet: Portal's default description is not flagged, and nothing from the export
+  is shown as text on the page.
 
 Snippets already keep their export in `snippets.exp_json`. They can move to this table
 later so there is one way to store a project's files.
@@ -1371,7 +1422,7 @@ statuses are defined under "Submission states".
 
 | Action | Who | Effect |
 |---|---|---|
-| Save a draft | Logged-in user | New, 2026-10-13. An experience or snippet as `draft`, seen only by its owner. Not built |
+| Save a draft | Logged-in user | New, 2026-10-13. An experience or snippet as `draft`, seen only by its owner. Built for experiences 2026-10-16, with deleting a draft; see "Submission states" |
 | Submit | Logged-in user | Experience or snippet as `pending`; approval request posted to the Discord approval channel. Limits: 5 waiting and 10 a day for an account that is not staff |
 | Approve submission | Moderator, admin | `published`; first approval posts the announcement to the Discord success channel, once |
 | Request changes | Moderator, admin | New, 2026-10-13, in place of "reject". `changes_requested`, with a note and notes on particular fields. It is not an end: see the next row |
@@ -1381,6 +1432,7 @@ statuses are defined under "Submission states".
 | Approve an edit, or request changes to it | Moderator, admin | Payload applied; or the revision is `changes_requested` and its owner fixes it and sends it again |
 | Mark own experience bugged or broken | Owner, collaborator | Immediate |
 | Add or remove a credited account | Owner | New. Immediate. The account is shown only once that user accepts |
+| Offer its files as a template, or stop | Owner | New, 2026-10-16. Stopping is immediate. Offering is immediate before it is published, and after that an edit for a moderator. See "Project files" |
 | Give or withdraw edit access | Owner | New. Immediate, and always explicit. Off by default |
 | Accept or decline an invitation, or leave | The invited user | New. Immediate |
 | Add or change a named credit | Owner | New. Part of an edit, so it goes to moderation |
@@ -2182,9 +2234,9 @@ was settled first, so the screens are built against seed data and the import fol
      video in the gallery must be on YouTube, since that is the player it embeds;
      a Twitch or Vimeo link is refused rather than taken for a picture.
 
-   Not in submit yet: uploading the Portal export and a template's files; inviting
-   accounts as collaborators, which is done from the page after approval; checking
-   that a cover address is really a picture.
+   Not in submit yet: inviting accounts as collaborators, which is done from the
+   page after approval; checking that a cover address is really a picture. The
+   export and a template's files were added 2026-10-16; see "Project files".
 
    Rebuilt to its mockup, 2026-10-13: the head says "Submit"; the form is in the
    mockup's sections, each under a display-face legend (which game, start from your
@@ -2193,8 +2245,8 @@ was settled first, so the screens are built against seed data and the import fol
    the code has its "Fetch details" button beside it; and a side column holds "How
    it will look", a card that follows the form as it is typed, and "Before you
    submit". Still in the mockup and not on the page, because they are not built:
-   the export upload, the "Your submissions" panel, the Markdown editor's preview
-   tab, and tags typed in freely.
+   the "Your submissions" panel, the Markdown editor's preview tab, and tags typed
+   in freely.
 
    Added 2026-10-13: "What are you sharing?" after the game, on both forms. With a
    game that has no snippets the snippet choice stays in view with the registry's
@@ -2236,14 +2288,18 @@ was settled first, so the screens are built against seed data and the import fol
    1. **The edit page,** for the owner of an experience. It is what every row of
       "Your submissions" opens, so the rest hangs from it. For something published
       it makes a revision; for anything else it changes the row. It needs mocking up
-      first: only the submit form stands in for it.
+      first: only the submit form stands in for it. Built for drafts 2026-10-16, as
+      the submit form at `/experiences/<slug>/edit`; something in review, sent back
+      or live cannot be opened there yet.
    2. **Drafts.** Save without submitting, as `draft`; submit a draft. The submit
-      form gets a second button.
+      form gets a second button. Built for experiences 2026-10-16.
    3. **Fix and resubmit.** The edit page for something with changes requested shows
       the notes at their fields and sends it back to `pending`. The same for an edit
       that was sent back, from its revision.
    4. **"Your submissions"** at `/submissions/`: the list, its three columns and the
       one button. Linked from the profile, the submit forms and the header menu.
+      Built 2026-10-16, linked from the header menu and the experience form; not
+      yet from the profile or the snippet form, and without its filters.
    5. **Submitting a snippet** at `/submit/snippet/`, with "what are you sharing?"
       added to the experience form, and `snippets` on the games registry. Built
       2026-10-13, ahead of 1 to 4, so a snippet can be sent in and reviewed but not
@@ -2316,7 +2372,7 @@ Each has a recommendation. Rows marked agreed are settled; the rest are not.
 | Project stage | Not built. A "work in progress / released / discontinued" label on a project would let unfinished tools be listed honestly; decide when tools get their own section |
 | Announcing updates | Do not post every update to the public Discord channel; the feed is the place for them |
 | Where uploaded files are stored | In the database. They are text, small, and rarely read, and it keeps the site free of file storage. Move to object storage only if binary files are ever allowed |
-| File size limits | **Agreed 2026-10-12:** 2 MB per file, Godot scenes included. Anything larger is hosted elsewhere and linked, as some existing experiences already do with Dropbox, Google Drive or GitHub |
+| File size limits | **Agreed 2026-10-12:** 2 MB per file, Godot scenes included. Anything larger is hosted elsewhere and linked, as some existing experiences already do with Dropbox, Google Drive or GitHub. **Changed 2026-10-16:** the export itself up to 6 MB, since real ones are over 2 MB (Custom Conquest is 5 MB) and are only of use whole |
 | Sharing uploaded files | **Agreed 2026-10-12:** sharing files is what makes an experience a template, a tag the creator sets on creation. There is no separate "share" switch |
 | Code on a template | **Agreed 2026-10-12:** optional. A template may exist only as files, and tools and add-ons will not need a code either when they get pages. An experience that is not a template still needs one |
 | The Discord playtest bot | **Agreed 2026-10-12, for now:** the site replaces it. A playtest is a brief, posted on the site and announced in Discord by webhook; there are no sign-ups. Revisit if people miss starting one from inside Discord |

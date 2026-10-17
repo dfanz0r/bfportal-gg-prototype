@@ -14,6 +14,7 @@ import {
   timestamp,
   unique,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core'
 
 import {
@@ -33,6 +34,7 @@ import {
   tagSources,
   testerRegions,
 } from '../../shared/content'
+import type { ExportSummary } from '../../shared/project-files'
 import type { TeamSetup } from '../../shared/teams'
 import { user } from './auth-schema'
 
@@ -379,6 +381,14 @@ export const experiences = pgTable(
     metaDescription: text('meta_description'),
     metaImage: text('meta_image'),
     includeInSitemap: boolean('include_in_sitemap').notNull().default(true),
+    // While it is a draft: its form as its owner last saved it, every field as
+    // typed, so the form opens as it was left. Its title, description and
+    // cover are copied into their columns as well, for its page. Submitting
+    // checks the whole form and clears this.
+    draftForm: jsonb('draft_form').$type<{
+      fields: Record<string, string | string[]>
+      errors: Record<string, string>
+    }>(),
     updatedAt: timestamptz('updated_at')
       .notNull()
       .defaultNow()
@@ -751,6 +761,42 @@ export const projectFiles = pgTable(
     check('project_files_size_check', sql`${table.sizeBytes} >= 0`),
     index('project_files_experience_idx').on(table.experienceId),
     index('project_files_snippet_idx').on(table.snippetId),
+  ],
+)
+
+/**
+ * A file chosen on the submit form, held for whoever chose it until the form
+ * is submitted. An export is read into the form before it is sent, and a form
+ * posted with no script cannot send a file again once it is refused. When the
+ * experience is offered as a template its files go into `project_files`;
+ * otherwise they are let go. One held longer than a day is let go too.
+ */
+export const heldFiles = pgTable(
+  'held_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    uploadedBy: text('uploaded_by')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // The draft it was saved with. Held as long as the draft is, rather than
+    // for a day.
+    experienceId: integer('experience_id').references(() => experiences.id, {
+      onDelete: 'cascade',
+    }),
+    kind: fileKindEnum('kind').notNull(),
+    filename: text('filename').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    sha256: text('sha256').notNull(),
+    body: text('body').notNull(),
+    // What an export holds, read once when it was chosen. Null for any other
+    // file.
+    summary: jsonb('summary').$type<ExportSummary>(),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    check('held_files_size_check', sql`${table.sizeBytes} >= 0`),
+    index('held_files_uploaded_by_idx').on(table.uploadedBy),
+    index('held_files_experience_idx').on(table.experienceId),
   ],
 )
 

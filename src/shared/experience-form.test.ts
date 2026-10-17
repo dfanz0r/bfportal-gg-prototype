@@ -48,6 +48,7 @@ describe('the submit form', () => {
       media: ['https://i.example/a.png', 'https://youtu.be/jNQXAC9IVRw'],
       credits: ['Coupe', 'Byte'],
       creditAccounts: [],
+      files: [],
     })
   })
 

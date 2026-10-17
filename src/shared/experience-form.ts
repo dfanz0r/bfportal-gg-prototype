@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { experienceTypes, games } from './content'
 import { formBoolean } from './form-input'
 import { type MediaProblem, mediaOf } from './media'
+import { MAX_ADDED_FILES } from './project-files'
 import { MAX_TEAMS } from './teams'
 
 export { fieldErrors as formErrors } from './form-input'
@@ -89,6 +90,8 @@ export const FILE_HOSTS = [
 ]
 
 export const experienceFormSchema = z.object({
+  /** The address of the draft this form is, when it is one being edited. */
+  editing: optional(z.string().max(200)),
   game: z.enum(games),
   /** A share code, checked against the game's format by the service. */
   code: optional(z.string().max(20)),
@@ -115,6 +118,11 @@ export const experienceFormSchema = z.object({
   coverImgUrl: optional(httpsUrl('The cover must be an https:// address.')),
   /** Links to pictures and YouTube videos, shown after the cover. */
   media: lines(MAX_MEDIA, mediaLink).default([]),
+  /**
+   * The files the form holds: an export and what is added beside it, each
+   * chosen earlier and held by its id until the form is sent.
+   */
+  files: lines(MAX_ADDED_FILES + 1, z.uuid('Add that file again.')).default([]),
   repoUrl: optional(
     onHosts(REPO_HOSTS, `The repository must be on ${REPO_HOSTS.join(', ')}.`),
   ),

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { and, desc, eq, inArray, isNull, like, or } from 'drizzle-orm'
 
 import type { Game } from '../../shared/content'
@@ -20,6 +21,7 @@ import {
   experienceTags,
   maps,
   mapTags,
+  projectFiles,
   sdkVersions,
   tagGroups,
   tags,
@@ -28,6 +30,14 @@ import {
 import { lookupExperience } from '../integrations/gametools'
 import { renderMarkdown } from '../markdown'
 import { discardDraft } from './drafts'
+import { ownDraft } from './experience-drafts'
+import {
+  heldFilesFor,
+  letGoOfDraftFiles,
+  letGoOfHeldFiles,
+  takeHeldFiles,
+} from './held-files'
+import { filesInExport, readExport } from './portal-export'
 import { groupBy, violates } from './shared'
 import { submissionLimit, withinLimit } from './submission-limits'
 
@@ -36,6 +46,8 @@ import { submissionLimit, withinLimit } from './submission-limits'
 
 /** The experience form's own fields, which a refused one is kept by. */
 export const EXPERIENCE_FIELDS = Object.keys(experienceFormSchema.shape)
+
+const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /**
  * Creates a pending experience from a submitted form, for whoever is acting.
@@ -54,7 +66,11 @@ export async function submitExperience(
   const parsed = experienceFormSchema.safeParse(given)
   if (!parsed.success) return refuse('invalid', formErrors(parsed.error))
   const form = parsed.data
-  const game: Game = form.game
+  // A draft of theirs being sent in, rather than something new. Its game was
+  // settled when it was first saved.
+  const draft = form.editing ? await ownDraft(actor, form.editing) : null
+  if (form.editing && !draft) return refuse('not-found')
+  const game: Game = draft?.game ?? form.game
   const info = gameInfo(game)
   const now = options.now ?? new Date()
   const errors: Record<string, string> = {}
@@ -109,6 +125,26 @@ export async function submitExperience(
   const credits = [...new Set(form.credits)]
   if (accounts.length + credits.length > MAX_CREDITS) {
     errors.credits = `Credit up to ${MAX_CREDITS} people.`
+  }
+
+  // Files chosen earlier, held for this account. One held too long has been
+  // let go, and one held for someone else is not theirs to send.
+  const held = info.hasExport
+    ? await heldFilesFor(actor, form.files, { now, draft: draft?.id })
+    : []
+  const exported = held.filter((file) => file.kind === 'export')
+  if (held.length < new Set(form.files).size && info.hasExport) {
+    errors.files = 'A file is no longer held. Add it again.'
+  } else if (exported.length > 1) {
+    errors.files = 'Add one export.'
+  }
+  const fromExport = exported[0]?.summary ?? null
+  // A template with no code is taken as its files, so it needs some.
+  if (offered && !form.code && !form.link && !errors.files) {
+    if (held.length === 0 && !form.filesUrl) {
+      errors.files =
+        'A template with no code needs its export, or a link to its files.'
+    }
   }
 
   const [[category], [sdk], chosenTags, gameMaps, creditedRows] =
@@ -219,8 +255,18 @@ export async function submitExperience(
   if (Object.keys(errors).length > 0) return refuse('invalid', errors)
 
   // Each map of the rotation, matched to one the site knows: by level id
-  // where gametools gives one, by name where it gives only that.
-  const rotation = (found?.rotation ?? []).map((entry) => {
+  // where gametools gives one, by name where it gives only that. With no code
+  // to look up, the export says what the maps are.
+  const portalRotation =
+    found?.rotation ??
+    (fromExport?.maps ?? []).map((levelId) => ({
+      levelId,
+      name: null,
+      mode: fromExport?.mode ?? 'Custom',
+      rounds: 1,
+      teams: (fromExport?.teams ?? []).map((team) => team.players),
+    }))
+  const rotation = portalRotation.map((entry) => {
     const known = gameMaps.find(
       (map) =>
         (entry.levelId && map.levelId === entry.levelId) ||
@@ -293,46 +339,71 @@ export async function submitExperience(
     for (let n = 2; used.has(slug); n += 1) slug = `${base}-${n}`
     try {
       const written = await withinLimit(actor, now, async (tx) => {
-        const [created] = await tx
-          .insert(experiences)
-          .values({
-            slug,
-            game,
-            status: 'pending',
-            title: form.title,
-            descriptionMd: form.description,
-            descriptionHtml: renderMarkdown(form.description),
-            ownerId: actor.id,
-            categoryId: category.id,
-            code,
-            playgroundId: found?.playgroundId ?? linked?.playgroundId ?? null,
-            copyAllowed: form.copyAllowed,
-            coverImgUrl: form.coverImgUrl ?? found?.thumbnailUrl ?? null,
-            repoUrl: form.repoUrl,
-            // A game with no export has no files to host elsewhere.
-            filesUrl: info.hasExport ? form.filesUrl : undefined,
-            maxPlayers: totals.players,
-            maxBots: totals.bots,
-            teamSetup: teams,
-            types: built,
-            // Chosen on the form, or said by the category it was put in.
-            isTemplate: offered || category.marksTemplate,
-            gameMode: found?.rotation[0]?.mode,
-            mapRotation: found ? rotation.map((entry) => entry.stored) : null,
-            xpMode: found?.xpMode,
-            requiresFullGame: found?.requiresFullGame ?? fromMaps(),
-            sdkVersionId: sdk?.id ?? null,
-            // What was just looked up counts as the first check of the code.
-            portalState: found
-              ? found.published
-                ? 'published'
-                : 'unpublished'
-              : 'unchecked',
-            portalCheckedAt: found ? now : null,
-            portalStateSince: found ? now : null,
-            submittedAt: now,
-          })
-          .returning({ id: experiences.id })
+        const values: Omit<typeof experiences.$inferInsert, 'slug'> = {
+          game,
+          status: 'pending',
+          title: form.title,
+          descriptionMd: form.description,
+          descriptionHtml: renderMarkdown(form.description),
+          ownerId: actor.id,
+          categoryId: category.id,
+          code,
+          playgroundId: found?.playgroundId ?? linked?.playgroundId ?? null,
+          copyAllowed: form.copyAllowed,
+          coverImgUrl: form.coverImgUrl ?? found?.thumbnailUrl ?? null,
+          repoUrl: form.repoUrl,
+          // A game with no export has no files to host elsewhere.
+          filesUrl: info.hasExport ? form.filesUrl : undefined,
+          maxPlayers: totals.players,
+          maxBots: totals.bots,
+          teamSetup: teams,
+          types: built,
+          // Chosen on the form, or said by the category it was put in.
+          isTemplate: offered || category.marksTemplate,
+          gameMode: portalRotation[0]?.mode,
+          mapRotation:
+            rotation.length > 0 ? rotation.map((entry) => entry.stored) : null,
+          xpMode: found?.xpMode,
+          requiresFullGame: found?.requiresFullGame ?? fromMaps(),
+          sdkVersionId: sdk?.id ?? null,
+          // What was just looked up counts as the first check of the code.
+          portalState: found
+            ? found.published
+              ? 'published'
+              : 'unpublished'
+            : 'unchecked',
+          portalCheckedAt: found ? now : null,
+          portalStateSince: found ? now : null,
+          submittedAt: now,
+        }
+        // A draft becomes the submission, at the address it already has.
+        // Anything it was saved with is replaced by what was just checked.
+        const [created] = draft
+          ? await tx
+              .update(experiences)
+              .set({ ...values, draftForm: null })
+              .where(
+                and(
+                  eq(experiences.id, draft.id),
+                  eq(experiences.status, 'draft'),
+                ),
+              )
+              .returning({ id: experiences.id })
+          : await tx
+              .insert(experiences)
+              .values({ ...values, slug })
+              .returning({ id: experiences.id })
+        if (!created) return refuse('not-found')
+        if (draft) {
+          for (const table of [
+            experienceTags,
+            experienceMedia,
+            experienceCreators,
+            projectFiles,
+          ]) {
+            await tx.delete(table).where(eq(table.experienceId, draft.id))
+          }
+        }
 
         if (tagged.length > 0) {
           await tx
@@ -365,9 +436,46 @@ export async function submitExperience(
             })),
           )
         }
-        // It went through, so a kept copy of a refused form has done its job.
+        // Its files are kept: the export as it was, what is inside it one
+        // file at a time, and what was added beside it. Only its owner and
+        // the moderators can download them until it is a template, which its
+        // owner can ask for later.
+        if (held.length > 0) {
+          const files = await takeHeldFiles(tx, actor, form.files, {
+            now,
+            draft: draft?.id,
+          })
+          await tx.insert(projectFiles).values(
+            files.flatMap((file) => {
+              const row = {
+                experienceId: created.id,
+                kind: file.kind,
+                filename: file.filename,
+                sizeBytes: file.sizeBytes,
+                sha256: file.sha256,
+                body: file.body,
+                uploadedBy: actor.id,
+              }
+              const read = file.kind === 'export' && readExport(file.body)
+              return [
+                row,
+                ...(read ? filesInExport(read.export) : []).map((inside) => ({
+                  ...row,
+                  ...inside,
+                  sizeBytes: Buffer.byteLength(inside.body),
+                  sha256: sha256(inside.body),
+                  fromExport: true,
+                })),
+              ]
+            }),
+          )
+        }
+        // It went through, so a kept copy of a refused form, and the files it
+        // held, have done their job.
         await discardDraft(tx, actor)
-        return { ok: true as const, slug }
+        await letGoOfHeldFiles(tx, actor)
+        if (draft) await letGoOfDraftFiles(tx, draft.id)
+        return { ok: true as const, slug: draft?.slug ?? slug }
       })
       return written
     } catch (error) {

@@ -23,6 +23,10 @@ export const body = 'max-w-[46em] text-[15.5px] text-fg-2'
 /** A bordered block on the page's surface. */
 export const panel = 'border border-line bg-surface-1'
 
+/** The square that says what kind of file a row is: JSON, TS, TSCN. */
+export const fileGlyph =
+  'grid size-11 shrink-0 place-items-center border border-line bg-surface-3 font-mono text-xs font-semibold tracking-[0.04em] text-steel'
+
 /** A small mono label above or beside something. */
 export const label =
   'font-mono text-[11px] font-medium tracking-[0.14em] text-fg-3 uppercase'

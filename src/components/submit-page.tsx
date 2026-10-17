@@ -1,19 +1,27 @@
-import { useNavigate } from '@tanstack/solid-router'
+import { useNavigate, useRouter } from '@tanstack/solid-router'
 import { createEffect, createMemo, createSignal, For, on, Show } from 'solid-js'
 
 import type { Library } from '../functions/library'
 import type { SubmitPageData } from '../functions/submit'
-import { startFromCode, submitForReview } from '../functions/submit'
+import {
+  deleteDraft,
+  readProjectFiles,
+  saveDraft,
+  startFromCode,
+  submitForReview,
+} from '../functions/submit'
 import { experienceTypeLabels } from '../shared/content'
 import { MAX_CREDITS, MAX_MEDIA, REPO_HOSTS } from '../shared/experience-form'
 import { formFields } from '../shared/form-input'
 import { defaultGame, gameInfo } from '../shared/games'
+import { MAX_EXPORT_BYTES, MAX_FILE_BYTES } from '../shared/project-files'
 import { submitLead } from '../shared/submit'
 import { type TeamSetup, teamTotals } from '../shared/teams'
 import { Check } from './check'
 import { Choice } from './choice'
 import { ChoiceGroup } from './choice-group'
 import { CreditsInput } from './credits-input'
+import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
 import { FormField } from './form-field'
 import { FormSection } from './form-section'
@@ -21,6 +29,7 @@ import { Icon, type IconName } from './icon'
 import { ImagePreview } from './image-preview'
 import { MediaListInput } from './media-list-input'
 import { PageLayout } from './page-layout'
+import { type FileSlot, ProjectFilesInput } from './project-files-input'
 import { SubmitStart } from './submit-start'
 import { TeamSetupInput } from './team-setup-input'
 import { buttonAccent, buttonGhost, field, label, panel } from './ui'
@@ -131,6 +140,44 @@ function LinkInput(props: {
   )
 }
 
+/** Where the rest of the visitor's submissions stand, and the way to them. */
+function YoursPanel(props: { tally: NonNullable<SubmitPageData['tally']> }) {
+  const rows = () => [
+    {
+      name: 'Changes requested',
+      count: props.tally.changesRequested,
+      needs: props.tally.changesRequested > 0,
+    },
+    { name: 'In review', count: props.tally.inReview, needs: false },
+    { name: 'Drafts', count: props.tally.drafts, needs: false },
+  ]
+  return (
+    <div class={`${panel} p-5`}>
+      <h2 class={`${label} mb-3`}>Your submissions</h2>
+      <ul class="mb-3 grid gap-1.5">
+        <For each={rows()}>
+          {(row) => (
+            <li
+              class={`flex justify-between text-[13.5px] ${row.needs ? 'text-warn' : 'text-fg-2'}`}
+            >
+              <span>{row.name}</span>
+              <b class="font-mono font-medium">{row.count}</b>
+            </li>
+          )}
+        </For>
+      </ul>
+      <p class="mb-3 text-[13px] text-fg-3">
+        You can have {props.tally.maxWaiting} new submissions waiting at once.{' '}
+        {props.tally.waiting} {props.tally.waiting === 1 ? 'is' : 'are'} now.
+      </p>
+      <a href="/submissions" class={`${buttonGhost} h-[34px] w-full text-xs`}>
+        See where each one is
+        <Icon name="arrow-right" />
+      </a>
+    </div>
+  )
+}
+
 const same = (one: unknown, other: unknown) =>
   JSON.stringify(one) === JSON.stringify(other)
 
@@ -139,6 +186,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   const data = () => props.data
   const info = () => gameInfo(data().game)
   const navigate = useNavigate()
+  const router = useRouter()
   // What the fields start from: a form that was posted with no script and
   // refused, which comes back as a draft with what was wrong, and what Portal
   // says about the code. Both are remembered by what they say. A field is
@@ -153,7 +201,10 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   )
   // What was wrong was wrong with the form as it was loaded.
   createEffect(on(data, () => setErrors(draft()?.errors ?? {})))
-  const [sending, setSending] = createSignal(false)
+  /** What is being sent, if anything: one at a time. */
+  const [sending, setSending] = createSignal<
+    'submit' | 'save' | 'delete' | null
+  >(null)
   const portalTags = () => found()?.tags ?? []
 
   /** What a field starts with: what was sent last time, or else `otherwise`. */
@@ -300,31 +351,146 @@ export function SubmitPage(props: { data: SubmitPageData }) {
 
   const fail = (form: HTMLFormElement, problems: Record<string, string>) => {
     setErrors(problems)
-    setSending(false)
+    setSending(null)
     form.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center' })
   }
 
+  /**
+   * Goes to this form's own address with `search`: a draft's edit page, or
+   * the page for something new, for this game.
+   */
+  const goToForm = (search: { code?: string; link?: string; draft?: true }) => {
+    const editing = data().editing
+    return editing
+      ? navigate({
+          to: '/experiences/$slug/edit',
+          params: { slug: editing.slug },
+          search,
+          resetScroll: false,
+        })
+      : navigate({
+          to: '/submit',
+          search: {
+            game: data().game === defaultGame.id ? undefined : data().game,
+            ...search,
+          },
+          resetScroll: false,
+        })
+  }
+
   let fetchButton: HTMLButtonElement | undefined
+  let saveButton: HTMLButtonElement | undefined
+  let deleteButton: HTMLButtonElement | undefined
   /** Goes to the page for the code or link in the form, keeping this one. */
   const fetchDetails = (form: HTMLFormElement) => {
     const fields = new FormData(form)
     const typedIn = (name: string) =>
       String(fields.get(name) ?? '').trim() || undefined
-    void navigate({
-      to: '/submit',
-      search: {
-        game: data().game === defaultGame.id ? undefined : data().game,
-        code: typedIn('code'),
-        link: typedIn('link'),
-      },
-      resetScroll: false,
-    })
+    void goToForm({ code: typedIn('code'), link: typedIn('link') })
   }
   // Enter in the code or the link is asking for its details.
   const fetchOnEnter = (event: KeyboardEvent) => {
     if (event.key !== 'Enter') return
     event.preventDefault()
     fetchButton?.click()
+  }
+
+  const [reading, setReading] = createSignal<string | null>(null)
+  /**
+   * Reads files chosen on the form and sends them with it. The form comes
+   * back as a draft holding them, filled in from an export, and the page
+   * goes to it.
+   */
+  const readFiles = async (input: HTMLInputElement, slot: FileSlot) => {
+    const form = input.form
+    const chosen = [...(input.files ?? [])]
+    input.value = ''
+    if (!form || chosen.length === 0 || reading()) return
+    // Told here rather than after sending megabytes to be told the same.
+    const limit = slot === 'exportFile' ? MAX_EXPORT_BYTES : MAX_FILE_BYTES
+    const tooLarge = chosen.find((file) => file.size > limit)
+    if (tooLarge) {
+      setErrors({
+        [slot]: `${tooLarge.name} is over ${limit / (1024 * 1024)} MB.`,
+      })
+      return
+    }
+    setReading(chosen.map((file) => file.name).join(', '))
+    try {
+      const files = await Promise.all(
+        chosen.map(async (file) => ({
+          filename: file.name,
+          text: await file.text(),
+        })),
+      )
+      const result = await readProjectFiles({
+        data: { ...formFields(new FormData(form)), [slot]: files },
+      })
+      if (result.ok) {
+        // The form is what the draft says now, the teams included.
+        setTyped(undefined)
+        await goToForm({ draft: true })
+        await router.invalidate()
+      } else if (result.reason === 'signed-out') {
+        window.location.assign('/login')
+      } else {
+        setErrors(result.errors ?? { [slot]: 'That file was not read.' })
+      }
+    } catch {
+      setErrors({ [slot]: 'The file was not sent. Try again.' })
+    } finally {
+      setReading(null)
+    }
+  }
+
+  /** Keeps the form as a draft, and goes to the draft's own page. */
+  const save = async (form: HTMLFormElement) => {
+    setSending('save')
+    let result: Awaited<ReturnType<typeof saveDraft>>
+    try {
+      result = await saveDraft({ data: formFields(new FormData(form)) })
+    } catch {
+      fail(form, {
+        form: 'No answer came back, so this may or may not have been saved. Save it again to be sure.',
+      })
+      return
+    }
+    if (result.ok) {
+      setErrors({})
+      // A new draft has an address now. Either way the page shows when it
+      // was saved.
+      await navigate({
+        to: '/experiences/$slug/edit',
+        params: { slug: result.slug },
+        resetScroll: false,
+      })
+      await router.invalidate()
+      setSending(null)
+    } else if (result.reason === 'signed-out') {
+      window.location.assign('/login')
+    } else {
+      fail(form, result.errors ?? { form: 'That could not be saved.' })
+    }
+  }
+
+  /** Deletes the draft this form is, once its owner says so. */
+  const remove = async (form: HTMLFormElement) => {
+    const editing = data().editing
+    if (!editing) return
+    if (!window.confirm('Delete this draft? It cannot be brought back.')) return
+    setSending('delete')
+    try {
+      const result = await deleteDraft({ data: { editing: editing.slug } })
+      if (result.ok || result.reason === 'not-found') {
+        await navigate({ to: '/submissions' })
+        return
+      }
+      fail(form, { form: 'That could not be deleted.' })
+    } catch {
+      fail(form, {
+        form: 'No answer came back, so this may or may not have been deleted.',
+      })
+    }
   }
 
   const submit = async (event: SubmitEvent) => {
@@ -335,7 +501,15 @@ export function SubmitPage(props: { data: SubmitPageData }) {
       return
     }
     if (sending()) return
-    setSending(true)
+    if (event.submitter === saveButton) {
+      await save(form)
+      return
+    }
+    if (event.submitter === deleteButton) {
+      await remove(form)
+      return
+    }
+    setSending('submit')
     let result: Awaited<ReturnType<typeof submitForReview>>
     try {
       result = await submitForReview({ data: formFields(new FormData(form)) })
@@ -362,19 +536,37 @@ export function SubmitPage(props: { data: SubmitPageData }) {
     }
   }
 
+  const savedNow = () => data().now
+
   return (
-    <PageLayout title="Submit" lead={submitLead}>
+    <PageLayout
+      title={data().editing?.title ?? 'Submit'}
+      lead={data().editing ? 'A draft. Only you can see it.' : submitLead}
+      crumbs={
+        data().editing
+          ? [
+              { label: 'Your submissions', href: '/submissions' },
+              { label: 'Edit' },
+            ]
+          : undefined
+      }
+    >
       <div
         class="grid items-start gap-8 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10"
         data-game={data().game}
       >
         <div class="min-w-0">
-          {/* The game comes first, and choosing one goes to its form. */}
-          <SubmitStart game={data().game} kind="experience" />
+          {/* The game comes first, and choosing one goes to its form. A
+              draft's game and kind were settled when it was first saved. */}
+          <Show when={!data().editing}>
+            <SubmitStart game={data().game} kind="experience" />
+          </Show>
 
           <form
             ref={filledIn}
             method="post"
+            // Files chosen with no script are sent with the form.
+            enctype="multipart/form-data"
             action={submitForReview.url}
             onSubmit={submit}
             onInput={(event) =>
@@ -386,6 +578,11 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 and does not fetch the details again. */}
             <button type="submit" hidden />
             <input type="hidden" name="game" value={data().game} />
+            <Show when={data().editing}>
+              {(draft) => (
+                <input type="hidden" name="editing" value={draft().slug} />
+              )}
+            </Show>
 
             <FormSection
               title="Start from your code"
@@ -456,6 +653,44 @@ export function SubmitPage(props: { data: SubmitPageData }) {
               )}
             </Show>
 
+            {/* Files are for a game whose Portal exports them. */}
+            <Show when={info().hasExport}>
+              <FormSection
+                title="Project files"
+                note="Optional. An export fills in the form."
+              >
+                <ProjectFilesInput
+                  held={data().held}
+                  errors={errors()}
+                  readUrl={readProjectFiles.url}
+                  reading={reading()}
+                  onChoose={readFiles}
+                />
+                <FormField
+                  label="Larger files"
+                  name="filesUrl"
+                  optional
+                  hint={`Files over ${MAX_FILE_BYTES / (1024 * 1024)} MB, on GitHub, Dropbox or Google Drive.`}
+                  errors={errors()}
+                >
+                  <LinkInput
+                    name="filesUrl"
+                    icon="download"
+                    value={start('filesUrl')}
+                    placeholder="https://..."
+                  />
+                </FormField>
+                <Check
+                  name="isTemplate"
+                  value="true"
+                  checked={ticked('isTemplate', 'true')}
+                >
+                  Offer it as a template: others may download these files and
+                  publish their own version
+                </Check>
+              </FormSection>
+            </Show>
+
             <FormSection title="How it is listed">
               <ChoiceGroup label="Category" error={errors().category}>
                 <For each={data().options.categories}>
@@ -490,18 +725,8 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   </For>
                 </ChoiceGroup>
               </Show>
+              {/* Without an export a template is a category, chosen above. */}
               <div class="grid gap-1">
-                {/* Without an export a template is a category, chosen above. */}
-                <Show when={info().hasExport}>
-                  <Check
-                    name="isTemplate"
-                    value="true"
-                    checked={ticked('isTemplate', 'true')}
-                  >
-                    Offer it as a template: others may take it and publish their
-                    own version
-                  </Check>
-                </Show>
                 <Check
                   name="copyAllowed"
                   value="true"
@@ -690,53 +915,64 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   max={MAX_MEDIA}
                 />
               </FormField>
-              <div class="grid items-start gap-x-5 gap-y-[18px] sm:grid-cols-2">
-                <FormField
-                  label="Source repository"
+              <FormField
+                label="Source repository"
+                name="repoUrl"
+                optional
+                hint={`On ${REPO_HOSTS.join(', ')}.`}
+                errors={errors()}
+              >
+                <LinkInput
                   name="repoUrl"
-                  optional
-                  hint={`On ${REPO_HOSTS.join(', ')}.`}
-                  errors={errors()}
-                >
-                  <LinkInput
-                    name="repoUrl"
-                    icon="code"
-                    value={start('repoUrl')}
-                    placeholder="https://github.com/..."
-                  />
-                </FormField>
-                <Show when={info().hasExport}>
-                  <FormField
-                    label="Larger files"
-                    name="filesUrl"
-                    optional
-                    hint="On GitHub, Dropbox or Google Drive."
-                    errors={errors()}
-                  >
-                    <LinkInput
-                      name="filesUrl"
-                      icon="download"
-                      value={start('filesUrl')}
-                      placeholder="https://..."
-                    />
-                  </FormField>
-                </Show>
-              </div>
+                  icon="code"
+                  value={start('repoUrl')}
+                  placeholder="https://github.com/..."
+                />
+              </FormField>
             </FormSection>
 
             <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
               <button
                 type="submit"
                 class={`${buttonAccent} h-11 px-6`}
-                disabled={sending()}
+                disabled={sending() !== null}
               >
-                {sending() ? 'Submitting' : 'Submit for review'}
+                {sending() === 'submit' ? 'Submitting' : 'Submit'}
                 <Icon name="arrow-right" />
               </button>
-              <a href="/" class={`${buttonGhost} h-11 px-6`}>
-                Cancel
-              </a>
+              {/* The same form, kept as a draft for now. Only a title is
+                  needed, so the browser's own checks are not run. */}
+              <button
+                ref={saveButton}
+                type="submit"
+                formaction={saveDraft.url}
+                formnovalidate
+                class={`${buttonGhost} h-11 px-6`}
+                disabled={sending() !== null}
+              >
+                {sending() === 'save' ? 'Saving' : 'Save'}
+              </button>
+              <Show when={data().editing}>
+                <button
+                  ref={deleteButton}
+                  type="submit"
+                  formaction={deleteDraft.url}
+                  formnovalidate
+                  class={`${buttonGhost} h-11 px-5 text-danger hover:border-danger/60 hover:bg-danger/8`}
+                  disabled={sending() !== null}
+                >
+                  Delete
+                </button>
+              </Show>
               <p class="max-w-[34em] text-[13.5px] text-fg-3">
+                <Show when={data().editing}>
+                  {(draft) => (
+                    <>
+                      Saved{' '}
+                      <DateText value={draft().savedAt} now={savedNow()} />.{' '}
+                    </>
+                  )}
+                </Show>
                 Nothing is public until a moderator approves it.
                 {/* Not asked for: a game only runs its latest release. */}
                 <Show when={data().options.currentSdk}>
@@ -754,6 +990,9 @@ export function SubmitPage(props: { data: SubmitPageData }) {
         </div>
 
         <aside class="grid gap-4 min-[1100px]:sticky min-[1100px]:top-20">
+          <Show when={data().tally}>
+            {(tally) => <YoursPanel tally={tally()} />}
+          </Show>
           <div>
             <h2 class={`${label} mb-3`}>How it will look</h2>
             {/* A picture of the card, not the card: it has no page to open

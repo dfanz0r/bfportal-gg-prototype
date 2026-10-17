@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
+import { portalExport } from '../../../tests/portal-export'
 import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
 import {
@@ -9,6 +10,8 @@ import {
   experienceMedia,
   experiences,
   experienceTags,
+  heldFiles,
+  projectFiles,
   sdkVersions,
   submissionDrafts,
   tagGroups,
@@ -17,7 +20,9 @@ import {
 } from '../db/schema'
 import type { Lookup } from '../integrations/gametools'
 import { keepDraft, readDraft } from './drafts'
+import { getProjectFile } from './experience'
 import { EXPERIENCE_FIELDS, submitExperience } from './experience-submissions'
+import { holdFiles } from './held-files'
 import { MAX_PER_DAY, MAX_WAITING } from './submission-limits'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
@@ -359,9 +364,25 @@ describe('submitting an experience', () => {
   })
 
   it('takes a template with no code, and nothing else without one', async () => {
+    // A template with no code is its files, so it needs some.
+    expect(
+      await submitExperience(
+        recruit(1),
+        form({ code: '', title: 'Nothing to take', isTemplate: 'true' }),
+        answers(found),
+      ),
+    ).toMatchObject({
+      ok: false,
+      errors: { files: expect.stringContaining('needs its export') },
+    })
     const result = await submitExperience(
       recruit(1),
-      form({ code: '', title: 'Files only', isTemplate: 'true' }),
+      form({
+        code: '',
+        title: 'Files only',
+        isTemplate: 'true',
+        filesUrl: 'https://www.dropbox.com/s/abc/files.zip',
+      }),
       answers(found),
     )
     expect(result).toEqual({ ok: true, slug: 'files-only' })
@@ -371,6 +392,157 @@ describe('submitting an experience', () => {
       isTemplate: true,
       portalState: 'unchecked',
     })
+  })
+
+  it('shares a template’s files: the export, what is inside it, and what was added', async () => {
+    const who = recruit(37)
+    const held = await holdFiles(
+      who,
+      [
+        {
+          slot: 'export',
+          filename: 'mode.json',
+          text: portalExport({
+            script: 'let a = 1',
+            maps: ['MP_Abbasid', 'MP_Tungsten'],
+            teams: [{ players: 12 }, { players: 12 }],
+          }),
+        },
+        { slot: 'added', filename: 'Abbasid.tscn', text: '[gd_scene]' },
+      ],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the files to be held')
+    const result = await submitExperience(
+      who,
+      form({
+        code: '',
+        title: 'Shared files',
+        isTemplate: 'true',
+        teamPlayers: ['12', '12'],
+        files: held.held.map((file) => file.id),
+      }),
+      answers(found),
+    )
+    expect(result).toEqual({ ok: true, slug: 'shared-files' })
+
+    const { row } = await stored('shared-files')
+    // With no code, the export says what the maps are.
+    expect(row).toMatchObject({
+      gameMode: 'Custom',
+      mapRotation: [
+        { map: 'MP_Abbasid', mode: 'Custom', rounds: 1, teams: [12, 12] },
+        { map: 'MP_Tungsten', mode: 'Custom', rounds: 1, teams: [12, 12] },
+      ],
+    })
+    const files = await db
+      .select({
+        kind: projectFiles.kind,
+        filename: projectFiles.filename,
+        fromExport: projectFiles.fromExport,
+        mapIndex: projectFiles.mapIndex,
+      })
+      .from(projectFiles)
+      .where(eq(projectFiles.experienceId, row.id))
+      .orderBy(projectFiles.id)
+    expect(files).toEqual([
+      {
+        kind: 'export',
+        filename: 'mode.json',
+        fromExport: false,
+        mapIndex: null,
+      },
+      {
+        kind: 'script',
+        filename: 'bundle.ts',
+        fromExport: true,
+        mapIndex: null,
+      },
+      {
+        kind: 'strings',
+        filename: 'bundle.strings.json',
+        fromExport: true,
+        mapIndex: null,
+      },
+      {
+        kind: 'spatial',
+        filename: 'MP_Abbasid_Test.spatial.json',
+        fromExport: true,
+        mapIndex: 0,
+      },
+      {
+        kind: 'spatial',
+        filename: 'MP_Tungsten_Test.spatial.json',
+        fromExport: true,
+        mapIndex: 1,
+      },
+      {
+        kind: 'scene',
+        filename: 'Abbasid.tscn',
+        fromExport: false,
+        mapIndex: null,
+      },
+    ])
+    // Its files are stored now, and no longer held.
+    expect(
+      await db.select().from(heldFiles).where(eq(heldFiles.uploadedBy, who.id)),
+    ).toEqual([])
+  })
+
+  it('keeps the files of one not offered as a template, for its owner to offer later', async () => {
+    const who = recruit(38)
+    const held = await holdFiles(
+      who,
+      [{ slot: 'export', filename: 'mode.json', text: portalExport() }],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the export to be held')
+    const result = await submitExperience(
+      who,
+      form({ title: 'Played, not shared', files: [held.held[0].id] }),
+      answers(found),
+    )
+    expect(result).toEqual({ ok: true, slug: 'played-not-shared' })
+    const { row } = await stored('played-not-shared')
+    expect(row.isTemplate).toBe(false)
+    const files = await db
+      .select({ id: projectFiles.id, kind: projectFiles.kind })
+      .from(projectFiles)
+      .where(eq(projectFiles.experienceId, row.id))
+    expect(files.map((file) => file.kind)).toEqual(['export', 'spatial'])
+    // Only its owner and the moderators can download them.
+    expect(await getProjectFile(files[0].id, null)).toBeNull()
+    expect(await getProjectFile(files[0].id, recruit(1))).toBeNull()
+    expect(await getProjectFile(files[0].id, who)).not.toBeNull()
+    expect(
+      await db.select().from(heldFiles).where(eq(heldFiles.uploadedBy, who.id)),
+    ).toEqual([])
+  })
+
+  it('refuses a file held for someone else, or no longer held', async () => {
+    const held = await holdFiles(
+      recruit(39),
+      [{ slot: 'export', filename: 'mode.json', text: portalExport() }],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the export to be held')
+    const files = [held.held[0].id]
+    const message = { files: 'A file is no longer held. Add it again.' }
+    expect(
+      await submitExperience(
+        recruit(40),
+        form({ title: 'Not mine', isTemplate: 'true', files }),
+        answers(found),
+      ),
+    ).toMatchObject({ ok: false, errors: message })
+    const tomorrow = new Date(NOW.getTime() + 25 * 60 * 60 * 1000)
+    expect(
+      await submitExperience(
+        recruit(39),
+        form({ title: 'Too late', isTemplate: 'true', files }),
+        { lookup: async () => found, now: tomorrow },
+      ),
+    ).toMatchObject({ ok: false, errors: message })
   })
 
   it('takes the code from Portal when given only a link', async () => {

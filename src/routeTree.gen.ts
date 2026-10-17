@@ -18,6 +18,7 @@ import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as MapsRouteImport } from './routes/maps'
+import { Route as SubmissionsRouteImport } from './routes/submissions'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as UpdatesRouteImport } from './routes/updates'
@@ -32,9 +33,11 @@ import { Route as ScriptsIndexRouteImport } from './routes/scripts/index'
 import { Route as ScriptsSlugRouteImport } from './routes/scripts/$slug'
 import { Route as SubmitSnippetRouteImport } from './routes/submit_.snippet'
 import { Route as UsersDiscordIdRouteImport } from './routes/users/$discordId'
+import { Route as AdminEditsIdRouteImport } from './routes/admin/edits.$id'
 import { Route as AdminReviewIdRouteImport } from './routes/admin/review.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files/$id'
+import { Route as ExperiencesSlugEditRouteImport } from './routes/experiences/$slug_.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -79,6 +82,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const MapsRoute = MapsRouteImport.update({
   id: '/maps',
   path: '/maps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubmissionsRoute = SubmissionsRouteImport.update({
+  id: '/submissions',
+  path: '/submissions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubmitRoute = SubmitRouteImport.update({
@@ -151,6 +159,11 @@ const UsersDiscordIdRoute = UsersDiscordIdRouteImport.update({
   path: '/users/$discordId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEditsIdRoute = AdminEditsIdRouteImport.update({
+  id: '/edits/$id',
+  path: '/edits/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminReviewIdRoute = AdminReviewIdRouteImport.update({
   id: '/review/$id',
   path: '/review/$id',
@@ -166,6 +179,11 @@ const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
   path: '/api/files/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExperiencesSlugEditRoute = ExperiencesSlugEditRouteImport.update({
+  id: '/experiences/$slug_/edit',
+  path: '/experiences/$slug/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -177,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
+  '/submissions': typeof SubmissionsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
@@ -191,9 +210,11 @@ export interface FileRoutesByFullPath {
   '/library/': typeof LibraryIndexRoute
   '/playtests/': typeof PlaytestsIndexRoute
   '/scripts/': typeof ScriptsIndexRoute
+  '/admin/edits/$id': typeof AdminEditsIdRoute
   '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -204,6 +225,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
+  '/submissions': typeof SubmissionsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
@@ -218,9 +240,11 @@ export interface FileRoutesByTo {
   '/library': typeof LibraryIndexRoute
   '/playtests': typeof PlaytestsIndexRoute
   '/scripts': typeof ScriptsIndexRoute
+  '/admin/edits/$id': typeof AdminEditsIdRoute
   '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -233,6 +257,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/maps': typeof MapsRoute
+  '/submissions': typeof SubmissionsRoute
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
@@ -247,9 +272,11 @@ export interface FileRoutesById {
   '/library/': typeof LibraryIndexRoute
   '/playtests/': typeof PlaytestsIndexRoute
   '/scripts/': typeof ScriptsIndexRoute
+  '/admin/edits/$id': typeof AdminEditsIdRoute
   '/admin/review/$id': typeof AdminReviewIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/experiences/$slug_/edit': typeof ExperiencesSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,6 +290,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/maps'
+    | '/submissions'
     | '/submit'
     | '/tools'
     | '/updates'
@@ -277,9 +305,11 @@ export interface FileRouteTypes {
     | '/library/'
     | '/playtests/'
     | '/scripts/'
+    | '/admin/edits/$id'
     | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/experiences/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -290,6 +320,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/maps'
+    | '/submissions'
     | '/submit'
     | '/tools'
     | '/updates'
@@ -304,9 +335,11 @@ export interface FileRouteTypes {
     | '/library'
     | '/playtests'
     | '/scripts'
+    | '/admin/edits/$id'
     | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/experiences/$slug/edit'
   id:
     | '__root__'
     | '/'
@@ -318,6 +351,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/maps'
+    | '/submissions'
     | '/submit'
     | '/tools'
     | '/updates'
@@ -332,9 +366,11 @@ export interface FileRouteTypes {
     | '/library/'
     | '/playtests/'
     | '/scripts/'
+    | '/admin/edits/$id'
     | '/admin/review/$id'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/experiences/$slug_/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -347,6 +383,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   MapsRoute: typeof MapsRoute
+  SubmissionsRoute: typeof SubmissionsRoute
   SubmitRoute: typeof SubmitRoute
   ToolsRoute: typeof ToolsRoute
   UpdatesRoute: typeof UpdatesRoute
@@ -362,6 +399,7 @@ export interface RootRouteChildren {
   ScriptsIndexRoute: typeof ScriptsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiFilesIdRoute: typeof ApiFilesIdRoute
+  ExperiencesSlugEditRoute: typeof ExperiencesSlugEditRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -427,6 +465,13 @@ declare module '@tanstack/solid-router' {
       path: '/maps'
       fullPath: '/maps'
       preLoaderRoute: typeof MapsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/submissions': {
+      id: '/submissions'
+      path: '/submissions'
+      fullPath: '/submissions'
+      preLoaderRoute: typeof SubmissionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/submit': {
@@ -527,6 +572,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof UsersDiscordIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/edits/$id': {
+      id: '/admin/edits/$id'
+      path: '/edits/$id'
+      fullPath: '/admin/edits/$id'
+      preLoaderRoute: typeof AdminEditsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/review/$id': {
       id: '/admin/review/$id'
       path: '/review/$id'
@@ -548,16 +600,25 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiFilesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/experiences/$slug_/edit': {
+      id: '/experiences/$slug_/edit'
+      path: '/experiences/$slug/edit'
+      fullPath: '/experiences/$slug/edit'
+      preLoaderRoute: typeof ExperiencesSlugEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminEditsIdRoute: typeof AdminEditsIdRoute
   AdminReviewIdRoute: typeof AdminReviewIdRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminEditsIdRoute: AdminEditsIdRoute,
   AdminReviewIdRoute: AdminReviewIdRoute,
 }
 
@@ -575,6 +636,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   MapsRoute: MapsRoute,
+  SubmissionsRoute: SubmissionsRoute,
   SubmitRoute: SubmitRoute,
   ToolsRoute: ToolsRoute,
   UpdatesRoute: UpdatesRoute,
@@ -590,6 +652,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScriptsIndexRoute: ScriptsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiFilesIdRoute: ApiFilesIdRoute,
+  ExperiencesSlugEditRoute: ExperiencesSlugEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

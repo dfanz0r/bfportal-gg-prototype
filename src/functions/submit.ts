@@ -1,18 +1,38 @@
 import { createServerFn } from '@tanstack/solid-start'
 import { z } from 'zod'
 
+import type { Actor } from '../server/auth/actor'
 import { assertFromThisSite, currentActor } from '../server/auth/actor'
 import { keepDraft } from '../server/services/drafts'
+import {
+  deleteExperienceDraft,
+  ownDraft,
+  saveExperienceDraft,
+} from '../server/services/experience-drafts'
 import {
   EXPERIENCE_FIELDS,
   submitExperience,
 } from '../server/services/experience-submissions'
-import { getSubmitPage } from '../server/services/submit-page'
+import { addFilesToForm, type SentFile } from '../server/services/held-files'
+import { getDraftEditPage, getSubmitPage } from '../server/services/submit-page'
 import { games } from '../shared/content'
 import { formOr } from '../shared/form-input'
 import { defaultGame } from '../shared/games'
-import { refuse } from '../shared/results'
+import { MAX_EXPORT_BYTES } from '../shared/project-files'
+import { type Refusal, refuse } from '../shared/results'
 import { redirectTo } from './answer'
+
+/** The address of the form: a draft's own, or the one for something new. */
+const formPage = (editing: unknown) =>
+  typeof editing === 'string' && editing
+    ? `/experiences/${encodeURIComponent(editing)}/edit`
+    : '/submit'
+
+const pageSearch = {
+  code: z.string().max(20).optional(),
+  link: z.string().max(500).optional(),
+  draft: z.boolean().optional(),
+}
 
 /**
  * What the submit page shows: what the form offers for the game, and what
@@ -20,38 +40,184 @@ import { redirectTo } from './answer'
  * the form this visitor last had refused comes back as well.
  */
 export const fetchSubmitPage = createServerFn({ method: 'GET' })
-  .validator(
-    z.object({
-      game: z.enum(games).optional(),
-      code: z.string().max(20).optional(),
-      link: z.string().max(500).optional(),
-      draft: z.boolean().optional(),
-    }),
-  )
+  .validator(z.object({ game: z.enum(games).optional(), ...pageSearch }))
   .handler(async ({ data }) => getSubmitPage(await currentActor(), data))
 
-/** Submits an experience for review. */
+/** The same form for one of the visitor's drafts, as it was saved. */
+export const fetchDraftEditPage = createServerFn({ method: 'GET' })
+  .validator(z.object({ slug: z.string().min(1).max(200), ...pageSearch }))
+  .handler(async ({ data }) => {
+    const { slug, ...search } = data
+    return getDraftEditPage(await currentActor(), slug, search)
+  })
+
+/** A file the page's script read, sent as its name and text. */
+const readFileSchema = z.object({
+  filename: z.string().max(300),
+  text: z.string(),
+})
+
+/** The form's file inputs, and which slot each fills. */
+const FILE_INPUTS = { exportFile: 'export', addedFiles: 'added' } as const
+
+/**
+ * The files sent with the submit form: chosen in its file inputs, with no
+ * script, or read by the page's script and sent as text. One too large to be
+ * taken is not read.
+ */
+async function filesSent(input: Record<string, unknown>) {
+  const sent: SentFile[] = []
+  for (const [name, slot] of Object.entries(FILE_INPUTS)) {
+    for (const value of [input[name] ?? []].flat()) {
+      if (value instanceof File) {
+        // A file input left empty still sends a file, with no name.
+        if (!value.name && value.size === 0) continue
+        sent.push(
+          value.size > MAX_EXPORT_BYTES
+            ? { slot, filename: value.name, text: '', sizeBytes: value.size }
+            : { slot, filename: value.name, text: await value.text() },
+        )
+      } else {
+        const read = readFileSchema.safeParse(value)
+        if (read.success) sent.push({ slot, ...read.data })
+      }
+    }
+  }
+  return sent
+}
+
+/** The form's fields, without its file inputs. */
+const withoutFiles = (input: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(input).filter(([name]) => !(name in FILE_INPUTS)),
+  )
+
+/** The draft a form is, if it is one of the actor's, by its id. */
+async function draftIdOf(actor: Actor | null, fields: Record<string, unknown>) {
+  if (!actor || typeof fields.editing !== 'string' || !fields.editing) {
+    return null
+  }
+  return (await ownDraft(actor, fields.editing))?.id ?? null
+}
+
+/**
+ * The form as sent, with any file chosen in it with no script held for it,
+ * so a refused form still has its files.
+ */
+async function withFilesHeld(
+  actor: Actor | null,
+  input: Record<string, unknown>,
+) {
+  const fields = withoutFiles(input)
+  const sent = await filesSent(input)
+  if (sent.length === 0) return { fields, refused: null }
+  const added = await addFilesToForm(actor, fields, sent, {
+    draft: await draftIdOf(actor, fields),
+  })
+  return added.ok
+    ? { fields: added.fields, refused: null }
+    : { fields, refused: added }
+}
+
+/**
+ * With no script the page that was filled in is gone by the time the answer
+ * is known. A refused form is kept, and its page shows it again with what was
+ * wrong.
+ */
+async function backToForm(
+  actor: Actor | null,
+  fields: Record<string, unknown>,
+  result: Refusal,
+) {
+  if (!actor || result.reason === 'signed-out') return redirectTo('/login')
+  await keepDraft(
+    actor,
+    'experience',
+    fields,
+    result.errors ?? { form: 'That could not be sent.' },
+    EXPERIENCE_FIELDS,
+  )
+  return redirectTo(`${formPage(fields.editing)}?draft=true`)
+}
+
+/** Submits an experience for review: a new one, or a draft being edited. */
 export const submitForReview = createServerFn({ method: 'POST' })
   .validator(formOr(z.record(z.string(), z.unknown())))
   .handler(async ({ data }) => {
     assertFromThisSite()
     const actor = await currentActor()
-    const result = data.input
-      ? await submitExperience(actor, data.input)
-      : refuse('invalid', data.errors)
+    const { fields, refused } = await withFilesHeld(actor, data.input ?? {})
+    const result = !data.input
+      ? refuse('invalid', data.errors)
+      : (refused ?? (await submitExperience(actor, fields)))
     if (!data.viaForm) return result
     if (result.ok) throw redirectTo(`/experiences/${result.slug}`)
-    if (!actor || result.reason === 'signed-out') throw redirectTo('/login')
-    // With no script the page that was filled in is gone by now. What was
-    // sent is kept, and the form is shown again with it and what was wrong.
-    await keepDraft(
-      actor,
-      'experience',
-      data.input ?? {},
-      result.errors ?? { form: 'That could not be submitted.' },
-      EXPERIENCE_FIELDS,
-    )
-    throw redirectTo('/submit?draft=true')
+    throw await backToForm(actor, fields, result)
+  })
+
+/**
+ * Saves the form as a draft without sending it to anyone: a new one, or the
+ * draft being edited. Only a title and safe links are needed.
+ */
+export const saveDraft = createServerFn({ method: 'POST' })
+  .validator(formOr(z.record(z.string(), z.unknown())))
+  .handler(async ({ data }) => {
+    assertFromThisSite()
+    const actor = await currentActor()
+    const { fields, refused } = await withFilesHeld(actor, data.input ?? {})
+    const result = !data.input
+      ? refuse('invalid', data.errors)
+      : (refused ?? (await saveExperienceDraft(actor, fields)))
+    if (!data.viaForm) return result
+    if (result.ok) throw redirectTo(formPage(result.slug))
+    throw await backToForm(actor, fields, result)
+  })
+
+/** Deletes one of the visitor's drafts. */
+export const deleteDraft = createServerFn({ method: 'POST' })
+  .validator(formOr(z.object({ editing: z.string().min(1).max(200) })))
+  .handler(async ({ data }) => {
+    assertFromThisSite()
+    const actor = await currentActor()
+    const result = data.input
+      ? await deleteExperienceDraft(actor, data.input.editing)
+      : refuse('invalid', data.errors)
+    if (!data.viaForm) return result
+    if (!actor) throw redirectTo('/login')
+    throw redirectTo('/submissions')
+  })
+
+/**
+ * Reads the files chosen on the submit form into it: an export fills in the
+ * form, and every file is held for the form until it is sent. The form comes
+ * back as a draft, with no script and with one: the page's script goes to it.
+ */
+export const readProjectFiles = createServerFn({ method: 'POST' })
+  .validator(formOr(z.record(z.string(), z.unknown())))
+  .handler(async ({ data }) => {
+    assertFromThisSite()
+    const actor = await currentActor()
+    if (!actor) {
+      if (data.viaForm) throw redirectTo('/login')
+      return refuse('signed-out')
+    }
+    const input = data.input ?? {}
+    const fields = withoutFiles(input)
+    const result = await addFilesToForm(actor, fields, await filesSent(input), {
+      fill: true,
+      draft: await draftIdOf(actor, fields),
+    })
+    if (result.ok || data.viaForm) {
+      await keepDraft(
+        actor,
+        'experience',
+        result.ok ? result.fields : fields,
+        result.ok ? {} : (result.errors ?? { form: 'That file was not read.' }),
+        EXPERIENCE_FIELDS,
+      )
+    }
+    if (data.viaForm) throw redirectTo(`${formPage(fields.editing)}?draft=true`)
+    return result.ok ? { ok: true as const } : result
   })
 
 /**
@@ -67,17 +233,21 @@ export const startFromCode = createServerFn({ method: 'POST' })
         game: z.enum(games).catch(defaultGame.id),
         code: z.string().max(20).catch(''),
         link: z.string().max(500).catch(''),
+        editing: z.string().max(200).optional().catch(undefined),
       }),
     ),
   )
   .handler(async ({ data }) => {
     const search = new URLSearchParams()
-    const { game, code, link } = data.input ?? {}
-    if (game && game !== defaultGame.id) search.set('game', game)
+    const { game, code, link, editing } = data.input ?? {}
+    // A draft's game is its own; only a new form says which game.
+    if (!editing && game && game !== defaultGame.id) search.set('game', game)
     if (code?.trim()) search.set('code', code.trim())
     if (link?.trim()) search.set('link', link.trim())
     const query = search.toString()
-    throw redirectTo(query ? `/submit?${query}` : '/submit')
+    throw redirectTo(
+      query ? `${formPage(editing)}?${query}` : formPage(editing),
+    )
   })
 
 export type SubmitPageData = Extract<

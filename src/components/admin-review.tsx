@@ -13,6 +13,7 @@ import { Fact } from './fact'
 import { Facts } from './facts'
 import { Icon } from './icon'
 import { PageLayout } from './page-layout'
+import { ProjectFileList } from './project-file-list'
 import { buttonGhost, label, panel } from './ui'
 
 /** One line of the checks: something to look at, or something that is fine. */
@@ -137,6 +138,7 @@ export function AdminReview(props: {
               </p>
             )}
           </For>
+          <ProjectFileList files={submission().files} />
         </div>
 
         <aside class="grid gap-4">

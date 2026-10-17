@@ -76,6 +76,8 @@ describe('experience', () => {
       reported: [],
       isOwner: false,
       isStaff: false,
+      templateRequest: null,
+      canOfferTemplate: false,
     })
     const [liker] = await db
       .select({ userId: experienceLikes.userId })
@@ -178,15 +180,40 @@ describe('experience', () => {
     expect((await getExperience('air-vehicle-sandbox', NOW))?.sdk).toBeNull()
   })
 
-  it('hands out a file only for a published template', async () => {
+  it('hands out a file for a published template, and before that only to its owner and moderators', async () => {
     const [file] = await db
-      .select({ id: projectFiles.id })
+      .select({
+        id: projectFiles.id,
+        experienceId: projectFiles.experienceId,
+        ownerId: experiences.ownerId,
+      })
       .from(projectFiles)
+      .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
       .where(eq(projectFiles.filename, 'Script.ts'))
+    const owner = { id: file.ownerId, role: 'user' as const }
+    const someone = { id: 'seed-kestrel', role: 'user' as const }
+    const moderator = { id: 'seed-gala', role: 'moderator' as const }
 
-    const found = await getProjectFile(file.id)
+    const found = await getProjectFile(file.id, null)
     expect(found?.filename).toBe('Script.ts')
     expect(found?.body).toContain('RETURN_AFTER_SECONDS')
-    expect(await getProjectFile(999999)).toBeNull()
+    expect(await getProjectFile(999999, moderator)).toBeNull()
+
+    // Waiting for a moderator: not for anyone yet.
+    await db
+      .update(experiences)
+      .set({ status: 'pending' })
+      .where(eq(experiences.id, file.experienceId ?? 0))
+    try {
+      expect(await getProjectFile(file.id, null)).toBeNull()
+      expect(await getProjectFile(file.id, someone)).toBeNull()
+      expect(await getProjectFile(file.id, owner)).not.toBeNull()
+      expect(await getProjectFile(file.id, moderator)).not.toBeNull()
+    } finally {
+      await db
+        .update(experiences)
+        .set({ status: 'published' })
+        .where(eq(experiences.id, file.experienceId ?? 0))
+    }
   })
 })

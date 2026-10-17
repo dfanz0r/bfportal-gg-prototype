@@ -119,6 +119,13 @@ Reach for what exists before writing markup:
 | A list of links to pictures and videos, each beside what it shows, in order | `MediaListInput` |
 | What a gallery link shows, a picture or a YouTube video to embed | `mediaOf` in `src/shared/media.ts`; never parse a link in a component |
 | An experience's pictures and videos, one at a time | `Gallery` |
+| A Portal export and the files beside it, held for the form until it is sent | `ProjectFilesInput`; the export is read by `readExport` in `src/server/services/portal-export.ts` |
+| The square that says what kind of file a row is | `fileGlyph` from `ui.ts`, with `fileGlyphs` from `src/shared/project-files.ts` |
+| A project's files for a moderator, each to download | `ProjectFileList` |
+| The owner's switch for offering files as a template | `TemplateOffer` |
+| The experience form for a draft | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which draft |
+| Everything someone has made, and where each stands | `YourSubmissions`, from `listOwnSubmissions` |
+| A moderator's screen for a pending edit, each change beside what is live | `AdminEdit`; what an edit may change is `editPayloadSchema` in `src/server/services/template-offers.ts` |
 | An item's status and the moderator's note, for its owner | `StatusNote` |
 | A moderator's decision: a note, approve or request changes | `DecisionForm` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |

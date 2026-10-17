@@ -11,11 +11,14 @@ import {
   categories,
   experienceMedia,
   experiences,
+  projectFiles,
+  revisions,
   snippets,
   user,
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
+import { type EditPayload, editPayloadSchema } from './template-offers'
 
 // What the moderators do: look at what is waiting, and decide. Every function
 // here refuses anyone who is not a moderator or an admin.
@@ -101,13 +104,184 @@ export async function listQueue(actor: Actor | null) {
     .where(snippetWaiting)
     .orderBy(asc(snippets.submittedAt), asc(snippets.id))
     .limit(QUEUE_PAGE)
+  // Changes to something already published, each reviewed on its own screen.
+  const waitingEdits = await db
+    .select({
+      id: revisions.id,
+      payload: revisions.payload,
+      submittedAt: revisions.submittedAt,
+      title: experiences.title,
+      ownerName: user.name,
+      ownerImage: user.image,
+    })
+    .from(revisions)
+    .innerJoin(experiences, eq(experiences.id, revisions.experienceId))
+    .innerJoin(user, eq(user.id, revisions.submittedBy))
+    .where(editWaiting)
+    .orderBy(asc(revisions.submittedAt), asc(revisions.id))
+    .limit(QUEUE_PAGE)
   return {
     ok: true as const,
     items: rows,
     total: total.value,
     snippets: waitingSnippets,
+    edits: waitingEdits.map(({ payload, ...edit }) => ({
+      ...edit,
+      changes: changesIn(editPayloadSchema.catch({}).parse(payload)),
+    })),
     now: new Date(),
   }
+}
+
+/** What a pending edit changes, each as the field's name. */
+function changesIn(payload: EditPayload) {
+  return Object.entries(EDIT_FIELDS).flatMap(([key, name]) =>
+    payload[key as keyof EditPayload] === undefined ? [] : [name],
+  )
+}
+
+/** The name each field an edit can change goes by. */
+const EDIT_FIELDS: Record<keyof EditPayload, string> = {
+  isTemplate: 'Template',
+}
+
+/**
+ * An edit whose every change this site can apply. One asking for anything
+ * else waits for the edit form, which is not built: approving it here would
+ * mark it approved and change nothing.
+ */
+const appliable = sql`(${revisions.payload} - ${sql.raw(`'{${Object.keys(EDIT_FIELDS).join(',')}}'`)}::text[]) = '{}'::jsonb`
+
+const editWaiting = and(
+  eq(revisions.kind, 'edit'),
+  eq(revisions.status, 'pending'),
+  isNull(experiences.deletedAt),
+  appliable,
+)
+
+/**
+ * One pending edit, beside the page as it is live now. Its files are
+ * included: an edit that offers them as a template is about them.
+ */
+export async function getEditReview(actor: Actor | null, id: number) {
+  const refused = refusal(actor)
+  if (refused) return refused
+  const [found] = await db
+    .select({
+      id: revisions.id,
+      payload: revisions.payload,
+      submittedAt: revisions.submittedAt,
+      experience: {
+        id: experiences.id,
+        slug: experiences.slug,
+        title: experiences.title,
+        game: experiences.game,
+        isTemplate: experiences.isTemplate,
+        filesUrl: experiences.filesUrl,
+      },
+      submitter: { name: user.name, image: user.image },
+    })
+    .from(revisions)
+    .innerJoin(experiences, eq(experiences.id, revisions.experienceId))
+    .innerJoin(user, eq(user.id, revisions.submittedBy))
+    .where(and(eq(revisions.id, id), editWaiting))
+    .limit(1)
+  if (!found) return refuse('not-found')
+  const payload = editPayloadSchema.catch({}).parse(found.payload)
+  const files = await db
+    .select({
+      id: projectFiles.id,
+      kind: projectFiles.kind,
+      filename: projectFiles.filename,
+      sizeBytes: projectFiles.sizeBytes,
+      fromExport: projectFiles.fromExport,
+    })
+    .from(projectFiles)
+    .where(eq(projectFiles.experienceId, found.experience.id))
+    .orderBy(asc(projectFiles.id))
+  const yesNo = (value: boolean) => (value ? 'Yes' : 'No')
+  return {
+    ok: true as const,
+    edit: {
+      id: found.id,
+      submittedAt: found.submittedAt,
+      submitter: found.submitter,
+      experience: found.experience,
+      // Each change as its field, what is live and what is asked for.
+      changes:
+        payload.isTemplate === undefined
+          ? []
+          : [
+              {
+                field: EDIT_FIELDS.isTemplate,
+                live: yesNo(found.experience.isTemplate),
+                proposed: payload.isTemplate
+                  ? 'Yes: anyone can download its files'
+                  : 'No',
+              },
+            ],
+      files,
+    },
+    now: new Date(),
+  }
+}
+
+/**
+ * Approves a pending edit, which applies what it changes to the live page, or
+ * sends it back with a note. Decided once, as a submission is.
+ */
+export async function decideEdit(
+  actor: Actor | null,
+  id: number,
+  decision: { approve: boolean; note?: string },
+  now = new Date(),
+): Promise<
+  { ok: true; slug: string; status: 'approved' | 'changes_requested' } | Refusal
+> {
+  const refused = refusal(actor)
+  if (refused || !actor) return refused ?? refuse('signed-out')
+  const note = decision.note?.trim() ?? ''
+  if (!decision.approve && note.length < 3) {
+    return refuse('invalid', { note: NOTE_NEEDED })
+  }
+  const status = decision.approve ? 'approved' : 'changes_requested'
+  return db.transaction(async (tx) => {
+    // The condition is in the update, so two moderators cannot both decide.
+    const [decided] = await tx
+      .update(revisions)
+      .set({
+        status,
+        reviewedBy: actor.id,
+        reviewedAt: now,
+        reviewNote: note || null,
+      })
+      .where(
+        and(
+          eq(revisions.id, id),
+          eq(revisions.kind, 'edit'),
+          eq(revisions.status, 'pending'),
+          appliable,
+        ),
+      )
+      .returning({
+        experienceId: revisions.experienceId,
+        payload: revisions.payload,
+      })
+    if (!decided) return refuse('not-found')
+    // Only the fields an edit may change, as the schema reads them.
+    const payload = editPayloadSchema.catch({}).parse(decided.payload)
+    if (decision.approve && Object.keys(payload).length > 0) {
+      await tx
+        .update(experiences)
+        .set(payload)
+        .where(eq(experiences.id, decided.experienceId))
+    }
+    const [experience] = await tx
+      .select({ slug: experiences.slug })
+      .from(experiences)
+      .where(eq(experiences.id, decided.experienceId))
+    return { ok: true as const, slug: experience.slug, status }
+  })
 }
 
 /**
@@ -184,12 +358,24 @@ export async function getSubmissionReview(
   if (!found) return refuse('not-found')
   const { experience } = found
 
-  const [mediaRows, sameCode, history, looked] = await Promise.all([
+  const [mediaRows, files, sameCode, history, looked] = await Promise.all([
     db
       .select({ url: experienceMedia.url })
       .from(experienceMedia)
       .where(eq(experienceMedia.experienceId, experience.id))
       .orderBy(asc(experienceMedia.position)),
+    // A template's files, which are reviewed with it.
+    db
+      .select({
+        id: projectFiles.id,
+        kind: projectFiles.kind,
+        filename: projectFiles.filename,
+        sizeBytes: projectFiles.sizeBytes,
+        fromExport: projectFiles.fromExport,
+      })
+      .from(projectFiles)
+      .where(eq(projectFiles.experienceId, experience.id))
+      .orderBy(asc(projectFiles.id)),
     experience.code
       ? db
           .select({
@@ -261,6 +447,7 @@ export async function getSubmissionReview(
       repoUrl: experience.repoUrl,
       filesUrl: experience.filesUrl,
       media,
+      files,
       submittedAt: experience.submittedAt,
     },
     submitter: {

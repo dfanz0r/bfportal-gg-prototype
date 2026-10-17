@@ -3,6 +3,7 @@ import { For, Show } from 'solid-js'
 import type { Experience } from '../functions/experience'
 import { formatBytes } from '../shared/dates'
 import { gameInfo } from '../shared/games'
+import { fileGlyphs } from '../shared/project-files'
 import { Avatar } from './avatar'
 import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
@@ -14,17 +15,9 @@ import { PersonLink } from './person-link'
 import { ReportMenu } from './report-menu'
 import { Section } from './section'
 import { StatusNote } from './status-note'
-import { buttonGhost, panel } from './ui'
+import { TemplateOffer } from './template-offer'
+import { buttonGhost, fileGlyph, panel } from './ui'
 import { UpdatePost } from './update-post'
-
-const FILE_GLYPHS = {
-  export: 'JSON',
-  script: 'TS',
-  spatial: 'JSON',
-  scene: 'TSCN',
-  strings: 'JSON',
-  other: 'FILE',
-} as const
 
 const smallButton = `${buttonGhost} h-[34px] px-3 text-xs`
 
@@ -64,8 +57,11 @@ export function experienceHead(data: Experience | undefined) {
 export function ExperiencePage(props: { data: Experience }) {
   const data = () => props.data
   const info = () => gameInfo(data().game)
+  // Everyone sees a template's files. Its owner and the moderators see them
+  // when they are not offered as well.
   const hasFiles = () =>
-    data().isTemplate && (data().files.length > 0 || data().filesUrl)
+    (data().isTemplate || data().viewer.isOwner || data().viewer.isStaff) &&
+    (data().files.length > 0 || data().filesUrl)
 
   return (
     <main id="content" data-game={data().game}>
@@ -169,7 +165,15 @@ export function ExperiencePage(props: { data: Experience }) {
       <div class="wrap pt-6 pb-20 sm:pt-8 sm:pb-24">
         {/* Only its owner and the moderators get this far before it is
             published. */}
-        <StatusNote status={data().status} note={data().reviewNote} />
+        <StatusNote
+          status={data().status}
+          note={data().reviewNote}
+          edit={
+            data().viewer.isOwner && data().status === 'draft'
+              ? `/experiences/${data().slug}/edit`
+              : undefined
+          }
+        />
         <Show when={data().unavailable || data().bugged || data().xpFarm}>
           <div class="mb-6 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
             <Show when={data().unavailable}>
@@ -256,19 +260,40 @@ export function ExperiencePage(props: { data: Experience }) {
 
             <Show when={hasFiles()}>
               <Section id="files" title="Files">
-                <p class="mb-4 border-l-2 border-accent bg-accent/8 px-4 py-3.5 text-sm text-fg-2">
-                  <b class="font-semibold text-fg">This is a template.</b> Take
-                  the files, change what you like and publish your own version.
-                </p>
+                <Show
+                  when={data().viewer.canOfferTemplate}
+                  fallback={
+                    <Show
+                      when={data().isTemplate}
+                      fallback={
+                        <p class="mb-4 border-l-2 border-steel bg-steel/8 px-4 py-3.5 text-sm text-fg-2">
+                          <b class="font-semibold text-fg">Not a template.</b>{' '}
+                          Only its owner and the moderators can download these
+                          files.
+                        </p>
+                      }
+                    >
+                      <p class="mb-4 border-l-2 border-accent bg-accent/8 px-4 py-3.5 text-sm text-fg-2">
+                        <b class="font-semibold text-fg">This is a template.</b>{' '}
+                        Take the files, change what you like and publish your
+                        own version.
+                      </p>
+                    </Show>
+                  }
+                >
+                  <TemplateOffer
+                    slug={data().slug}
+                    isTemplate={data().isTemplate}
+                    published={data().status === 'published'}
+                    request={data().viewer.templateRequest}
+                  />
+                </Show>
                 <ul class={`${panel} divide-y divide-line`}>
                   <For each={data().files}>
                     {(file) => (
                       <li class="flex items-center gap-4 px-4 py-3.5">
-                        <span
-                          class="grid size-11 shrink-0 place-items-center border border-line bg-surface-3 font-mono text-xs font-semibold tracking-[0.04em] text-steel"
-                          aria-hidden="true"
-                        >
-                          {FILE_GLYPHS[file.kind]}
+                        <span class={fileGlyph} aria-hidden="true">
+                          {fileGlyphs[file.kind]}
                         </span>
                         <span class="min-w-0 flex-1 truncate text-[15px] font-semibold">
                           {file.filename}

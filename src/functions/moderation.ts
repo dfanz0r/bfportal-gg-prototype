@@ -3,8 +3,10 @@ import { z } from 'zod'
 
 import { assertFromThisSite, currentActor } from '../server/auth/actor'
 import {
+  decideEdit,
   decideSnippet,
   decideSubmission,
+  getEditReview,
   getSubmissionReview,
   listQueue,
 } from '../server/services/moderation'
@@ -79,6 +81,28 @@ export const decideOnSnippet = createServerFn({ method: 'POST' })
     return result
   })
 
+/** One pending edit, beside the page as it is live now. */
+export const fetchEditReview = createServerFn({ method: 'GET' })
+  .validator(z.object({ id: z.number().int().positive() }))
+  .handler(async ({ data }) => getEditReview(await currentActor(), data.id))
+
+/** Approves a pending edit, or sends it back with changes requested. */
+export const decideOnEdit = createServerFn({ method: 'POST' })
+  .validator(formOr(decisionSchema))
+  .handler(async ({ data }) => {
+    assertFromThisSite()
+    const { input } = data
+    const result = input
+      ? await decideEdit(await currentActor(), input.id, input)
+      : refuse('invalid', data.errors)
+    if (data.viaForm) throw decisionAnswer(result, data.back, input?.note)
+    return result
+  })
+
+export type EditReview = Extract<
+  Awaited<ReturnType<typeof fetchEditReview>>,
+  { ok: true }
+>
 export type Queue = Extract<
   Awaited<ReturnType<typeof fetchQueue>>,
   { ok: true }

@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, gt, isNull, lte, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { gameInfo } from '../../shared/games'
 import { shownMedia } from '../../shared/media'
 import { isStaff as isStaffRole } from '../../shared/roles'
 import { teamSetupSchema } from '../../shared/teams'
@@ -31,6 +32,7 @@ import {
   visible,
 } from './experience-cards'
 import { excerpt, personColumns, publicPerson } from './shared'
+import { templateRequestOf } from './template-offers'
 
 // Everything an experience's own page shows. Nothing here is private: what
 // this returns is written into the page.
@@ -81,6 +83,8 @@ export async function getExperience(
   const isOwner = viewer?.id === found.owner.id
   const isStaff = viewer !== null && isStaffRole(viewer.role)
   if (experience.status !== 'published' && !isOwner && !isStaff) return null
+  // A draft has not been sent to anyone, moderators included.
+  if (experience.status === 'draft' && !isOwner) return null
   const read = rotationSchema.safeParse(experience.mapRotation ?? [])
   if (!read.success) {
     // The page still shows; a rotation that will not read is left off it.
@@ -102,6 +106,7 @@ export async function getExperience(
     more,
     [ownLike],
     ownReports,
+    templateRequest,
   ] = await Promise.all([
     db
       .select({ url: experienceMedia.url })
@@ -176,8 +181,9 @@ export async function getExperience(
       )
       .orderBy(desc(playtests.opensAt))
       .limit(1),
-    // Files are shared when the experience is offered as a template.
-    experience.isTemplate
+    // Files are shared when the experience is offered as a template. Its
+    // owner and the moderators see them either way.
+    experience.isTemplate || isOwner || isStaff
       ? db
           .select({
             id: projectFiles.id,
@@ -231,6 +237,8 @@ export async function getExperience(
             ),
           )
       : [],
+    // Its owner's request to offer it as a template, which only they see.
+    isOwner ? templateRequestOf(experience.id) : null,
   ])
 
   const mapOf = new Map(mapRows.map((map) => [map.levelId, map]))
@@ -287,6 +295,9 @@ export async function getExperience(
       reported: ownReports.map((report) => report.type),
       isOwner,
       isStaff,
+      // Where its owner may offer its files, and how their request stands.
+      templateRequest,
+      canOfferTemplate: isOwner && gameInfo(experience.game).hasExport,
     },
     owner: publicPerson(found.owner),
     // An invitation not yet accepted shows nowhere.
@@ -343,9 +354,10 @@ export type ExperienceData = NonNullable<
 
 /**
  * One shared file, for download. Null unless it belongs to a published
- * experience that is offered as a template.
+ * experience that is offered as a template, or the viewer is its owner or a
+ * moderator, who see a submission's files before it is published.
  */
-export async function getProjectFile(id: number) {
+export async function getProjectFile(id: number, viewer: Actor | null) {
   const [file] = await db
     .select({
       filename: projectFiles.filename,
@@ -354,7 +366,15 @@ export async function getProjectFile(id: number) {
     .from(projectFiles)
     .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
     .where(
-      and(eq(projectFiles.id, id), eq(experiences.isTemplate, true), visible),
+      and(
+        eq(projectFiles.id, id),
+        isNull(experiences.deletedAt),
+        or(
+          and(eq(experiences.isTemplate, true), visible),
+          viewer && isStaffRole(viewer.role) ? sql`true` : undefined,
+          viewer ? eq(experiences.ownerId, viewer.id) : undefined,
+        ),
+      ),
     )
     .limit(1)
   return file ?? null

@@ -7,7 +7,10 @@ import { db } from '../db'
 import { categories, sdkVersions, tagGroups, tags } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { allow } from '../rate-limit'
-import { readDraft } from './drafts'
+import { type Draft, readDraft } from './drafts'
+import { ownDraft } from './experience-drafts'
+import { heldFilesFor, heldIdsIn } from './held-files'
+import { ownSubmissionTally } from './own-submissions'
 import { peopleByDiscordId } from './people'
 import { groupBy } from './shared'
 
@@ -37,7 +40,41 @@ export async function getSubmitPage(
   options: { lookup?: typeof lookupExperience } = {},
 ) {
   if (!actor) return { state: 'login' as const }
-  const draft = search.draft ? await readDraft(actor, 'experience') : null
+  const kept = search.draft ? await readDraft(actor, 'experience') : null
+  // A kept form from editing a draft is that draft's page's to show.
+  const draft = kept?.fields.editing ? null : kept
+  return pageFor(actor, search, draft, null, options)
+}
+
+/**
+ * The form for one of their drafts, as it was saved, or as it was last sent
+ * and refused when `search.draft` says so. `not-found` for a draft that is not
+ * theirs, or is no longer a draft.
+ */
+export async function getDraftEditPage(
+  actor: Actor | null,
+  slug: string,
+  search: Omit<SubmitSearch, 'game'>,
+  options: { lookup?: typeof lookupExperience } = {},
+) {
+  if (!actor) return { state: 'login' as const }
+  const saved = await ownDraft(actor, slug)
+  if (!saved) return { state: 'not-found' as const }
+  const kept = search.draft ? await readDraft(actor, 'experience') : null
+  const draft =
+    kept?.fields.editing === slug
+      ? kept
+      : (saved.draftForm ?? { fields: { title: saved.title }, errors: {} })
+  return pageFor(actor, search, draft, saved, options)
+}
+
+async function pageFor(
+  actor: Actor,
+  search: SubmitSearch,
+  draft: Draft | null,
+  editing: NonNullable<Awaited<ReturnType<typeof ownDraft>>> | null,
+  options: { lookup?: typeof lookupExperience },
+) {
   // A kept form says what it was for, where the address does not.
   const kept = (name: string) => {
     const value = draft?.fields[name]
@@ -46,8 +83,10 @@ export async function getSubmitPage(
   const typedLink = search.link ?? kept('link')
   const typedCode = search.code ?? kept('code')
   const linked = typedLink ? parsePortalLink(typedLink) : null
-  // A pasted link says which game it is for.
+  // A draft's game was settled when it was first saved. Otherwise a pasted
+  // link says which game it is for.
   const game =
+    editing?.game ??
     linked?.game ??
     search.game ??
     games.find((item) => item === kept('game')) ??
@@ -62,7 +101,7 @@ export async function getSubmitPage(
   const limited =
     by !== null && !allow(`lookup:${actor.id}`, LOOKUPS_PER_MINUTE, 60 * 1000)
 
-  const [offered, looked, credited] = await Promise.all([
+  const [offered, looked, credited, held, tally] = await Promise.all([
     getSubmitOptions(game),
     by && !limited ? (options.lookup ?? lookupExperience)(game, by) : null,
     // A kept form holds the accounts it credited by id. The form shows
@@ -70,6 +109,12 @@ export async function getSubmitPage(
     peopleByDiscordId(
       [draft?.fields.creditAccounts ?? []].flat().map(String).slice(0, 20),
     ),
+    // And the files it holds, by id: what each is, not what it says.
+    heldFilesFor(actor, heldIdsIn(draft?.fields.files), {
+      draft: editing?.id,
+    }),
+    // Where the rest of theirs stand, for the side of the page.
+    ownSubmissionTally(actor),
   ])
   const found = looked?.status === 'found' ? looked.experience : null
   return {
@@ -103,6 +148,16 @@ export async function getSubmitPage(
     },
     draft,
     credited,
+    held,
+    tally,
+    // When the page's data was read, to say how long ago it was saved.
+    now: new Date(),
+    // The draft this form is, when it is one.
+    editing: editing && {
+      slug: editing.slug,
+      title: editing.title,
+      savedAt: editing.updatedAt,
+    },
   }
 }
 
