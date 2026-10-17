@@ -112,7 +112,7 @@ export function YourSubmissions(props: { data: OwnSubmissions }) {
         <div class={`${panel} divide-y divide-line`}>
           <div class="hidden items-center gap-4 px-4 py-2.5 lg:flex">
             <span class={`${label} w-14`} />
-            <span class={`${label} min-w-0 flex-1`}>What</span>
+            <span class={`${label} min-w-0 flex-1`}>Submission</span>
             <div class={`${columns} w-[520px]`}>
               <span class={label}>Status</span>
               <span class={label}>Request</span>
