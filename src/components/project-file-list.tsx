@@ -1,3 +1,4 @@
+import { useLocation } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
 import type { FileKind } from '../shared/content'
@@ -20,6 +21,8 @@ export function ProjectFileList(props: {
   /** Whether they are offered as a template, which makes them public. */
   isTemplate: boolean
 }) {
+  // A file opened from here comes back here.
+  const location = useLocation()
   return (
     <Show when={props.files.length > 0}>
       <div>
@@ -58,7 +61,7 @@ export function ProjectFileList(props: {
                   {formatBytes(file.sizeBytes)}
                 </span>
                 <a
-                  href={`/files/${file.id}`}
+                  href={`/files/${file.id}?back=${encodeURIComponent(location().pathname)}`}
                   class="text-sm text-steel-hi underline"
                 >
                   View

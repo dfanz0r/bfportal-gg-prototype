@@ -3,6 +3,7 @@ import { Show } from 'solid-js'
 import type { FileView } from '../functions/files'
 import { formatBytes } from '../shared/dates'
 import { fileGlyphs } from '../shared/project-files'
+import { safeBackPath } from '../shared/results'
 import { CodeView } from './code-view'
 import { CopyText } from './copy-text'
 import { Icon } from './icon'
@@ -15,10 +16,22 @@ const count = (value: number) => value.toLocaleString('en-US')
  * One of a project's files, to read without downloading it: for a moderator
  * looking over a submission, or anyone looking at a template.
  */
-export function FilePage(props: { data: FileView }) {
+export function FilePage(props: {
+  data: FileView
+  /** The page it was opened from, if it says; else its experience's page. */
+  back?: string
+}) {
   const data = () => props.data
   const file = () => data().file
   const cut = () => data().shownLines < data().lines
+  const experiencePage = () => `/experiences/${data().experience.slug}`
+  // Only one of this site's own pages.
+  const back = () => {
+    const given = props.back ? safeBackPath(props.back) : '/'
+    return given === '/' ? experiencePage() : given
+  }
+  const backLabel = () =>
+    back().startsWith('/admin/') ? 'Back to the review' : 'Back'
 
   return (
     <PageLayout
@@ -32,14 +45,20 @@ export function FilePage(props: { data: FileView }) {
         { label: 'Files' },
       ]}
       actions={
-        <a
-          href={`/api/files/${file().id}`}
-          download={file().filename}
-          class={buttonGhost}
-        >
-          <Icon name="download" />
-          Download
-        </a>
+        <>
+          <a href={back()} class={buttonGhost}>
+            <Icon name="arrow-right" class="size-4 rotate-180" />
+            {backLabel()}
+          </a>
+          <a
+            href={`/api/files/${file().id}`}
+            download={file().filename}
+            class={buttonGhost}
+          >
+            <Icon name="download" />
+            Download
+          </a>
+        </>
       }
     >
       <Show when={!data().experience.isTemplate}>
