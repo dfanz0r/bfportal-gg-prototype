@@ -506,9 +506,10 @@ describe('submitting an experience', () => {
     const { row } = await stored('played-not-shared')
     expect(row.isTemplate).toBe(false)
     const files = await db
-      .select({ id: projectFiles.id, kind: projectFiles.kind })
+      .select({ id: projectFiles.publicId, kind: projectFiles.kind })
       .from(projectFiles)
       .where(eq(projectFiles.experienceId, row.id))
+      .orderBy(projectFiles.id)
     expect(files.map((file) => file.kind)).toEqual(['export', 'spatial'])
     // Only its owner and the moderators can download them.
     expect(await getProjectFile(files[0].id, null)).toBeNull()

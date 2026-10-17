@@ -16,6 +16,9 @@ export const MAX_ADDED_FILES = 10
 /** What may be added beside the export. */
 export const ADDED_FILE_TYPES = ['.tscn', '.ts', '.json']
 
+/** What a stored file's public id looks like: 32 hex digits. */
+export const FILE_ID = /^[0-9a-f]{32}$/
+
 /** The short label drawn for a file of each kind. */
 export const fileGlyphs: Record<FileKind, string> = {
   export: 'JSON',

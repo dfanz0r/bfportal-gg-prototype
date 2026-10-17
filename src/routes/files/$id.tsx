@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { FilePage } from '../../components/file-page'
 import { fetchFileView } from '../../functions/files'
 import { pageTitle } from '../../shared/page-title'
+import { FILE_ID } from '../../shared/project-files'
 
 // One project file, read on a page. Who may see it is who may download it.
 export const Route = createFileRoute('/files/$id')({
@@ -12,8 +13,8 @@ export const Route = createFileRoute('/files/$id')({
     back: z.string().max(300).optional().catch(undefined),
   }),
   loader: async ({ params }) => {
-    const view = /^\d{1,9}$/.test(params.id)
-      ? await fetchFileView({ data: { id: Number(params.id) } })
+    const view = FILE_ID.test(params.id)
+      ? await fetchFileView({ data: { id: params.id } })
       : null
     if (!view) throw notFound()
     return view

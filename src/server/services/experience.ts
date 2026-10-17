@@ -186,7 +186,8 @@ export async function getExperience(
     experience.isTemplate || isOwner || isStaff
       ? db
           .select({
-            id: projectFiles.id,
+            // The one its addresses use.
+            id: projectFiles.publicId,
             kind: projectFiles.kind,
             filename: projectFiles.filename,
             sizeBytes: projectFiles.sizeBytes,
@@ -358,7 +359,7 @@ export type ExperienceData = NonNullable<
  * experience that is offered as a template, or the viewer is its owner or a
  * moderator, who see a submission's files before it is published.
  */
-export async function getProjectFile(id: number, viewer: Actor | null) {
+export async function getProjectFile(publicId: string, viewer: Actor | null) {
   const [file] = await db
     .select({
       filename: projectFiles.filename,
@@ -366,7 +367,7 @@ export async function getProjectFile(id: number, viewer: Actor | null) {
     })
     .from(projectFiles)
     .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
-    .where(and(eq(projectFiles.id, id), fileReadableBy(viewer)))
+    .where(and(eq(projectFiles.publicId, publicId), fileReadableBy(viewer)))
     .limit(1)
   return file ?? null
 }

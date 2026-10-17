@@ -183,7 +183,7 @@ describe('experience', () => {
   it('hands out a file for a published template, and before that only to its owner and moderators', async () => {
     const [file] = await db
       .select({
-        id: projectFiles.id,
+        id: projectFiles.publicId,
         experienceId: projectFiles.experienceId,
         ownerId: experiences.ownerId,
       })
@@ -197,7 +197,9 @@ describe('experience', () => {
     const found = await getProjectFile(file.id, null)
     expect(found?.filename).toBe('Script.ts')
     expect(found?.body).toContain('RETURN_AFTER_SECONDS')
-    expect(await getProjectFile(999999, moderator)).toBeNull()
+    // An address is 32 random hex digits, and one that is no file's is none.
+    expect(file.id).toMatch(/^[0-9a-f]{32}$/)
+    expect(await getProjectFile('0'.repeat(32), moderator)).toBeNull()
 
     // Waiting for a moderator: not for anyone yet.
     await db

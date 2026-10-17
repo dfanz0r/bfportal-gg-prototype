@@ -33,7 +33,7 @@ async function privateFile(filename: string, body: string) {
       body,
       uploadedBy: row.ownerId,
     })
-    .returning({ id: projectFiles.id })
+    .returning({ id: projectFiles.publicId })
   return { id: file.id, owner: { id: row.ownerId, role: 'user' as const } }
 }
 
@@ -48,7 +48,7 @@ describe('viewing a project file', () => {
 
   it('shows a template’s file to anyone, as it is', async () => {
     const [file] = await db
-      .select({ id: projectFiles.id })
+      .select({ id: projectFiles.publicId })
       .from(projectFiles)
       .where(eq(projectFiles.filename, 'Script.ts'))
     const view = await getFileView(file.id, null)

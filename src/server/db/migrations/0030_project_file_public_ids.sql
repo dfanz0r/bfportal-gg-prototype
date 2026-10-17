@@ -1,0 +1,2 @@
+ALTER TABLE "project_files" ADD COLUMN "public_id" text DEFAULT replace(gen_random_uuid()::text, '-', '') NOT NULL;--> statement-breakpoint
+ALTER TABLE "project_files" ADD CONSTRAINT "project_files_public_id_unique" UNIQUE("public_id");

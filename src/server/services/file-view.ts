@@ -44,11 +44,12 @@ function readable(filename: string, body: string) {
  * A project file to view, if whoever is looking may read it: the same rule
  * as downloading it. Null otherwise.
  */
-export async function getFileView(id: number, viewer: Actor | null) {
+export async function getFileView(publicId: string, viewer: Actor | null) {
   const [found] = await db
     .select({
       file: {
-        id: projectFiles.id,
+        // The one its addresses use.
+        id: projectFiles.publicId,
         kind: projectFiles.kind,
         filename: projectFiles.filename,
         sizeBytes: projectFiles.sizeBytes,
@@ -63,7 +64,7 @@ export async function getFileView(id: number, viewer: Actor | null) {
     })
     .from(projectFiles)
     .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
-    .where(and(eq(projectFiles.id, id), fileReadableBy(viewer)))
+    .where(and(eq(projectFiles.publicId, publicId), fileReadableBy(viewer)))
     .limit(1)
   if (!found) return null
 

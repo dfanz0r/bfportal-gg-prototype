@@ -732,6 +732,13 @@ export const projectFiles = pgTable(
   'project_files',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    // What its addresses use, in place of the id: 32 random hex digits, so a
+    // file's address cannot be guessed from another's, and how many there are
+    // is not given away. Anyone may still only read what they may download.
+    publicId: text('public_id')
+      .notNull()
+      .unique()
+      .default(sql`replace(gen_random_uuid()::text, '-', '')`),
     experienceId: integer('experience_id').references(() => experiences.id, {
       onDelete: 'cascade',
     }),

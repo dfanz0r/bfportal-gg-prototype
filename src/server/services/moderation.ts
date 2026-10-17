@@ -190,7 +190,8 @@ export async function getEditReview(actor: Actor | null, id: number) {
   const payload = editPayloadSchema.catch({}).parse(found.payload)
   const files = await db
     .select({
-      id: projectFiles.id,
+      // The one its addresses use.
+      id: projectFiles.publicId,
       kind: projectFiles.kind,
       filename: projectFiles.filename,
       sizeBytes: projectFiles.sizeBytes,
@@ -364,10 +365,11 @@ export async function getSubmissionReview(
       .from(experienceMedia)
       .where(eq(experienceMedia.experienceId, experience.id))
       .orderBy(asc(experienceMedia.position)),
-    // A template's files, which are reviewed with it.
+    // Its files, which are reviewed with it.
     db
       .select({
-        id: projectFiles.id,
+        // The one its addresses use.
+        id: projectFiles.publicId,
         kind: projectFiles.kind,
         filename: projectFiles.filename,
         sizeBytes: projectFiles.sizeBytes,

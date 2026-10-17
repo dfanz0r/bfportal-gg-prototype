@@ -12,7 +12,8 @@ import { fileGlyph, label, panel } from './ui'
  */
 export function ProjectFileList(props: {
   files: {
-    id: number
+    /** Its public id, which its addresses use. */
+    id: string
     kind: FileKind
     filename: string
     sizeBytes: number
