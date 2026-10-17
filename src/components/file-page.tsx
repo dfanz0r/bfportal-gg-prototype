@@ -2,7 +2,7 @@ import { Show } from 'solid-js'
 
 import type { FileView } from '../functions/files'
 import { formatBytes } from '../shared/dates'
-import { fileGlyphs } from '../shared/project-files'
+import { fileGlyphs, fileLanguages } from '../shared/project-files'
 import { safeBackPath } from '../shared/results'
 import { CodeView } from './code-view'
 import { CopyText } from './copy-text'
@@ -80,7 +80,11 @@ export function FilePage(props: {
             <CopyText text={data().text} label="Copy" />
           </Show>
         </p>
-        <CodeView text={data().text} class="max-h-[75vh]" />
+        <CodeView
+          text={data().text}
+          language={fileLanguages[file().kind]}
+          class="max-h-[75vh]"
+        />
         <Show when={cut()}>
           <p class="border-t border-line px-4 py-3 text-sm text-fg-2">
             The first {count(data().shownLines)} of {count(data().lines)} lines.

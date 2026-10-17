@@ -29,6 +29,22 @@ export const fileGlyphs: Record<FileKind, string> = {
   other: 'FILE',
 }
 
+/** The languages code is colored in. */
+export type CodeLanguage = 'typescript' | 'json' | 'gdresource'
+
+/**
+ * What a file of each kind is colored as. Anything else in an export could be
+ * any format, so it is shown plain.
+ */
+export const fileLanguages: Record<FileKind, CodeLanguage | null> = {
+  export: 'json',
+  script: 'typescript',
+  spatial: 'json',
+  scene: 'gdresource',
+  strings: 'json',
+  other: null,
+}
+
 /** What an export holds, as the form shows it once it is read. */
 export type ExportSummary = {
   name: string

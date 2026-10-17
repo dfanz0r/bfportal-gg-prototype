@@ -34,6 +34,13 @@
   --color-danger: #f0524d;
   --color-live: #ff3b3b;
 
+  /* Code: plain text, then the four kinds of word that are colored */
+  --color-code-text: #c8d1da;
+  --color-code-keyword: #ff8a65;
+  --color-code-string: #9fd6a0;
+  --color-code-comment: #5d6873;
+  --color-code-name: #8fc1ea;
+
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;

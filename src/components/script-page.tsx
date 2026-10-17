@@ -68,7 +68,11 @@ export function ScriptPage(props: {
               <span>Script.ts, {data().lines} lines</span>
               <CopyText text={data().script} label="Copy" />
             </p>
-            <CodeView text={data().script} class="max-h-[560px]" />
+            <CodeView
+              text={data().script}
+              language="typescript"
+              class="max-h-[560px]"
+            />
           </div>
 
           <Show when={data().descriptionHtml}>

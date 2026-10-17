@@ -56,6 +56,7 @@ installed, `package.json` and the lockfile are the record of its version, not th
 | Validation | Zod | 4.6.7 | In use for the environment; proposed for forms and the API |
 | Styling | Tailwind (current site is on 3.3.2) | 4.3.3 | In use. The theme holds the mockup's tokens, and Tailwind's default palette is switched off |
 | Markdown | `marked` with `sanitize-html`, server side | 18.1.1, 2.18.0 | Proposed |
+| Code coloring | Shiki, JavaScript regex engine, in the browser | 4.5.0 | In use. `CodeView` sends code plain and colors it once the page runs, a batch of lines at a time; only pages that show code load it. TypeScript, JSON and Godot scenes, in the mockup's four colors |
 | Admin tables and forms | TanStack Table, Form, Query (Solid adapters) | 9.3.1, 1.33.5, 5.104.2 | Proposed, admin routes only |
 | Tests | Vitest, Playwright | 5.0.4, 1.64.0 | Vitest in use, with happy-dom for component tests; Playwright proposed, and needed for anything that clicks through pages |
 | Lint and format | Biome | 2.5.15 | Agreed |
