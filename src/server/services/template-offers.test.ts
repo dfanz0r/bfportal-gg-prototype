@@ -130,21 +130,48 @@ describe('offering files as a template after submitting', () => {
     expect(await templateRequestOf(id)).toBeNull()
   })
 
-  it('offers them at once while it waits for its first review', async () => {
+  it('does not offer them while it is in review, but stops offering them', async () => {
     const { id, slug, owner } = await liveExperience('bf6', true)
     await db
       .update(experiences)
       .set({ status: 'pending' })
       .where(eq(experiences.id, id))
-    expect(await offerAsTemplate(owner, slug, true, NOW)).toEqual({
-      ok: true,
-      state: 'offered',
+    // The moderator decides on it with its files private.
+    expect(await offerAsTemplate(owner, slug, true, NOW)).toMatchObject({
+      ok: false,
+      reason: 'invalid',
     })
-    expect(await isTemplate(id)).toBe(true)
+    expect(await isTemplate(id)).toBe(false)
     expect(await pendingEdits(id)).toEqual([])
+
     await db
       .update(experiences)
-      .set({ status: 'published', isTemplate: false })
+      .set({ isTemplate: true })
+      .where(eq(experiences.id, id))
+    expect(await offerAsTemplate(owner, slug, false, NOW)).toEqual({
+      ok: true,
+      state: 'withdrawn',
+    })
+    expect(await isTemplate(id)).toBe(false)
+    await db
+      .update(experiences)
+      .set({ status: 'published' })
+      .where(eq(experiences.id, id))
+  })
+
+  it('refuses one that has been deleted', async () => {
+    const { id, slug, owner } = await liveExperience('bf6', true)
+    await db
+      .update(experiences)
+      .set({ deletedAt: NOW })
+      .where(eq(experiences.id, id))
+    expect(await offerAsTemplate(owner, slug, false, NOW)).toMatchObject({
+      ok: false,
+      reason: 'not-found',
+    })
+    await db
+      .update(experiences)
+      .set({ deletedAt: null })
       .where(eq(experiences.id, id))
   })
 

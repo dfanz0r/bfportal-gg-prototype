@@ -1086,9 +1086,11 @@ Rules:
   2026-10-16: they are kept either way, so the owner can offer them later; until then
   only the owner and the moderators can download them. Taking the offer back is
   immediate. Offering the files of something published waits for a moderator, as an
-  edit; before it is published, its review covers the files already, so the switch
-  is immediate both ways. In a game with no export a template is its category, which
-  an edit changes.
+  edit; before it is sent in, or when it has been sent back, its review covers the
+  files already, so the switch is immediate both ways. While it is in review the files
+  cannot be offered, changed 2026-10-17: the moderator decides on it with them private,
+  and offering them is for after. In a game with no export a template is its
+  category, which an edit changes.
 - Files are served as downloads or shown as escaped text, never as a page: a fixed
   plain-text or JSON content type, `nosniff`, and `Content-Disposition: attachment`.
 - 2 MB per file, and only `.json`, `.ts` and `.tscn`. A larger file, typically a big
@@ -1424,7 +1426,7 @@ statuses are defined under "Submission states".
 | Action | Who | Effect |
 |---|---|---|
 | Save a draft | Logged-in user | New, 2026-10-13. An experience or snippet as `draft`, seen only by its owner. Built for experiences 2026-10-16, with deleting a draft; see "Submission states" |
-| Submit | Logged-in user | Experience or snippet as `pending`; approval request posted to the Discord approval channel. Limits: 5 waiting and 10 a day for an account that is not staff |
+| Submit | Logged-in user | Experience or snippet as `pending`; approval request posted to the Discord approval channel. Limits: 5 waiting and 10 a day for an account that is not staff, deleted ones included in the day's 10 |
 | Approve submission | Moderator, admin | `published`; first approval posts the announcement to the Discord success channel, once |
 | Request changes | Moderator, admin | New, 2026-10-13, in place of "reject". `changes_requested`, with a note and notes on particular fields. It is not an end: see the next row |
 | Fix and resubmit | Owner, collaborator | New, 2026-10-13. Back to `pending`, on the same row and address. Built for an experience's owner 2026-10-17 |
@@ -1433,7 +1435,7 @@ statuses are defined under "Submission states".
 | Approve an edit, or request changes to it | Moderator, admin | Payload applied; or the revision is `changes_requested` and its owner fixes it and sends it again |
 | Mark own experience bugged or broken | Owner, collaborator | Immediate |
 | Add or remove a credited account | Owner | New. Immediate. The account is shown only once that user accepts |
-| Offer its files as a template, or stop | Owner | New, 2026-10-16. Stopping is immediate. Offering is immediate before it is published, and after that an edit for a moderator. See "Project files" |
+| Offer its files as a template, or stop | Owner | New, 2026-10-16. Stopping is immediate. Offering is immediate before it is sent in or once sent back, refused while it is in review, and an edit for a moderator once published. See "Project files" |
 | Give or withdraw edit access | Owner | New. Immediate, and always explicit. Off by default |
 | Accept or decline an invitation, or leave | The invited user | New. Immediate |
 | Add or change a named credit | Owner | New. Part of an edit, so it goes to moderation |
@@ -1817,7 +1819,12 @@ The same shape as today, so nothing about hosting has to change at once:
   webhook id and token pairs, `OWNERS`, the Cloudflare credentials, the database URL,
   and `SITE_URL`, the public address used in canonical links and previews, which
   defaults to the sign-in address. One module validates them, and the server refuses
-  to start if any is missing.
+  to start if any is missing. `CLIENT_IP_HEADER` names the header the proxy in front
+  sets to the visitor's address: `cf-connecting-ip` behind Cloudflare, set in
+  `compose.prod.yml`. Better Auth and the per-address limits read only that one.
+- Added 2026-10-17, after a review: starting a sign-in is limited to 10 a minute per
+  address. A request body over 32 MB is refused before it is read, and so is a body
+  with no `Content-Length`, which browsers and Cloudflare always send.
 - HTML is not cached at Cloudflare for now. Caching it for requests with no session
   cookie is deferred; see "Rendering". The API keeps its five-minute cache headers.
 
@@ -2185,7 +2192,8 @@ was settled first, so the screens are built against seed data and the import fol
    Tightened after review, 2026-10-13:
 
    - **Limits.** An account that is not staff may have 5 submissions waiting and send
-     10 in a day; both are counted in the database. Lookups from the submit page are
+     10 in a day; both are counted in the database. A day's count includes what was
+     sent and then deleted, and leaves out drafts, which were sent to nobody. Lookups from the submit page are
      held to 20 a minute per account, in memory, and a lookup's answer is reused for a
      minute. gametools is someone else's service and the queue is a moderator's time.
    - **The address is found by trying.** Two people sending the same title at once

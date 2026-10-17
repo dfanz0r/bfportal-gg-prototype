@@ -287,6 +287,7 @@ export function ExperiencePage(props: { data: Experience }) {
                     slug={data().slug}
                     isTemplate={data().isTemplate}
                     published={data().status === 'published'}
+                    inReview={data().status === 'pending'}
                     request={data().viewer.templateRequest}
                   />
                 </Show>

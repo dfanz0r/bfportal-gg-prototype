@@ -410,6 +410,9 @@ export async function submitExperience(
                 and(
                   eq(experiences.id, draft.id),
                   inArray(experiences.status, ['draft', 'changes_requested']),
+                  // Still there: deleted since it was read, it is not
+                  // submitted, and nothing reports that it was.
+                  isNull(experiences.deletedAt),
                 ),
               )
               .returning({ id: experiences.id })

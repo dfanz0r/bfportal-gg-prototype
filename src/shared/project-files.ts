@@ -13,6 +13,14 @@ export const MAX_EXPORT_BYTES = 10 * 1024 * 1024
 export const MAX_FILE_BYTES = 2 * 1024 * 1024
 /** How many files may be added beside the export. */
 export const MAX_ADDED_FILES = 10
+/**
+ * The most one request may carry: an export and every file beside it, sent
+ * together by a form with no script, with room for the rest of the form and
+ * for the script's way of sending a file as text. A request is refused at
+ * this size before anything reads it.
+ */
+export const MAX_REQUEST_BYTES = 32 * 1024 * 1024
+
 /** What may be added beside the export. */
 export const ADDED_FILE_TYPES = ['.tscn', '.ts', '.json']
 

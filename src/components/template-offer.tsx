@@ -18,6 +18,8 @@ export function TemplateOffer(props: {
   slug: string
   isTemplate: boolean
   published: boolean
+  /** Waiting for its review, when its files are not offered until after. */
+  inReview: boolean
   request: { waiting: boolean; note: string | null } | null
 }) {
   const router = useRouter()
@@ -83,6 +85,10 @@ export function TemplateOffer(props: {
                     {' '}
                     A moderator approves offering them.
                   </Show>
+                  <Show when={props.inReview}>
+                    {' '}
+                    They can be offered once its review is decided.
+                  </Show>
                 </>
               }
             >
@@ -91,17 +97,20 @@ export function TemplateOffer(props: {
             </Show>
           </Show>
         </p>
-        <button
-          type="submit"
-          disabled={sending()}
-          class={`${buttonGhost} h-[34px] px-3 text-xs`}
-        >
-          {props.isTemplate
-            ? 'Stop offering'
-            : waiting()
-              ? 'Cancel request'
-              : 'Offer as a template'}
-        </button>
+        {/* In review, files can stop being offered, but not start. */}
+        <Show when={props.isTemplate || !props.inReview}>
+          <button
+            type="submit"
+            disabled={sending()}
+            class={`${buttonGhost} h-[34px] px-3 text-xs`}
+          >
+            {props.isTemplate
+              ? 'Stop offering'
+              : waiting()
+                ? 'Cancel request'
+                : 'Offer as a template'}
+          </button>
+        </Show>
       </div>
       {/* Headed by what it is, never by who wrote it. */}
       <Show when={!props.isTemplate && props.request?.note}>

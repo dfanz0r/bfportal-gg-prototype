@@ -23,6 +23,14 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   DISCORD_CLIENT_ID: discordCredential,
   DISCORD_CLIENT_SECRET: discordCredential,
+  // The request header the proxy in front of the site puts the visitor's
+  // address in, which limits per visitor go by. Only a header that proxy
+  // sets itself can be trusted: behind Cloudflare that is cf-connecting-ip,
+  // where x-forwarded-for keeps whatever the visitor sent ahead of it.
+  CLIENT_IP_HEADER: z
+    .string()
+    .regex(/^[a-z0-9-]+$/i)
+    .default('x-forwarded-for'),
 })
 
 // A variable left blank in an env file arrives as an empty string.
@@ -38,6 +46,16 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data
+
+/**
+ * The visitor's address, as the proxy in front of the site says it, or null
+ * where there is none, as in development. The first address in the header is
+ * the one nearest the visitor.
+ */
+export function clientIp(request: Request) {
+  const value = request.headers.get(env.CLIENT_IP_HEADER)
+  return value?.split(',')[0]?.trim() || null
+}
 
 /** The site's public address, with no slash on the end. */
 export const siteUrl = (env.SITE_URL ?? env.BETTER_AUTH_URL).replace(/\/+$/, '')

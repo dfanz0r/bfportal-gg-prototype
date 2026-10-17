@@ -635,6 +635,17 @@ describe('submitting an experience', () => {
       ok: false,
       errors: { form: expect.stringContaining('last day') },
     })
+    // Deleting one does not give its place back.
+    await db
+      .update(experiences)
+      .set({ deletedAt: NOW })
+      .where(eq(experiences.ownerId, busy.id))
+    expect(
+      await submitExperience(busy, form({ title: 'One more' }), answers(found)),
+    ).toMatchObject({
+      ok: false,
+      errors: { form: expect.stringContaining('last day') },
+    })
     // Tomorrow is another day.
     const tomorrow = new Date(NOW.getTime() + 25 * 60 * 60 * 1000)
     expect(

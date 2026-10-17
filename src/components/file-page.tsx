@@ -23,7 +23,7 @@ export function FilePage(props: {
 }) {
   const data = () => props.data
   const file = () => data().file
-  const cut = () => data().shownLines < data().lines
+  const cut = () => data().truncated
   const experiencePage = () => `/experiences/${data().experience.slug}`
   // Only one of this site's own pages.
   const back = () => {
@@ -87,7 +87,13 @@ export function FilePage(props: {
         />
         <Show when={cut()}>
           <p class="border-t border-line px-4 py-3 text-sm text-fg-2">
-            The first {count(data().shownLines)} of {count(data().lines)} lines.
+            <Show
+              when={data().shownLines < data().lines}
+              fallback="Only the start of this file is shown."
+            >
+              The first {count(data().shownLines)} of {count(data().lines)}{' '}
+              lines.
+            </Show>{' '}
             Download it for the rest.
           </p>
         </Show>

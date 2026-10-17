@@ -1,14 +1,21 @@
 import { and, count, eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
 
-import { experienceFormSchema, formErrors } from '../../shared/experience-form'
+import {
+  experienceFormSchema,
+  formErrors,
+  MAX_CREDITS,
+  MAX_MEDIA,
+} from '../../shared/experience-form'
 import { gameInfo } from '../../shared/games'
+import { MAX_ADDED_FILES } from '../../shared/project-files'
 import { type Refusal, refuse } from '../../shared/results'
 import { slugify } from '../../shared/slug'
+import { MAX_TEAMS } from '../../shared/teams'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { categories, experiences } from '../db/schema'
 import { renderMarkdown } from '../markdown'
-import { discardDraft } from './drafts'
+import { DRAFT_LIMIT, discardDraft } from './drafts'
 import { heldIdsIn, keepFilesWithDraft, letGoOfDraftFiles } from './held-files'
 import { type Executor, violates } from './shared'
 
@@ -24,6 +31,55 @@ export const MAX_DRAFTS = 20
 
 /** The experience form's own fields, which are all a draft keeps. */
 const FIELDS = Object.keys(experienceFormSchema.shape)
+
+type FieldName = keyof typeof experienceFormSchema.shape
+
+/**
+ * How much of each field a draft keeps: the same limits the form holds a
+ * submission to, in characters and, for a list, in entries. Whatever else a
+ * draft lets slide, it does not store more than a submission could. Every
+ * field of the form is here, or this does not compile.
+ */
+const SIZES: Record<FieldName, { chars: number; items?: number }> = {
+  editing: { chars: 200 },
+  game: { chars: 20 },
+  code: { chars: 20 },
+  link: { chars: 500 },
+  category: { chars: 80 },
+  title: { chars: 80 },
+  description: { chars: 10_000 },
+  tags: { chars: 80, items: 30 },
+  built: { chars: 20, items: 4 },
+  isTemplate: { chars: 10 },
+  copyAllowed: { chars: 10 },
+  teamPlayers: { chars: 5, items: MAX_TEAMS },
+  teamBots: { chars: 5, items: MAX_TEAMS },
+  coverImgUrl: { chars: 500 },
+  media: { chars: 500, items: MAX_MEDIA },
+  files: { chars: 36, items: MAX_ADDED_FILES + 1 },
+  repoUrl: { chars: 500 },
+  filesUrl: { chars: 500 },
+  credits: { chars: 60, items: MAX_CREDITS },
+  creditAccounts: { chars: 25, items: MAX_CREDITS },
+}
+
+/** What in a draft's fields is more than it may keep, by field. */
+function oversized(fields: Record<string, string | string[]>) {
+  const errors: Record<string, string> = {}
+  for (const [name, value] of Object.entries(fields)) {
+    const size = SIZES[name as FieldName]
+    if (!size) continue
+    // One value where a list is taken is a list of one.
+    const values = [value].flat()
+    const most = size.items ?? 1
+    if (values.length > most) {
+      errors[name] = most === 1 ? 'Only one is taken.' : `Up to ${most}.`
+    } else if (values.some((item) => item.length > size.chars)) {
+      errors[name] = `Keep it to ${size.chars} characters.`
+    }
+  }
+  return errors
+}
 
 /**
  * What a draft must be before it is saved: a title, a category, and nothing
@@ -119,6 +175,12 @@ export async function saveExperienceDraft(
 ): Promise<{ ok: true; slug: string } | Refusal> {
   if (!actor) return refuse('signed-out')
   const fields = keptFields(given)
+  const tooMuch = oversized(fields)
+  if (Object.keys(tooMuch).length > 0) return refuse('invalid', tooMuch)
+  // And the whole of it, which every field at its most stays well under.
+  if (JSON.stringify(fields).length > DRAFT_LIMIT) {
+    return refuse('invalid', { form: 'That is more than a draft keeps.' })
+  }
   const read = draftSchema.safeParse(fields)
   if (!read.success) return refuse('invalid', formErrors(read.error))
   const form = read.data
@@ -168,6 +230,9 @@ export async function saveExperienceDraft(
           and(
             eq(experiences.id, draft.id),
             inArray(experiences.status, EDITABLE),
+            // Still there: deleted in another tab since it was read, it is
+            // not saved into.
+            isNull(experiences.deletedAt),
           ),
         )
         .returning({ id: experiences.id })

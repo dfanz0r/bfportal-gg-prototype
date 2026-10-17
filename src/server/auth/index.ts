@@ -52,6 +52,11 @@ export const auth = betterAuth({
   // Better Auth checks where a request came from, and switches that check off
   // by itself when it detects a test run. Saying so here keeps it on there
   // too, so the tests see what production does.
-  advanced: { disableOriginCheck: false },
+  advanced: {
+    disableOriginCheck: false,
+    // Its limits on signing in go by the visitor's address, from the one
+    // header the proxy in front of the site sets itself.
+    ipAddress: { ipAddressHeaders: [env.CLIENT_IP_HEADER] },
+  },
   plugins: [tanstackStartCookies()],
 })

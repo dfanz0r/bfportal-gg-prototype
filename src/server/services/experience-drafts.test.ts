@@ -235,6 +235,19 @@ describe('drafts', () => {
     expect(
       (await saveExperienceDraft(owner, form({ title: 'One more' }), NOW)).ok,
     ).toBe(true)
+    // Drafts were sent to nobody, so none counts toward a day's submissions.
+    expect(
+      await submitExperience(
+        owner,
+        form({
+          title: 'Sent After Drafts',
+          isTemplate: 'true',
+          filesUrl: 'https://www.dropbox.com/s/abc/files.zip',
+          teamPlayers: ['16', '16'],
+        }),
+        { ...nobody, now: NOW },
+      ),
+    ).toEqual({ ok: true, slug: 'sent-after-drafts' })
   })
 
   it('deletes only its owner’s draft', async () => {
@@ -252,6 +265,65 @@ describe('drafts', () => {
     })
     expect((await row('thrown-away')).deletedAt).not.toBeNull()
     expect(await getExperience('thrown-away', NOW, owner)).toBeNull()
+
+    // Gone, so neither saved nor sent.
+    expect(
+      await saveExperienceDraft(
+        owner,
+        form({ editing: 'thrown-away', title: 'Back Again' }),
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: 'not-found' })
+    expect(
+      await submitExperience(
+        owner,
+        form({
+          editing: 'thrown-away',
+          isTemplate: 'true',
+          filesUrl: 'https://www.dropbox.com/s/abc/files.zip',
+          teamPlayers: ['16', '16'],
+        }),
+        { ...nobody, now: NOW },
+      ),
+    ).toEqual({ ok: false, reason: 'not-found' })
+    expect((await row('thrown-away')).status).toBe('draft')
+  })
+
+  it('keeps no more than a form holds', async () => {
+    const owner = writer(31)
+    expect(
+      await saveExperienceDraft(
+        owner,
+        form({ code: 'x'.repeat(1_100_000) }),
+        NOW,
+      ),
+    ).toMatchObject({ ok: false, errors: { code: expect.any(String) } })
+    expect(
+      await saveExperienceDraft(
+        owner,
+        form({ tags: Array.from({ length: 31 }, (_, n) => `tag-${n}`) }),
+        NOW,
+      ),
+    ).toMatchObject({ ok: false, errors: { tags: expect.any(String) } })
+    expect(
+      await saveExperienceDraft(owner, form({ title: ['One', 'Two'] }), NOW),
+    ).toMatchObject({ ok: false, errors: { title: expect.any(String) } })
+    // A form field it does not know is not kept, so it cannot be used to
+    // fill the draft either.
+    expect(
+      (
+        await saveExperienceDraft(
+          owner,
+          form({ padding: 'x'.repeat(1_100_000) }),
+          NOW,
+        )
+      ).ok,
+    ).toBe(true)
+    const [kept] = await db
+      .select({ draftForm: experiences.draftForm })
+      .from(experiences)
+      .where(eq(experiences.ownerId, owner.id))
+    expect(JSON.stringify(kept.draftForm).length).toBeLessThan(10_000)
   })
 
   it('opens one sent back as it was submitted, and resubmits it at the same address', async () => {

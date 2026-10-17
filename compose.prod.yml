@@ -47,6 +47,9 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+      # The visitor's address, as Cloudflare sets it. Limits per visitor go
+      # by this; x-forwarded-for keeps whatever a visitor sends.
+      CLIENT_IP_HEADER: cf-connecting-ip
     healthcheck:
       test:
         - CMD

@@ -99,6 +99,17 @@ describe('viewing a project file', () => {
     expect(view).toMatchObject({
       lines: MAX_SHOWN_LINES + 10,
       shownLines: MAX_SHOWN_LINES,
+      truncated: true,
     })
+  })
+
+  it('cuts one very long line short, and says it did', async () => {
+    const { id } = await privateFile('min.js', 'x'.repeat(1_500_000))
+    const view = await getFileView(id, moderator)
+    expect(view).toMatchObject({ lines: 1, shownLines: 1, truncated: true })
+    expect(view?.text.length).toBe(1_000_000)
+
+    const short = await privateFile('short.js', 'let a = 1\n')
+    expect((await getFileView(short.id, moderator))?.truncated).toBe(false)
   })
 })

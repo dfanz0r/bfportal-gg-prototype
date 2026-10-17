@@ -5,7 +5,7 @@ import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
-import { experiences, revisions } from '../db/schema'
+import { experiences, projectFiles, revisions } from '../db/schema'
 import { letGoOfDraftFiles } from './held-files'
 import type { Executor } from './shared'
 
@@ -52,6 +52,11 @@ export async function deleteOwnExperience(
     if (!deleted) return refuse('not-found')
     await dropPendingEdits(tx, deleted.id)
     await letGoOfDraftFiles(tx, deleted.id)
+    // Nobody can open its files now, so they are not kept: deleting is not a
+    // way to store uploads out of sight.
+    await tx
+      .delete(projectFiles)
+      .where(eq(projectFiles.experienceId, deleted.id))
     return { ok: true as const }
   })
 }

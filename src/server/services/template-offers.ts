@@ -52,10 +52,7 @@ export async function offerAsTemplate(
     .select({
       id: experiences.id,
       game: experiences.game,
-      status: experiences.status,
       ownerId: experiences.ownerId,
-      isTemplate: experiences.isTemplate,
-      filesUrl: experiences.filesUrl,
     })
     .from(experiences)
     .where(and(eq(experiences.slug, slug), isNull(experiences.deletedAt)))
@@ -73,6 +70,19 @@ export async function offerAsTemplate(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`edit:${found.id}`}, 0))`,
     )
+    // What it is now, held still until this is done: a moderator approving
+    // it meanwhile waits, or has finished, and either way this decides on
+    // what it is, not on what it was when the request came in.
+    const [current] = await tx
+      .select({
+        status: experiences.status,
+        isTemplate: experiences.isTemplate,
+        filesUrl: experiences.filesUrl,
+      })
+      .from(experiences)
+      .where(and(eq(experiences.id, found.id), isNull(experiences.deletedAt)))
+      .for('update')
+    if (!current) return refuse('not-found')
     const [pending] = await tx
       .select({ id: revisions.id, payload: revisions.payload })
       .from(revisions)
@@ -103,14 +113,22 @@ export async function offerAsTemplate(
       .select({ value: count() })
       .from(projectFiles)
       .where(eq(projectFiles.experienceId, found.id))
-    if (files === 0 && !found.filesUrl) {
+    if (files === 0 && !current.filesUrl) {
       return refuse('invalid', { form: 'It has no files to offer.' })
     }
-    if (found.isTemplate)
+    if (current.isTemplate) {
       return { ok: true as const, state: 'offered' as const }
-    // Not published yet: a moderator reviews it, files and all, before
-    // anyone else sees it, so there is nothing to ask.
-    if (found.status !== 'published') {
+    }
+    // In review: the moderator is deciding on it as they see it, with its
+    // files private. Offering them is for after that decision.
+    if (current.status === 'pending') {
+      return refuse('invalid', {
+        form: 'It is in review. Offer its files once it has been decided.',
+      })
+    }
+    // Not sent in, or sent back: a moderator reviews it, files and all,
+    // before anyone else sees it, so there is nothing to ask.
+    if (current.status !== 'published') {
       await tx
         .update(experiences)
         .set({ isTemplate: true })

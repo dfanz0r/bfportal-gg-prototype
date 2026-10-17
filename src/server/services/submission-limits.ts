@@ -1,4 +1,4 @@
-import { and, count, eq, isNull, sql } from 'drizzle-orm'
+import { count, eq, sql } from 'drizzle-orm'
 
 import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
@@ -30,16 +30,21 @@ export async function submissionLimit(
 ): Promise<Refusal | null> {
   if (isStaff(actor.role)) return null
   const since = new Date(now.getTime() - DAY).toISOString()
+  // Waiting: what is in the queue now, so not what its owner deleted. Today:
+  // everything sent in during the last day, deleted or not, or deleting
+  // would give the place back. A draft saved and not sent is neither.
   const counts = (table: typeof experiences | typeof snippets) =>
     executor
       .select({
-        waiting: count(sql`case when ${table.status} = 'pending' then 1 end`),
+        waiting: count(
+          sql`case when ${table.status} = 'pending' and ${table.deletedAt} is null then 1 end`,
+        ),
         today: count(
-          sql`case when ${table.submittedAt} > ${since}::timestamptz then 1 end`,
+          sql`case when ${table.status} <> 'draft' and ${table.submittedAt} > ${since}::timestamptz then 1 end`,
         ),
       })
       .from(table)
-      .where(and(eq(table.ownerId, actor.id), isNull(table.deletedAt)))
+      .where(eq(table.ownerId, actor.id))
   const [[one], [other]] = await Promise.all([
     counts(experiences),
     counts(snippets),

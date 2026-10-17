@@ -242,7 +242,19 @@ Anything that changes something follows `src/functions/likes.ts` and
   `src/server/rate-limit.ts` for calls to a third party. Count in the same
   transaction as the write, under a lock on the account, or two requests at once
   both fit in the last place: `withinLimit` in
-  `src/server/services/submission-limits.ts`.
+  `src/server/services/submission-limits.ts`. A count of what was sent includes
+  what has since been deleted, or deleting refills it.
+- **Stored text has a size.** Whatever a write keeps, even a draft that lets the
+  rest slide, is held to the limits the form has, per field and in total.
+- **Read the size and the sender before the body.** A function that takes files
+  checks the session and how many and how large they are before reading one.
+  `src/start.ts` refuses any body over `MAX_REQUEST_BYTES`, and one with no length.
+- **Decide on the row as it is now.** A write that depends on a row's status
+  reads it again inside its transaction, `for update`, and its final update
+  repeats the conditions, `deleted_at is null` included.
+- **A visitor's address comes from `clientIp`** in `src/server/env.ts`, which reads
+  the one header the proxy in front sets (`CLIENT_IP_HEADER`). Never another header,
+  which anyone can send.
 
 ## Design
 

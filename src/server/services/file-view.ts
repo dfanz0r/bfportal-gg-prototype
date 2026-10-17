@@ -72,9 +72,13 @@ export async function getFileView(publicId: string, viewer: Actor | null) {
   // A file ends with a line break, which is not a line.
   const lines = text.replace(/\n$/, '').split('\n')
   let shown = lines.slice(0, MAX_SHOWN_LINES).join('\n')
+  let truncated = lines.length > MAX_SHOWN_LINES
   if (shown.length > MAX_SHOWN_CHARS) {
-    // Whole lines only.
-    shown = shown.slice(0, shown.lastIndexOf('\n', MAX_SHOWN_CHARS))
+    truncated = true
+    // Whole lines where there is a break to cut at; a line longer than all
+    // of it, such as minified data, is cut where the room runs out.
+    const lastBreak = shown.lastIndexOf('\n', MAX_SHOWN_CHARS)
+    shown = shown.slice(0, lastBreak > 0 ? lastBreak : MAX_SHOWN_CHARS)
   }
   const shownLines = shown.split('\n').length
   return {
@@ -83,6 +87,9 @@ export async function getFileView(publicId: string, viewer: Actor | null) {
     text: shown,
     lines: lines.length,
     shownLines,
+    // Said, not worked out from the counts: one long line cut short is
+    // still one line.
+    truncated,
     reformatted,
   }
 }

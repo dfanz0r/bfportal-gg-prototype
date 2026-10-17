@@ -18,7 +18,11 @@ import { getDraftEditPage, getSubmitPage } from '../server/services/submit-page'
 import { games } from '../shared/content'
 import { formOr } from '../shared/form-input'
 import { defaultGame } from '../shared/games'
-import { MAX_EXPORT_BYTES } from '../shared/project-files'
+import {
+  MAX_ADDED_FILES,
+  MAX_EXPORT_BYTES,
+  MAX_FILE_BYTES,
+} from '../shared/project-files'
 import { type Refusal, refuse } from '../shared/results'
 import { redirectTo } from './answer'
 
@@ -60,30 +64,53 @@ const readFileSchema = z.object({
 /** The form's file inputs, and which slot each fills. */
 const FILE_INPUTS = { exportFile: 'export', addedFiles: 'added' } as const
 
+/** The most of each slot one form sends, and the largest file in each. */
+const SLOTS = {
+  export: { most: 1, largest: MAX_EXPORT_BYTES },
+  added: { most: MAX_ADDED_FILES, largest: MAX_FILE_BYTES },
+}
+
 /**
  * The files sent with the submit form: chosen in its file inputs, with no
- * script, or read by the page's script and sent as text. One too large to be
- * taken is not read.
+ * script, or read by the page's script and sent as text. How many there are,
+ * and how large each says it is, are checked before any is read; one too
+ * large to be taken is not read at all. A form with more files than it can
+ * hold is refused.
  */
-async function filesSent(input: Record<string, unknown>) {
-  const sent: SentFile[] = []
-  for (const [name, slot] of Object.entries(FILE_INPUTS)) {
-    for (const value of [input[name] ?? []].flat()) {
-      if (value instanceof File) {
-        // A file input left empty still sends a file, with no name.
-        if (!value.name && value.size === 0) continue
-        sent.push(
-          value.size > MAX_EXPORT_BYTES
-            ? { slot, filename: value.name, text: '', sizeBytes: value.size }
-            : { slot, filename: value.name, text: await value.text() },
-        )
-      } else {
-        const read = readFileSchema.safeParse(value)
-        if (read.success) sent.push({ slot, ...read.data })
-      }
+async function filesSent(
+  input: Record<string, unknown>,
+): Promise<{ ok: true; sent: SentFile[] } | Refusal> {
+  const chosen = Object.entries(FILE_INPUTS).flatMap(([name, slot]) =>
+    [input[name] ?? []]
+      .flat()
+      // A file input left empty still sends a file, with no name.
+      .filter((value) => !(value instanceof File && !value.name && !value.size))
+      .map((value) => ({ slot, value })),
+  )
+  for (const [slot, { most }] of Object.entries(SLOTS)) {
+    if (chosen.filter((file) => file.slot === slot).length > most) {
+      return refuse('invalid', {
+        [slot === 'export' ? 'exportFile' : 'addedFiles']:
+          slot === 'export'
+            ? 'Choose one export.'
+            : `Add up to ${MAX_ADDED_FILES} files beside the export.`,
+      })
     }
   }
-  return sent
+  const sent: SentFile[] = []
+  for (const { slot, value } of chosen) {
+    if (value instanceof File) {
+      sent.push(
+        value.size > SLOTS[slot].largest
+          ? { slot, filename: value.name, text: '', sizeBytes: value.size }
+          : { slot, filename: value.name, text: await value.text() },
+      )
+    } else {
+      const read = readFileSchema.safeParse(value)
+      if (read.success) sent.push({ slot, ...read.data })
+    }
+  }
+  return { ok: true, sent }
 }
 
 /** The form's fields, without its file inputs. */
@@ -102,16 +129,21 @@ async function draftIdOf(actor: Actor | null, fields: Record<string, unknown>) {
 
 /**
  * The form as sent, with any file chosen in it with no script held for it,
- * so a refused form still has its files.
+ * so a refused form still has its files. Nothing is read for a visitor who
+ * is not signed in.
  */
 async function withFilesHeld(
   actor: Actor | null,
   input: Record<string, unknown>,
 ) {
   const fields = withoutFiles(input)
-  const sent = await filesSent(input)
-  if (sent.length === 0) return { fields, refused: null }
-  const added = await addFilesToForm(actor, fields, sent, {
+  if (!actor) {
+    return { fields, refused: refuse('signed-out') as Refusal }
+  }
+  const files = await filesSent(input)
+  if (!files.ok) return { fields, refused: files }
+  if (files.sent.length === 0) return { fields, refused: null }
+  const added = await addFilesToForm(actor, fields, files.sent, {
     draft: await draftIdOf(actor, fields),
   })
   return added.ok
@@ -203,10 +235,13 @@ export const readProjectFiles = createServerFn({ method: 'POST' })
     }
     const input = data.input ?? {}
     const fields = withoutFiles(input)
-    const result = await addFilesToForm(actor, fields, await filesSent(input), {
-      fill: true,
-      draft: await draftIdOf(actor, fields),
-    })
+    const files = await filesSent(input)
+    const result = files.ok
+      ? await addFilesToForm(actor, fields, files.sent, {
+          fill: true,
+          draft: await draftIdOf(actor, fields),
+        })
+      : files
     if (result.ok || data.viaForm) {
       await keepDraft(
         actor,
