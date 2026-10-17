@@ -156,11 +156,17 @@ describe('holding files for the submit form', () => {
     expect(errorsOf(refused)).toHaveProperty('exportFile')
     expect(await heldFilesFor(who, [oldExport], { now: NOW })).toHaveLength(1)
 
-    // The form sent without "Two.tscn", and a new export. The title the
-    // first export filled in was not typed, so the new one replaces it.
+    // The form sent without "Two.tscn", which it was drawn with, and a new
+    // export. The title the first export filled in was not typed, so the new
+    // one replaces it.
     const second = await addFilesToForm(
       who,
-      { files: [oldExport, one], title: 'Test Mode', description: 'Typed.' },
+      {
+        files: [oldExport, one],
+        shownFiles: first.fields.files,
+        title: 'Test Mode',
+        description: 'Typed.',
+      },
       [exportFile(portalExport({ name: 'Second' }), 'second.json')],
       { fill: true, now: NOW },
     )
@@ -201,5 +207,43 @@ describe('holding files for the submit form', () => {
     expect(
       (await addFilesToForm(who, full.fields, [exportFile()], { now: NOW })).ok,
     ).toBe(true)
+  })
+
+  it('leaves another open form’s files alone', async () => {
+    const who = holder(37)
+    const first = await addFilesToForm(
+      who,
+      {},
+      [exportFile(), added('First.tscn')],
+      { now: NOW },
+    )
+    if (!first.ok) throw new Error('expected the files to be held')
+    // A second form, opened beside it, with nothing chosen yet.
+    const second = await addFilesToForm(
+      who,
+      { shownFiles: [] },
+      [exportFile(portalExport({ name: 'Other' }), 'other.json')],
+      { now: NOW },
+    )
+    expect(second.ok).toBe(true)
+    expect(
+      await heldFilesFor(who, first.fields.files as string[], { now: NOW }),
+    ).toHaveLength(2)
+  })
+
+  it('lets go of anyone’s files once their day is out, when someone uploads', async () => {
+    const gone = holder(38)
+    const old = await holdFiles(gone, [added('Old.tscn')], NOW)
+    if (!old.ok) throw new Error('expected the file to be held')
+    const later = new Date(NOW.getTime() + 25 * 60 * 60 * 1000)
+    expect((await holdFiles(holder(39), [added('New.tscn')], later)).ok).toBe(
+      true,
+    )
+    expect(
+      await db
+        .select()
+        .from(heldFiles)
+        .where(eq(heldFiles.uploadedBy, gone.id)),
+    ).toEqual([])
   })
 })

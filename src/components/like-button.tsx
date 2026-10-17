@@ -42,7 +42,10 @@ export function LikeButton(props: {
     likes: props.likes,
   })
   createEffect(() => setState({ liked: props.liked, likes: props.likes }))
-  const [sending, setSending] = createSignal(false)
+  // The experience whose answer is awaited. The router can hand this button
+  // another experience before it comes, and that one's state is not to be
+  // touched by it.
+  const [sending, setSending] = createSignal<string | null>(null)
   // Back to the page it was pressed on, a listing's as much as its own.
   const back = () => location().href
   const look = () => looks[props.look ?? 'page']
@@ -54,14 +57,16 @@ export function LikeButton(props: {
     // One at a time. A second press before the first is answered would start
     // from a count that is only a guess, and the answers can arrive in either
     // order.
-    if (sending()) return
-    setSending(true)
+    const slug = props.slug
+    if (sending() === slug) return
+    setSending(slug)
     const before = state()
     const liked = !before.liked
     // Show it at once, and put it back if the server says otherwise.
     setState({ liked, likes: before.likes + (liked ? 1 : -1) })
     try {
-      const result = await likeExperience({ data: { slug: props.slug, liked } })
+      const result = await likeExperience({ data: { slug, liked } })
+      if (props.slug !== slug) return
       if (result.ok) {
         setState({ liked: result.liked, likes: result.likes })
       } else {
@@ -69,9 +74,9 @@ export function LikeButton(props: {
         if (result.reason === 'signed-out') window.location.assign('/login')
       }
     } catch {
-      setState(before)
+      if (props.slug === slug) setState(before)
     } finally {
-      setSending(false)
+      if (sending() === slug) setSending(null)
     }
   }
 
@@ -88,7 +93,7 @@ export function LikeButton(props: {
       <button
         type="submit"
         aria-pressed={state().liked}
-        aria-busy={sending()}
+        aria-busy={sending() === props.slug}
         class={look().button}
       >
         <Icon

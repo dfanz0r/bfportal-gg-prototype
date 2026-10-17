@@ -18,6 +18,15 @@ const MODE_NAMES: Record<string, string> = { ModBuilderCustom: 'Custom' }
 
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
 
+/**
+ * The most an export may hold of what is stored one row each. A 20-map
+ * rotation exports 22 attachments, one layout a map and three more, so these
+ * leave room for any real one. More is not an export.
+ */
+const MAX_MAPS = 100
+const MAX_ATTACHMENTS = MAX_MAPS + 28
+const MAX_TEAMS = 64
+
 const base64 = z
   .string()
   .refine(
@@ -40,7 +49,10 @@ const exportSchema = z.object({
   name: z.string(),
   description: z.string().default(''),
   gameMode: z.string(),
-  mapRotation: z.array(z.object({ id: z.string() })).default([]),
+  mapRotation: z
+    .array(z.object({ id: z.string().max(200) }))
+    .max(MAX_MAPS)
+    .default([]),
   workspace: z
     .object({
       mod: z
@@ -63,8 +75,9 @@ const exportSchema = z.object({
         }),
       ]),
     )
+    .max(MAX_TEAMS)
     .default([]),
-  attachments: z.array(attachmentSchema).default([]),
+  attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).default([]),
 })
 
 type Export = z.infer<typeof exportSchema>
@@ -79,21 +92,27 @@ const decode = (attachment: Attachment) =>
 /**
  * The blocks in the rules editor. Every mod has one `modBlock` holding the
  * rest, so an export with none of its own has that one alone. Walked without
- * recursion: a long rule nests deeply.
+ * recursion, since a long rule nests deeply, and pushed one at a time: a
+ * spread passes each item as an argument, and a long array is more
+ * arguments than a call takes.
  */
 function countBlocks(blocks: unknown[]) {
   let total = 0
-  const waiting: unknown[] = [...blocks]
+  const waiting: unknown[] = []
+  const add = (items: unknown[]) => {
+    for (const item of items) waiting.push(item)
+  }
+  add(blocks)
   while (waiting.length > 0) {
     const node = waiting.pop()
     if (Array.isArray(node)) {
-      waiting.push(...node)
+      add(node)
     } else if (node && typeof node === 'object') {
       const { type } = node as { type?: unknown }
       if (typeof type === 'string' && 'id' in node && type !== 'modBlock') {
         total += 1
       }
-      waiting.push(...Object.values(node))
+      add(Object.values(node))
     }
   }
   return total
@@ -183,13 +202,17 @@ export function filesInExport(read: Export) {
     const { original, compiled } = attachment.attachmentData
     const body = decodeText(original || compiled)
     if (!body.trim()) return []
-    const index = attachment.metadata?.match(/^mapIdx=(\d+)$/)?.[1]
+    // A map of the rotation it has, or none.
+    const index = Number(attachment.metadata?.match(/^mapIdx=(\d{1,3})$/)?.[1])
     return [
       {
         kind,
         filename: attachment.filename,
         body,
-        mapIndex: index === undefined ? null : Number(index),
+        mapIndex:
+          Number.isInteger(index) && index < read.mapRotation.length
+            ? index
+            : null,
       },
     ]
   })

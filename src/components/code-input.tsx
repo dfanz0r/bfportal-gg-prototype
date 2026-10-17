@@ -32,19 +32,25 @@ export function CodeInput(props: {
       '\n',
     )
 
+  // The file chosen last is the one that counts. One chosen before it and
+  // read after it neither fills the box nor lets the form be sent.
+  let latest = 0
   const readFile = async (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
     const file = input.files?.[0]
     if (!file || !area) return
+    latest += 1
+    const reading = latest
     props.onReading?.(true)
     try {
       const read = await file.text()
+      if (reading !== latest) return
       area.value = read
       setText(read)
       // The box has it now; the file itself need not be sent as well.
       input.value = ''
     } finally {
-      props.onReading?.(false)
+      if (reading === latest) props.onReading?.(false)
     }
   }
 

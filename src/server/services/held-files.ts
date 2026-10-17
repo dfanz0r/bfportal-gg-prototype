@@ -33,12 +33,15 @@ import type { Executor } from './shared'
 /** How long a file is held for a form that is not sent. */
 const HELD_FOR = 24 * 60 * 60 * 1000
 /**
- * The most one account holds at once: the export, every file the form takes
- * beside it, and an export about to replace the first. Each costs space here,
- * so it is counted, under a lock on the account, in the same transaction as
- * the write.
+ * The most one account holds at once, in files and in size: enough for a few
+ * forms open together, each with its export, every file the form takes beside
+ * it, and an export about to replace the first. Each costs space here, so it
+ * is counted, under a lock on the account, in the same transaction as the
+ * write. A form only lets go of its own files, so what an abandoned form held
+ * counts until it is let go a day later.
  */
-const MAX_HELD = MAX_ADDED_FILES + 2
+const MAX_HELD = (MAX_ADDED_FILES + 2) * 3
+const MAX_HELD_BYTES = 64 * 1024 * 1024
 
 const MB = 1024 * 1024
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -119,7 +122,11 @@ export async function heldFilesFor(
     .orderBy(asc(heldFiles.createdAt))
 }
 
-/** The same, with what each file says, to store. */
+/**
+ * The same, with what each file says, to store, held still until the
+ * transaction ends: another form letting go of them meanwhile waits, and
+ * finds them gone.
+ */
 export async function takeHeldFiles(
   executor: Executor,
   actor: Actor,
@@ -139,6 +146,7 @@ export async function takeHeldFiles(
       ),
     )
     .orderBy(asc(heldFiles.createdAt))
+    .for('update')
 }
 
 /**
@@ -178,23 +186,46 @@ export async function letGoOfDraftFiles(executor: Executor, draft: number) {
 }
 
 /**
- * Lets go of every loose file held for someone, but those in `keep`. Files
- * saved with a draft are the draft's, and stay.
+ * Lets go of the loose files in `ids` held for someone. Only those: another
+ * form of theirs may be open, holding its own. Files saved with a draft are
+ * the draft's, and stay.
  */
 export async function letGoOfHeldFiles(
   executor: Executor,
   actor: Actor,
-  keep: string[] = [],
+  ids: string[],
 ) {
+  const going = heldIdsIn(ids)
+  if (going.length === 0) return
   await executor
     .delete(heldFiles)
     .where(
       and(
         eq(heldFiles.uploadedBy, actor.id),
         loose,
-        keep.length > 0 ? notInArray(heldFiles.id, keep) : undefined,
+        inArray(heldFiles.id, going),
       ),
     )
+}
+
+/** How many expired files one sweep lets go of, so no upload waits long on it. */
+const SWEEP_BATCH = 50
+
+/**
+ * Lets go of loose files whose day has run out, anyone's, a batch at a time.
+ * Each upload sweeps once, so an account that never comes back does not keep
+ * what it chose. Rows another sweep has hold of are left to it.
+ */
+export async function sweepHeldFiles(executor: Executor, now = new Date()) {
+  const cutoff = new Date(now.getTime() - HELD_FOR)
+  await executor.execute(sql`
+    delete from ${heldFiles} where ${heldFiles.id} in (
+      select ${heldFiles.id} from ${heldFiles}
+      where ${heldFiles.experienceId} is null
+        and ${heldFiles.createdAt} < ${cutoff.toISOString()}::timestamptz
+      limit ${SWEEP_BATCH}
+      for update skip locked
+    )`)
 }
 
 /**
@@ -262,14 +293,28 @@ export async function holdFiles(
           lt(heldFiles.createdAt, new Date(now.getTime() - HELD_FOR)),
         ),
       )
+    await sweepHeldFiles(tx, now)
     // A draft's files are counted with the drafts, not here.
-    const [{ value: holding }] = await tx
-      .select({ value: count() })
+    const [holding] = await tx
+      .select({
+        files: count(),
+        bytes:
+          sql<number>`coalesce(sum(${heldFiles.sizeBytes}), 0)::bigint`.mapWith(
+            Number,
+          ),
+      })
       .from(heldFiles)
       .where(and(eq(heldFiles.uploadedBy, actor.id), loose))
-    if (holding + ready.length > MAX_HELD) {
+    const adding = ready.reduce((sum, row) => sum + row.sizeBytes, 0)
+    if (
+      holding.files + ready.length > MAX_HELD ||
+      holding.bytes + adding > MAX_HELD_BYTES
+    ) {
       return refuse('invalid', {
-        addedFiles: `Up to ${MAX_ADDED_FILES} files and one export. Remove one first.`,
+        [ready.some((row) => row.kind === 'export')
+          ? 'exportFile'
+          : 'addedFiles']:
+          'You have as many files waiting as an account can hold. Each is let go a day after it was chosen.',
       })
     }
     const held = await tx
@@ -282,8 +327,8 @@ export async function holdFiles(
 
 /**
  * The form with the files sent with it added to those it holds. A new export
- * takes the place of the one it had. Every other file held for its sender is
- * let go, since the form no longer has it.
+ * takes the place of the one it had. A file the form was drawn with and no
+ * longer names, in `shownFiles`, was taken off it and is let go.
  *
  * With `fill`, the form is filled in from a new export as well: its name and
  * description where those are empty or still what the export before it
@@ -313,12 +358,13 @@ export async function addFilesToForm(
       addedFiles: `Add up to ${MAX_ADDED_FILES} files beside the export.`,
     })
   }
-  // What the form no longer holds goes before the count is made. The export
+  // What the form was taken off goes before the count is made. The export
   // being replaced stays until its replacement is read.
+  const named = new Set(heldIdsIn(fields.files))
   await letGoOfHeldFiles(
     db,
     actor,
-    had.map((file) => file.id),
+    heldIdsIn(fields.shownFiles).filter((id) => !named.has(id)),
   )
   const result = await holdFiles(actor, sent, now)
   if (!result.ok) return result
@@ -327,7 +373,7 @@ export async function addFilesToForm(
     await letGoOfHeldFiles(
       db,
       actor,
-      files.map((file) => file.id),
+      had.filter((file) => file.kind === 'export').map((file) => file.id),
     )
   }
   const next: Record<string, unknown> = {

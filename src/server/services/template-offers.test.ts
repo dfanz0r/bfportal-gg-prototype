@@ -159,6 +159,29 @@ describe('offering files as a template after submitting', () => {
       .where(eq(experiences.id, id))
   })
 
+  it('takes the experience before its edit, as its owner does, so neither waits on the other', async () => {
+    const { id, slug, owner } = await liveExperience('bf6', true)
+    await offerAsTemplate(owner, slug, true, NOW)
+    const [edit] = await pendingEdits(id)
+    let deciding: ReturnType<typeof decideEdit> | undefined
+    // Its owner partway through taking the request back: the experience is
+    // held, and the request is next. A moderator approves meanwhile. Taken
+    // in the other order, each held what the other waited for, and Postgres
+    // ended one of them.
+    await db.transaction(async (tx) => {
+      await tx
+        .select({ id: experiences.id })
+        .from(experiences)
+        .where(eq(experiences.id, id))
+        .for('update')
+      deciding = decideEdit(moderator, edit.id, { approve: true }, NOW)
+      await new Promise((waited) => setTimeout(waited, 300))
+      await tx.delete(revisions).where(eq(revisions.id, edit.id))
+    })
+    expect(await deciding).toEqual({ ok: false, reason: 'not-found' })
+    expect(await isTemplate(id)).toBe(false)
+  })
+
   it('refuses one that has been deleted', async () => {
     const { id, slug, owner } = await liveExperience('bf6', true)
     await db

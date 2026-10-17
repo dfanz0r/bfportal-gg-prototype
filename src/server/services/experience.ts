@@ -85,6 +85,10 @@ export async function getExperience(
   if (experience.status !== 'published' && !isOwner && !isStaff) return null
   // A draft has not been sent to anyone, moderators included.
   if (experience.status === 'draft' && !isOwner) return null
+  // Files are shared when the experience is offered as a template: its
+  // uploads and the link to the rest alike. Its owner and the moderators see
+  // them either way.
+  const filesShown = experience.isTemplate || isOwner || isStaff
   const read = rotationSchema.safeParse(experience.mapRotation ?? [])
   if (!read.success) {
     // The page still shows; a rotation that will not read is left off it.
@@ -181,9 +185,7 @@ export async function getExperience(
       )
       .orderBy(desc(playtests.opensAt))
       .limit(1),
-    // Files are shared when the experience is offered as a template. Its
-    // owner and the moderators see them either way.
-    experience.isTemplate || isOwner || isStaff
+    filesShown
       ? db
           .select({
             // The one its addresses use.
@@ -264,7 +266,7 @@ export async function getExperience(
       ...shownMedia(media.map((item) => item.url)),
     ],
     repoUrl: experience.repoUrl,
-    filesUrl: experience.filesUrl,
+    filesUrl: filesShown ? experience.filesUrl : null,
     maxPlayers: experience.maxPlayers,
     maxBots: experience.maxBots,
     // As its creator set them out, or else the sizes Portal gives for the

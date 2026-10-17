@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { createSignal } from 'solid-js'
 import { render } from 'solid-js/web'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -70,6 +71,47 @@ describe('LikeButton', () => {
     expect(likeExperience).toHaveBeenCalledTimes(2)
     expect(likeExperience).toHaveBeenLastCalledWith({
       data: { slug: 'gun-master', liked: false },
+    })
+  })
+
+  it('keeps an answer for one experience off the next one it is given', async () => {
+    let answer: (result: unknown) => void = () => {}
+    likeExperience.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve
+        }),
+    )
+    const [shownFor, setShownFor] = createSignal({
+      slug: 'gun-master',
+      likes: 4,
+    })
+    const host = document.createElement('div')
+    document.body.append(host)
+    render(
+      () => (
+        <LikeButton
+          slug={shownFor().slug}
+          likes={shownFor().likes}
+          liked={false}
+          signedIn
+        />
+      ),
+      host,
+    )
+    press(host)
+    // The router moves on to another experience before the answer comes.
+    setShownFor({ slug: 'infection', likes: 20 })
+    answer({ ok: true, liked: true, likes: 5 })
+    await new Promise((settled) => setTimeout(settled, 0))
+    expect(shown(host)).toBe(20)
+    expect(host.querySelector('button')?.getAttribute('aria-pressed')).toBe(
+      'false',
+    )
+    // And it can be pressed for this one at once.
+    press(host)
+    expect(likeExperience).toHaveBeenLastCalledWith({
+      data: { slug: 'infection', liked: true },
     })
   })
 

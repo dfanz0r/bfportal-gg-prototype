@@ -95,6 +95,41 @@ describe('reading a Portal export', () => {
     ])
   })
 
+  it('reads a long array of blocks, which is more than a call takes as arguments', () => {
+    const json = JSON.parse(portalExport({ maps: [] }))
+    json.workspace.mod.blocks.blocks.push(
+      Array.from({ length: 300_000 }, () => 0),
+    )
+    expect(readExport(JSON.stringify(json))?.summary.blocks).toBe(0)
+  })
+
+  it('reads nothing from an export with more in it than any real one', () => {
+    const json = JSON.parse(portalExport({ maps: [] }))
+    const one = json.attachments[0]
+    json.attachments = Array.from({ length: 8000 }, () => one)
+    expect(readExport(JSON.stringify(json))).toBeNull()
+  })
+
+  it('places a layout on a map of the rotation, or on none', () => {
+    const json = JSON.parse(portalExport({ maps: ['MP_Abbasid'] }))
+    const layout = json.attachments.find(
+      (item: { attachmentType: number }) => item.attachmentType === 1,
+    )
+    layout.metadata = 'mapIdx=99999999999'
+    json.attachments.push({
+      ...layout,
+      filename: 'b.spatial.json',
+      metadata: 'mapIdx=1',
+    })
+    const read = readExport(JSON.stringify(json))
+    if (!read) throw new Error('expected an export')
+    expect(
+      filesInExport(read.export)
+        .filter((file) => file.kind === 'spatial')
+        .map((file) => file.mapIndex),
+    ).toEqual([null, null])
+  })
+
   it('reads nothing from what is not an export', () => {
     expect(readExport('not json')).toBeNull()
     expect(readExport('{"name": "No mode"}')).toBeNull()

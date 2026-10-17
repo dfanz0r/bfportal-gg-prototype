@@ -24,6 +24,23 @@ export const editPayloadSchema = z.object({
 
 export type EditPayload = z.infer<typeof editPayloadSchema>
 
+/**
+ * Holds an experience and its edits still until the transaction ends: its
+ * lock, then its row. Everything that changes its edits takes them in this
+ * order, before it touches a revision, or two people acting at once can each
+ * hold what the other waits for.
+ */
+export async function lockEdits(tx: Executor, experienceId: number) {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`edit:${experienceId}`}, 0))`,
+  )
+  await tx
+    .select({ id: experiences.id })
+    .from(experiences)
+    .where(eq(experiences.id, experienceId))
+    .for('update')
+}
+
 const pendingEdit = (experienceId: number) =>
   and(
     eq(revisions.experienceId, experienceId),
@@ -66,13 +83,10 @@ export async function offerAsTemplate(
   }
 
   return db.transaction(async (tx) => {
-    // One change to an experience's edits at a time.
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtextextended(${`edit:${found.id}`}, 0))`,
-    )
-    // What it is now, held still until this is done: a moderator approving
+    // One change to an experience's edits at a time. A moderator approving
     // it meanwhile waits, or has finished, and either way this decides on
-    // what it is, not on what it was when the request came in.
+    // what it is now, not on what it was when the request came in.
+    await lockEdits(tx, found.id)
     const [current] = await tx
       .select({
         status: experiences.status,
@@ -81,7 +95,6 @@ export async function offerAsTemplate(
       })
       .from(experiences)
       .where(and(eq(experiences.id, found.id), isNull(experiences.deletedAt)))
-      .for('update')
     if (!current) return refuse('not-found')
     const [pending] = await tx
       .select({ id: revisions.id, payload: revisions.payload })

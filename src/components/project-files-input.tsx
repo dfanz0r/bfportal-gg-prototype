@@ -136,6 +136,10 @@ function HeldRow(props: {
  *
  * With the page's script a file is read as soon as it is chosen. With none,
  * "Upload files" sends the form to be read and shown again.
+ *
+ * The form sends `shownFiles` as well, the ids it was drawn with, so the
+ * server knows which files this form took off. Another form open at the same
+ * time keeps its own.
  */
 export function ProjectFilesInput(props: {
   held: HeldFile[]
@@ -173,6 +177,11 @@ export function ProjectFilesInput(props: {
 
   return (
     <div class="grid gap-2">
+      {/* Every file the form was drawn with, kept or taken off. The server
+          lets go of those taken off, and of no other form's. */}
+      <For each={props.held}>
+        {(file) => <input type="hidden" name="shownFiles" value={file.id} />}
+      </For>
       <Show when={submitted().length > 0}>
         <div class={`${panel} divide-y divide-line`}>
           <p class="px-3 py-2.5 text-[13px] text-fg-2">

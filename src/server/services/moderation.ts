@@ -18,7 +18,11 @@ import {
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
-import { type EditPayload, editPayloadSchema } from './template-offers'
+import {
+  type EditPayload,
+  editPayloadSchema,
+  lockEdits,
+} from './template-offers'
 
 // What the moderators do: look at what is waiting, and decide. Every function
 // here refuses anyone who is not a moderator or an admin.
@@ -257,6 +261,14 @@ export async function decideEdit(
   }
   const status = decision.approve ? 'approved' : 'changes_requested'
   return db.transaction(async (tx) => {
+    const [asked] = await tx
+      .select({ experienceId: revisions.experienceId })
+      .from(revisions)
+      .where(eq(revisions.id, id))
+    if (!asked) return refuse('not-found')
+    // The experience before the revision, as its owner changing the same
+    // edit takes them.
+    await lockEdits(tx, asked.experienceId)
     // The condition is in the update, so two moderators cannot both decide.
     const [decided] = await tx
       .update(revisions)

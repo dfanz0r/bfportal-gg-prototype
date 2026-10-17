@@ -347,6 +347,21 @@ export async function submitExperience(
     for (let n = 2; used.has(slug); n += 1) slug = `${base}-${n}`
     try {
       const written = await withinLimit(actor, now, async (tx) => {
+        // The files read above, taken again before anything is written: one
+        // let go since, by another form or by its day running out, means
+        // this is not the submission its sender saw.
+        const files =
+          held.length > 0
+            ? await takeHeldFiles(tx, actor, form.files, {
+                now,
+                draft: draft?.id,
+              })
+            : []
+        if (files.length < held.length) {
+          return refuse('invalid', {
+            files: 'A file is no longer held. Add it again.',
+          })
+        }
         const values: Omit<typeof experiences.$inferInsert, 'slug'> = {
           game,
           status: 'pending',
@@ -473,11 +488,7 @@ export async function submitExperience(
         // file at a time, and what was added beside it. Only its owner and
         // the moderators can download them until it is a template, which its
         // owner can ask for later.
-        if (held.length > 0) {
-          const files = await takeHeldFiles(tx, actor, form.files, {
-            now,
-            draft: draft?.id,
-          })
+        if (files.length > 0) {
           await tx.insert(projectFiles).values(
             files.flatMap((file) => {
               const row = {
@@ -504,9 +515,13 @@ export async function submitExperience(
           )
         }
         // It went through, so a kept copy of a refused form, and the files it
-        // held, have done their job.
+        // held, have done their job. Another form's files are its own.
         await discardDraft(tx, actor)
-        await letGoOfHeldFiles(tx, actor)
+        await letGoOfHeldFiles(
+          tx,
+          actor,
+          files.map((file) => file.id),
+        )
         if (draft) await letGoOfDraftFiles(tx, draft.id)
         return { ok: true as const, slug: draft?.slug ?? slug }
       })

@@ -1084,7 +1084,8 @@ Rules:
   before anything is read from it. This is the validator snippets already need.
 - Files are shared when the creator offers the experience as a template. Changed
   2026-10-16: they are kept either way, so the owner can offer them later; until then
-  only the owner and the moderators can download them. Taking the offer back is
+  only the owner and the moderators can download them, or see the link to larger
+  files hosted elsewhere. Taking the offer back is
   immediate. Offering the files of something published waits for a moderator, as an
   edit; before it is sent in, or when it has been sent back, its review covers the
   files already, so the switch is immediate both ways. While it is in review the files
@@ -1106,7 +1107,16 @@ Built 2026-10-16, on the submit form's "Project files" section:
 - A file chosen on the form is held in `held_files` for whoever chose it until the
   form is sent, for a day at most, and the form sends its id. That is what lets a
   refused form posted with no script keep its files, and an export be read into the
-  form before it is sent. An account holds an export and up to 10 files beside it.
+  form before it is sent. A form holds an export and up to 10 files beside it.
+- Changed 2026-10-17, after a review: a form lets go only of its own files, so two
+  open at once do not take each other's. It sends `shownFiles`, the ids it was drawn
+  with, and a file among them that it no longer names was taken off and is let go;
+  so is an export it replaced, and what it submits. An account holds up to three
+  forms' worth, 36 files and 64 MB. What an abandoned form held goes a day after it
+  was chosen: each upload lets go of up to 50 such files, anyone's. A submission
+  takes its files again inside its transaction, and is refused if one has gone.
+- An export with more than 100 maps, 128 attachments or 64 teams is not read as
+  one. A layout's map index outside its rotation is kept as no map.
 - Reading an export fills in the title and description where they are empty, and the
   teams and what it is built with. With the page's script a file is read as soon as
   it is chosen; with none, "Upload files" posts the form to be read, and a file

@@ -237,6 +237,8 @@ Anything that changes something follows `src/functions/likes.ts` and
   why), the server said yes (never show an error after this, whatever the
   navigation does), and no answer came back (say it may or may not have gone
   through; do not say nothing happened). Ignore a second press while one is out.
+  An answer that comes after the component was given something else, such as
+  another experience, is dropped: `LikeButton` keeps the slug it sent.
 - **What costs someone else is limited per account:** a count in the database, in
   the service, for what must hold across restarts; `allow()` from
   `src/server/rate-limit.ts` for calls to a third party. Count in the same
@@ -251,7 +253,15 @@ Anything that changes something follows `src/functions/likes.ts` and
   `src/start.ts` refuses any body over `MAX_REQUEST_BYTES`, and one with no length.
 - **Decide on the row as it is now.** A write that depends on a row's status
   reads it again inside its transaction, `for update`, and its final update
-  repeats the conditions, `deleted_at is null` included.
+  repeats the conditions, `deleted_at is null` included. Rows are locked in one
+  order everywhere: an experience before its revisions, through `lockEdits` in
+  `src/server/services/template-offers.ts`.
+- **A visitor may have the same form open twice.** A write lets go only of what
+  this request names, never everything an account holds: `shownFiles` on the
+  submit form is the example.
+- **Show what is private only to those it is for.** Loader data is in the page's
+  HTML, so a field the page hides is still sent: leave it out on the server. The
+  link to an experience's larger files follows the same rule as its uploads.
 - **A visitor's address comes from `clientIp`** in `src/server/env.ts`, which reads
   the one header the proxy in front sets (`CLIENT_IP_HEADER`). Never another header,
   which anyone can send.

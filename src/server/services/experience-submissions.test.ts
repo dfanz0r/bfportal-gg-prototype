@@ -544,6 +544,28 @@ describe('submitting an experience', () => {
         { lookup: async () => found, now: tomorrow },
       ),
     ).toMatchObject({ ok: false, errors: message })
+
+    // Let go of while Portal is asked, as another form can: refused, and
+    // nothing is written.
+    expect(
+      await submitExperience(
+        recruit(39),
+        form({ title: 'Lost Meanwhile', isTemplate: 'true', files }),
+        {
+          lookup: async () => {
+            await db.delete(heldFiles).where(eq(heldFiles.id, files[0]))
+            return found
+          },
+          now: NOW,
+        },
+      ),
+    ).toMatchObject({ ok: false, errors: message })
+    expect(
+      await db
+        .select()
+        .from(experiences)
+        .where(eq(experiences.slug, 'lost-meanwhile')),
+    ).toEqual([])
   })
 
   it('takes the code from Portal when given only a link', async () => {
