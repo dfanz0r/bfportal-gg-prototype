@@ -4,6 +4,7 @@ import { decideOnSnippet } from '../functions/moderation'
 import type { Script } from '../functions/scripts'
 import type { DecisionSearch } from '../shared/decision'
 import { Byline } from './byline'
+import { CodeView } from './code-view'
 import { CopyText } from './copy-text'
 import { DateText } from './date-text'
 import { DecisionForm } from './decision-form'
@@ -67,21 +68,7 @@ export function ScriptPage(props: {
               <span>Script.ts, {data().lines} lines</span>
               <CopyText text={data().script} label="Copy" />
             </p>
-            {/* The script as text, a numbered line at a time. Nothing here
-                runs it, and the numbers are drawn by the page, so copying
-                the text does not pick them up. */}
-            <pre class="max-h-[560px] overflow-auto bg-base py-4 font-mono text-[13px] leading-[1.7] text-fg-2">
-              <code class="block [counter-reset:line]">
-                {/* A file ends with a line break, which is not a line. */}
-                <For each={data().script.replace(/\n$/, '').split('\n')}>
-                  {(line) => (
-                    <span class="block pr-4 before:mr-4 before:inline-block before:w-[46px] before:text-right before:text-fg-3/60 before:content-[counter(line)] before:[counter-increment:line]">
-                      {line || ' '}
-                    </span>
-                  )}
-                </For>
-              </code>
-            </pre>
+            <CodeView text={data().script} class="max-h-[560px]" />
           </div>
 
           <Show when={data().descriptionHtml}>

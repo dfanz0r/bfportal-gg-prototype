@@ -301,6 +301,9 @@ export function ExperiencePage(props: { data: Experience }) {
                         <span class="font-mono text-xs text-fg-3">
                           {formatBytes(file.sizeBytes)}
                         </span>
+                        <a href={`/files/${file.id}`} class={smallButton}>
+                          View
+                        </a>
                         <a
                           href={`/api/files/${file.id}`}
                           class={smallButton}

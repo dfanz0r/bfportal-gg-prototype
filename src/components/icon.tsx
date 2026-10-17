@@ -156,13 +156,17 @@ export function Icon(props: { name: IconName; class?: string }) {
   const brand = () =>
     props.name in BRAND ? BRAND[props.name as BrandName] : undefined
   const line = () => LINE[props.name as LineName]
+  // A line icon is an outline unless it is asked to be filled in, as a
+  // liked heart is. Both classes at once would leave it to the order of the
+  // stylesheet, which keeps it an outline.
+  const fill = () => (size().includes('fill-current') ? '' : 'fill-none')
 
   return (
     <Show
       when={brand()}
       fallback={
         <svg
-          class={`shrink-0 fill-none stroke-current ${size()}`}
+          class={`shrink-0 ${fill()} stroke-current ${size()}`}
           viewBox="0 0 24 24"
           stroke-width="1.75"
           stroke-linecap="round"

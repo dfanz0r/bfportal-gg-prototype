@@ -10,11 +10,11 @@ const looks = {
       'inline-flex h-[38px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-semibold transition-colors hover:border-steel hover:bg-steel/6 aria-pressed:border-accent aria-pressed:text-accent',
     icon: 'size-4',
   },
-  // Over a card's picture, where the count used to be.
+  // Over a card's picture, where the count used to be: big enough to press.
   card: {
     button:
-      'inline-flex h-[26px] items-center gap-1.5 bg-base/80 px-2 font-mono text-[11.5px] text-fg tabular-nums backdrop-blur-sm transition-colors hover:bg-base hover:text-accent aria-pressed:text-accent',
-    icon: 'size-3',
+      'inline-flex h-[38px] items-center gap-2 bg-base/80 px-3 font-mono text-[15px] text-fg tabular-nums backdrop-blur-sm transition-colors hover:bg-base hover:text-accent aria-pressed:text-accent',
+    icon: 'size-[18px]',
   },
 }
 

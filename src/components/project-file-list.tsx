@@ -58,6 +58,12 @@ export function ProjectFileList(props: {
                   {formatBytes(file.sizeBytes)}
                 </span>
                 <a
+                  href={`/files/${file.id}`}
+                  class="text-sm text-steel-hi underline"
+                >
+                  View
+                </a>
+                <a
                   href={`/api/files/${file.id}`}
                   download={file.filename}
                   class="text-sm text-steel-hi underline"

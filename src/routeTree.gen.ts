@@ -25,6 +25,7 @@ import { Route as UpdatesRouteImport } from './routes/updates'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ExperiencesSlugRouteImport } from './routes/experiences/$slug'
+import { Route as FilesIdRouteImport } from './routes/files/$id'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as LibraryGameRouteImport } from './routes/library/$game'
 import { Route as PlaytestsIndexRouteImport } from './routes/playtests/index'
@@ -119,6 +120,11 @@ const ExperiencesSlugRoute = ExperiencesSlugRouteImport.update({
   path: '/experiences/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FilesIdRoute = FilesIdRouteImport.update({
+  id: '/files/$id',
+  path: '/files/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LibraryIndexRoute = LibraryIndexRouteImport.update({
   id: '/library/',
   path: '/library/',
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/files/$id': typeof FilesIdRoute
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/files/$id': typeof FilesIdRoute
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/updates': typeof UpdatesRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
+  '/files/$id': typeof FilesIdRoute
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/updates'
     | '/api/health'
     | '/experiences/$slug'
+    | '/files/$id'
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/updates'
     | '/api/health'
     | '/experiences/$slug'
+    | '/files/$id'
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/updates'
     | '/api/health'
     | '/experiences/$slug'
+    | '/files/$id'
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
@@ -389,6 +401,7 @@ export interface RootRouteChildren {
   UpdatesRoute: typeof UpdatesRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ExperiencesSlugRoute: typeof ExperiencesSlugRoute
+  FilesIdRoute: typeof FilesIdRoute
   LibraryGameRoute: typeof LibraryGameRoute
   PlaytestsIdRoute: typeof PlaytestsIdRoute
   ScriptsSlugRoute: typeof ScriptsSlugRoute
@@ -514,6 +527,13 @@ declare module '@tanstack/solid-router' {
       path: '/experiences/$slug'
       fullPath: '/experiences/$slug'
       preLoaderRoute: typeof ExperiencesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/files/$id': {
+      id: '/files/$id'
+      path: '/files/$id'
+      fullPath: '/files/$id'
+      preLoaderRoute: typeof FilesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library/': {
@@ -642,6 +662,7 @@ const rootRouteChildren: RootRouteChildren = {
   UpdatesRoute: UpdatesRoute,
   ApiHealthRoute: ApiHealthRoute,
   ExperiencesSlugRoute: ExperiencesSlugRoute,
+  FilesIdRoute: FilesIdRoute,
   LibraryGameRoute: LibraryGameRoute,
   PlaytestsIdRoute: PlaytestsIdRoute,
   ScriptsSlugRoute: ScriptsSlugRoute,

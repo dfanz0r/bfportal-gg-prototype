@@ -366,17 +366,21 @@ export async function getProjectFile(id: number, viewer: Actor | null) {
     })
     .from(projectFiles)
     .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
-    .where(
-      and(
-        eq(projectFiles.id, id),
-        isNull(experiences.deletedAt),
-        or(
-          and(eq(experiences.isTemplate, true), visible),
-          viewer && isStaffRole(viewer.role) ? sql`true` : undefined,
-          viewer ? eq(experiences.ownerId, viewer.id) : undefined,
-        ),
-      ),
-    )
+    .where(and(eq(projectFiles.id, id), fileReadableBy(viewer)))
     .limit(1)
   return file ?? null
 }
+
+/**
+ * Who may read a project's files, to download or to view: anyone, for a
+ * published template; its owner and the moderators, always.
+ */
+export const fileReadableBy = (viewer: Actor | null) =>
+  and(
+    isNull(experiences.deletedAt),
+    or(
+      and(eq(experiences.isTemplate, true), visible),
+      viewer && isStaffRole(viewer.role) ? sql`true` : undefined,
+      viewer ? eq(experiences.ownerId, viewer.id) : undefined,
+    ),
+  )
