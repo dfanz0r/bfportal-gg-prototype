@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm'
+import { and, asc, count, eq, isNull, ne, notInArray, sql } from 'drizzle-orm'
 
 import { NOTE_NEEDED } from '../../shared/decision'
 import { shownMedia } from '../../shared/media'
@@ -53,6 +53,16 @@ const snippetWaiting = and(
   isNull(snippets.deletedAt),
 )
 
+/**
+ * Another page that still has its code: not deleted, not removed for good,
+ * and not a draft, which was sent to nobody. The queue's own check says the
+ * same in SQL.
+ */
+const holdsItsCode = and(
+  isNull(experiences.deletedAt),
+  notInArray(experiences.status, ['draft', 'removed']),
+)
+
 const waiting = and(
   eq(experiences.status, 'pending'),
   isNull(experiences.deletedAt),
@@ -76,7 +86,7 @@ export async function listQueue(actor: Actor | null) {
       ownerName: user.name,
       ownerImage: user.image,
       // Another page already on the same code: worth knowing before opening it.
-      sameCode: sql<boolean>`exists (select 1 from ${experiences} as other where other.game = ${experiences.game} and other.code = ${experiences.code} and other.id <> ${experiences.id} and other.deleted_at is null)`,
+      sameCode: sql<boolean>`exists (select 1 from ${experiences} as other where other.game = ${experiences.game} and other.code = ${experiences.code} and other.id <> ${experiences.id} and other.deleted_at is null and other.status not in ('draft', 'removed'))`,
     })
     .from(experiences)
     .innerJoin(user, eq(user.id, experiences.ownerId))
@@ -391,7 +401,7 @@ export async function getSubmissionReview(
               eq(experiences.game, experience.game),
               eq(experiences.code, experience.code),
               ne(experiences.id, experience.id),
-              isNull(experiences.deletedAt),
+              holdsItsCode,
             ),
           )
       : [],

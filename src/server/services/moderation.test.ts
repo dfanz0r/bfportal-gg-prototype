@@ -156,6 +156,25 @@ describe('moderation', () => {
     expect(review.checks.sameCode.map((other) => other.title)).toEqual([
       'First with this code',
     ])
+    // Removed, or a draft, it no longer has the code to clash with.
+    for (const status of ['removed', 'draft'] as const) {
+      await db
+        .update(experiences)
+        .set({ status })
+        .where(eq(experiences.id, first))
+      const again = await getSubmissionReview(moderator, second, unavailable)
+      expect(again.ok && again.checks.sameCode).toEqual([])
+      const queued = await listQueue(moderator)
+      expect(
+        queued.ok &&
+          queued.items.find((item) => item.title === 'Second with this code')
+            ?.sameCode,
+      ).toBe(false)
+    }
+    await db
+      .update(experiences)
+      .set({ status: 'pending' })
+      .where(eq(experiences.id, first))
     // Every link, in order, for the moderator to open.
     expect(
       review.submission.media.map((item) => [item.kind, item.url]),
