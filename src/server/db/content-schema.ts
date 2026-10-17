@@ -33,6 +33,7 @@ import {
   tagSources,
   testerRegions,
 } from '../../shared/content'
+import type { TeamSetup } from '../../shared/teams'
 import { user } from './auth-schema'
 
 // The site's own tables. See "Data model" in PLAN.md.
@@ -92,6 +93,9 @@ export const categories = pgTable(
     iconSvg: text('icon_svg'),
     visible: boolean('visible').notNull().default(true),
     selectableOnForm: boolean('selectable_on_form').notNull().default(true),
+    // An experience submitted in this category is a template. How a game
+    // whose templates are a category, not a choice on the form, says so.
+    marksTemplate: boolean('marks_template').notNull().default(false),
     notReady: boolean('not_ready').notNull().default(false),
     descriptionMd: text('description_md').notNull().default(''),
     metaTitle: text('meta_title'),
@@ -305,14 +309,20 @@ export const experiences = pgTable(
     // the playground id instead.
     expUrl: text('exp_url'),
     coverImgUrl: text('cover_img_url'),
-    vidUrl: text('vid_url'),
     // The project's source repository, if the owner shares one.
     repoUrl: text('repo_url'),
     // Files too large to upload here, hosted elsewhere: a Dropbox, Google
     // Drive or GitHub link.
     filesUrl: text('files_url'),
+    // All its players and all its bots. Worked out from `team_setup` where
+    // there is one, and kept here so listings can show and filter on them.
     maxPlayers: integer('max_players').notNull().default(0),
     maxBots: integer('max_bots').notNull().default(0),
+    // How it splits them into teams: for each team in order, how many people
+    // and how many bots (`TeamSetup` in src/shared/teams.ts). Said by its
+    // creator on the form. Null for one imported from the old site, which
+    // never asked.
+    teamSetup: jsonb('team_setup').$type<TeamSetup>(),
     // What it is built with. Read from an uploaded export, or chosen on the
     // form. Empty for Battlefield 2042, where the distinction does not exist.
     types: experienceTypeEnum('types').array().notNull().default(sql`'{}'`),
@@ -391,15 +401,20 @@ export const experiences = pgTable(
     }),
     check('experiences_max_players_check', sql`${table.maxPlayers} >= 0`),
     check('experiences_max_bots_check', sql`${table.maxBots} >= 0`),
+    check(
+      'experiences_team_setup_check',
+      sql`${table.teamSetup} is null or jsonb_typeof(${table.teamSetup}) = 'array'`,
+    ),
   ],
 )
 
 /**
- * Extra pictures for an experience's gallery, shown after the cover image in
- * this order. Like the cover, each is a link to an image hosted elsewhere.
+ * An experience's gallery after its cover, in this order: links to pictures
+ * and videos hosted elsewhere. Each is kept as it was typed; what it shows
+ * is worked out from the link by `mediaOf` in `src/shared/media.ts`.
  */
-export const experienceImages = pgTable(
-  'experience_images',
+export const experienceMedia = pgTable(
+  'experience_media',
   {
     experienceId: integer('experience_id')
       .notNull()

@@ -1,5 +1,7 @@
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm'
 
+import { isStaff as isStaffRole } from '../../shared/roles'
+import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import {
   categories,
@@ -109,12 +111,23 @@ export type SnippetItem = Awaited<
   ReturnType<typeof listSnippets>
 >['items'][number]
 
-/** A script's own page, or null unless it is published and not deleted. */
-export async function getSnippet(slug: string, now = new Date()) {
+/**
+ * A script's own page, or null if whoever is looking may not see it. The
+ * public sees what is published. Its owner and the moderators also see it in
+ * any other status. Nobody sees one its owner deleted.
+ */
+export async function getSnippet(
+  slug: string,
+  now = new Date(),
+  viewer: Actor | null = null,
+) {
   const [row] = await db
     .select({
       id: snippets.id,
       slug: snippets.slug,
+      status: snippets.status,
+      ownerId: snippets.ownerId,
+      reviewNote: snippets.reviewNote,
       title: snippets.title,
       descriptionMd: snippets.descriptionMd,
       descriptionHtml: snippets.descriptionHtml,
@@ -133,9 +146,12 @@ export async function getSnippet(slug: string, now = new Date()) {
     .innerJoin(user, eq(user.id, snippets.ownerId))
     .leftJoin(categories, eq(categories.id, snippets.categoryId))
     .leftJoin(sdkVersions, eq(sdkVersions.id, snippets.sdkVersionId))
-    .where(and(eq(snippets.slug, slug), snippetVisible))
+    .where(and(eq(snippets.slug, slug), isNull(snippets.deletedAt)))
     .limit(1)
   if (!row) return null
+  const isOwner = viewer?.id === row.ownerId
+  const isStaff = viewer !== null && isStaffRole(viewer.role)
+  if (row.status !== 'published' && !isOwner && !isStaff) return null
 
   const posts = await db
     .select({
@@ -157,6 +173,7 @@ export async function getSnippet(slug: string, now = new Date()) {
     .orderBy(desc(updates.publishedAt))
 
   return {
+    id: row.id,
     slug: row.slug,
     title: row.title,
     summary: excerpt(row.descriptionMd),
@@ -180,6 +197,11 @@ export async function getSnippet(slug: string, now = new Date()) {
       publishedAt: post.publishedAt,
       author: publicPerson(post.author),
     })),
+    status: row.status,
+    // What a moderator wrote when asking for changes or removing it, for its
+    // owner. Who wrote it is not passed on.
+    reviewNote: isOwner || isStaff ? row.reviewNote : null,
+    viewer: { isOwner, isStaff },
     now,
   }
 }

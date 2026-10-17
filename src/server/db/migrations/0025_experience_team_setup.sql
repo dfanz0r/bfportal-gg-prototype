@@ -1,0 +1,2 @@
+ALTER TABLE "experiences" ADD COLUMN "team_setup" jsonb;--> statement-breakpoint
+ALTER TABLE "experiences" ADD CONSTRAINT "experiences_team_setup_check" CHECK ("experiences"."team_setup" is null or jsonb_typeof("experiences"."team_setup") = 'array');

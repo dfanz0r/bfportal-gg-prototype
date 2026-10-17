@@ -8,6 +8,7 @@ import type {
   TesterRegion,
 } from '../src/shared/content'
 import type { Role } from '../src/shared/roles'
+import type { TeamSetup } from '../src/shared/teams'
 
 // Made-up people and content, after the mockups. Everything that needs
 // invented words (update posts, playtest briefs, pending edits, flags) hangs
@@ -65,6 +66,8 @@ export type SampleExperience = {
   code: string | null
   players: number
   bots?: number
+  /** How its creator set out the teams, where that says more than the sizes. */
+  teams?: TeamSetup
   rotation?: Rotation
   /** An index into `stockCovers`. A 2042 one uses its first map's picture. */
   cover?: number
@@ -153,6 +156,10 @@ export const experiences: SampleExperience[] = [
     code: '1zpr7',
     players: 4,
     bots: 60,
+    teams: [
+      { players: 4, bots: 0 },
+      { players: 0, bots: 60 },
+    ],
     rotation: rotation('Custom', [4, 60], 'MP_Dumbo'),
     cover: 3,
     age: 41,
@@ -421,6 +428,10 @@ export const experiences: SampleExperience[] = [
     code: 'aar9xm',
     players: 8,
     bots: 56,
+    teams: [
+      { players: 8, bots: 0 },
+      { players: 0, bots: 56 },
+    ],
     rotation: rotation('Custom', [8, 56], 'MP_Hourglass'),
     age: 700,
     likes: 49,

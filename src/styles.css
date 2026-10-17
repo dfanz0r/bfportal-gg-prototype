@@ -233,6 +233,45 @@
   }
 }
 
+/* A slider as the Portal editor draws one: a thin line, and a narrow upright
+   bar to drag along it. The box around it is the page's. */
+@utility range {
+  appearance: none;
+  height: 30px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  &::-webkit-slider-runnable-track {
+    height: 1px;
+    background: var(--color-line-strong);
+  }
+  &::-moz-range-track {
+    height: 1px;
+    background: var(--color-line-strong);
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 3px;
+    height: 16px;
+    margin-top: -8px;
+    border: 0;
+    background: var(--color-fg);
+  }
+  &::-moz-range-thumb {
+    width: 3px;
+    height: 16px;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-fg);
+  }
+  &:hover::-webkit-slider-thumb {
+    background: var(--color-accent);
+  }
+  &:hover::-moz-range-thumb {
+    background: var(--color-accent);
+  }
+}
+
 /* The faint dot grid behind page heads, after the official Portal site. */
 @utility dot-grid {
   background-image: radial-gradient(
@@ -246,5 +285,10 @@
   * {
     /* biome-ignore lint/complexity/noImportantStyles: has to beat every component's own transition */
     transition: none !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
   }
 }

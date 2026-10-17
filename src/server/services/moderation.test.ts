@@ -7,9 +7,16 @@ import { db, sql } from '../db'
 import { experiences } from '../db/schema'
 import type { Lookup } from '../integrations/gametools'
 import { getExperience } from './experience'
+import { submitExperience } from './experience-submissions'
 import { getLibrary } from './library'
-import { decideSubmission, getSubmissionReview, listQueue } from './moderation'
-import { submitExperience } from './submissions'
+import {
+  decideSnippet,
+  decideSubmission,
+  getSubmissionReview,
+  listQueue,
+} from './moderation'
+import { submitSnippet } from './snippet-submissions'
+import { getSnippet } from './snippets'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 const someone: Actor = { id: 'seed-vantage', role: 'user' }
@@ -38,7 +45,7 @@ async function submit(title: string, changes: Record<string, unknown> = {}) {
       title,
       description:
         'A description long enough to say what the experience is and how it plays.',
-      maxPlayers: '32',
+      teamPlayers: ['16', '16'],
       ...changes,
     },
     { ...unavailable, now: NOW },
@@ -101,7 +108,11 @@ describe('moderation', () => {
       description:
         '![x](https://tracker.example/p.gif) ![y](https://i.imgur.com/a.png)',
       coverImgUrl: 'https://covers.example/c.png',
-      images: 'https://gallery.example/g.png\nhttps://i.imgur.com/b.png',
+      media: [
+        'https://gallery.example/g.png',
+        'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+        'https://i.imgur.com/b.png',
+      ],
     })
 
     // The queue says so before either is opened.
@@ -136,13 +147,22 @@ describe('moderation', () => {
       portal: 'published',
       portalTitle: 'What Portal calls it',
       // imgur is an everyday host; the others are worth a look, whether the
-      // picture is in the description, the cover or the gallery.
+      // picture is in the description, the cover or the gallery. A video's
+      // thumbnail comes from YouTube, not from whoever posted it.
       pictureHosts: ['covers.example', 'gallery.example', 'tracker.example'],
       thinDescription: true,
       hasCover: true,
     })
     expect(review.checks.sameCode.map((other) => other.title)).toEqual([
       'First with this code',
+    ])
+    // Every link, in order, for the moderator to open.
+    expect(
+      review.submission.media.map((item) => [item.kind, item.url]),
+    ).toEqual([
+      ['image', 'https://gallery.example/g.png'],
+      ['video', 'https://www.youtube.com/watch?v=jNQXAC9IVRw'],
+      ['image', 'https://i.imgur.com/b.png'],
     ])
     expect(review.submitter).toMatchObject({ name: 'vantage' })
     expect(review.submitter.published).toBeGreaterThan(0)
@@ -178,6 +198,56 @@ describe('moderation', () => {
       ok: false,
       reason: 'not-found',
     })
+  })
+
+  it('reviews a snippet the same way: in the queue, decided once', async () => {
+    const sent = await submitSnippet(
+      { id: 'seed-recruit-08', role: 'user' },
+      {
+        title: 'Reviewed snippet',
+        description: 'Something small.',
+        script: 'const reviewed = true',
+        category: 'rules',
+      },
+      { now: NOW },
+    )
+    if (!sent.ok) throw new Error('expected the snippet to go in')
+    const waiting = await getSnippet(sent.slug, NOW, moderator)
+    if (!waiting) throw new Error('expected a moderator to see it')
+
+    const queue = await listQueue(moderator)
+    expect(queue.ok && queue.snippets.map((item) => item.title)).toContain(
+      'Reviewed snippet',
+    )
+    // Nobody but a moderator or an admin decides it.
+    for (const [actor, reason] of [
+      [null, 'signed-out'],
+      [someone, 'forbidden'],
+    ] as const) {
+      expect(await decideSnippet(actor, waiting.id, { approve: true })).toEqual(
+        { ok: false, reason },
+      )
+    }
+    // Changes need a note; then it is out of the queue, and still not public.
+    expect(
+      await decideSnippet(moderator, waiting.id, { approve: false }),
+    ).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(await getSnippet(sent.slug, NOW)).toBeNull()
+
+    expect(
+      await decideSnippet(admin, waiting.id, { approve: true }, NOW),
+    ).toEqual({ ok: true, slug: sent.slug, status: 'published' })
+    expect(await getSnippet(sent.slug, NOW)).toMatchObject({
+      status: 'published',
+      publishedAt: NOW,
+    })
+    // Decided already: there is nothing waiting to decide.
+    expect(
+      await decideSnippet(moderator, waiting.id, {
+        approve: false,
+        note: 'changed my mind',
+      }),
+    ).toEqual({ ok: false, reason: 'not-found' })
   })
 
   it('requests changes only with a note, which its owner then sees', async () => {

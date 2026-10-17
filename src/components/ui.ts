@@ -35,6 +35,23 @@ export const tag =
 export const pill =
   'inline-flex h-[34px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-medium text-fg-2 hover:border-steel hover:text-fg aria-[current=true]:border-accent aria-[current=true]:text-fg'
 
+/**
+ * A choice drawn as a card that cannot be taken: the card's shape, dashed,
+ * with nothing that answers the pointer.
+ */
+export const choiceCardOff =
+  'relative grid gap-0.5 border border-dashed border-line-strong px-3.5 pt-[11px] pb-3'
+
+/**
+ * A choice drawn as a card: a name and a line about it. A link to where the
+ * choice leads, filled in when it is marked `data-chosen`. Not by
+ * `aria-current`: the router writes that on a link as soon as the address
+ * changes, before the page's data has loaded, so the card would fill in the
+ * old page's colors and then change to the new ones.
+ */
+export const choiceCard =
+  'relative grid cursor-pointer gap-0.5 border border-line-strong px-3.5 pt-[11px] pb-3 transition-colors duration-200 hover:border-steel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-chosen:border-accent data-chosen:bg-accent/12'
+
 /** A text field. A `<select>` and a `<textarea>` take it too. */
 export const field =
   'min-h-[42px] w-full border border-line-strong bg-base px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-3 focus:border-steel'

@@ -2,8 +2,12 @@ import { createFileRoute, notFound } from '@tanstack/solid-router'
 
 import { ScriptPage, scriptHead } from '../../components/script-page'
 import { fetchScript } from '../../functions/scripts'
+import { decisionSearchSchema } from '../../shared/decision'
 
 export const Route = createFileRoute('/scripts/$slug')({
+  // A waiting snippet is decided on its own page. Set when a decision posted
+  // with no script was refused.
+  validateSearch: decisionSearchSchema,
   loader: async ({ params }) => {
     const script = await fetchScript({ data: { slug: params.slug } })
     if (!script) {
@@ -17,5 +21,6 @@ export const Route = createFileRoute('/scripts/$slug')({
 
 function Page() {
   const data = Route.useLoaderData()
-  return <ScriptPage data={data()} />
+  const search = Route.useSearch()
+  return <ScriptPage data={data()} decision={search()} />
 }

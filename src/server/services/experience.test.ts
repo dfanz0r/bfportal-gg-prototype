@@ -121,7 +121,7 @@ describe('experience', () => {
       sdk: { version: '1.4.3.0', season: 'Season 4', releasesBehind: 0 },
     })
     // The cover and three gallery pictures.
-    expect(page?.images).toHaveLength(4)
+    expect(page?.gallery).toHaveLength(4)
     expect(page?.rotation.map((entry) => entry.name)).toEqual([
       'Siege of Cairo',
       'Mirak Valley',

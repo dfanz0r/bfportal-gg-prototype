@@ -1,25 +1,29 @@
 import { useNavigate } from '@tanstack/solid-router'
-import { createEffect, createSignal, For, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, on, Show } from 'solid-js'
 
 import type { Library } from '../functions/library'
 import type { SubmitPageData } from '../functions/submit'
-import { submitForReview } from '../functions/submit'
+import { startFromCode, submitForReview } from '../functions/submit'
 import { experienceTypeLabels } from '../shared/content'
-import { MAX_CREDITS, MAX_IMAGES, VIDEO_HOSTS } from '../shared/experience-form'
+import { MAX_CREDITS, MAX_MEDIA, REPO_HOSTS } from '../shared/experience-form'
 import { formFields } from '../shared/form-input'
-import { gameInfo, gameList } from '../shared/games'
+import { defaultGame, gameInfo } from '../shared/games'
+import { submitLead } from '../shared/submit'
+import { type TeamSetup, teamTotals } from '../shared/teams'
 import { Check } from './check'
 import { Choice } from './choice'
 import { ChoiceGroup } from './choice-group'
+import { CreditsInput } from './credits-input'
 import { ExperienceCard } from './experience-card'
 import { FormField } from './form-field'
 import { FormSection } from './form-section'
-import { Icon } from './icon'
+import { Icon, type IconName } from './icon'
+import { ImagePreview } from './image-preview'
+import { MediaListInput } from './media-list-input'
 import { PageLayout } from './page-layout'
+import { SubmitStart } from './submit-start'
+import { TeamSetupInput } from './team-setup-input'
 import { buttonAccent, buttonGhost, field, label, panel } from './ui'
-
-const LEAD =
-  'Share something you built in Portal. A moderator looks at every new submission before it goes live, usually within a day.'
 
 type Card = Library['items'][number]
 
@@ -102,21 +106,55 @@ function LookupNote(props: { data: SubmitPageData }) {
   )
 }
 
+/** A field for a link, with an icon for what it leads to. */
+function LinkInput(props: {
+  name: string
+  icon: IconName
+  value: string | number
+  placeholder?: string
+}) {
+  return (
+    <div class="relative">
+      <Icon
+        name={props.icon}
+        class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-3"
+      />
+      <input
+        id={props.name}
+        name={props.name}
+        type="url"
+        value={props.value}
+        placeholder={props.placeholder}
+        class={`${field} pl-9`}
+      />
+    </div>
+  )
+}
+
+const same = (one: unknown, other: unknown) =>
+  JSON.stringify(one) === JSON.stringify(other)
+
 /** The page for sharing an experience. */
 export function SubmitPage(props: { data: SubmitPageData }) {
   const data = () => props.data
   const info = () => gameInfo(data().game)
   const navigate = useNavigate()
-  // A form that was posted with no script and refused comes back as a draft:
-  // what was sent, and what was wrong with it.
-  const draft = () => data().draft
+  // What the fields start from: a form that was posted with no script and
+  // refused, which comes back as a draft with what was wrong, and what Portal
+  // says about the code. Both are remembered by what they say. A field is
+  // written to whenever what it starts from is read again, so going to the
+  // other game's form, which loads the page's data again, would otherwise
+  // wipe everything typed so far.
+  const draft = createMemo(() => data().draft, undefined, { equals: same })
+  const found = createMemo(() => data().found, undefined, { equals: same })
   const [errors, setErrors] = createSignal<Record<string, string>>(
     // Read once on purpose, so the server's HTML carries them too.
     props.data.draft?.errors ?? {},
   )
-  createEffect(() => setErrors(draft()?.errors ?? {}))
+  // What was wrong was wrong with the form as it was loaded.
+  createEffect(on(data, () => setErrors(draft()?.errors ?? {})))
   const [sending, setSending] = createSignal(false)
-  const portalTags = () => data().found?.tags ?? []
+  const portalTags = () => found()?.tags ?? []
 
   /** What a field starts with: what was sent last time, or else `otherwise`. */
   const start = (name: string, otherwise: string | number = '') => {
@@ -135,6 +173,21 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   // then the card beside the form is drawn from what the form started with,
   // which is also what the server draws.
   const [typed, setTyped] = createSignal<ReturnType<typeof formFields>>()
+  let filledIn: HTMLFormElement | undefined
+  // Going to the other game's form keeps this page and changes what it
+  // offers: other categories, other tags. What was read from the form before
+  // is then about fields that are gone, so it is read again.
+  createEffect(
+    on(
+      data,
+      () => {
+        if (typed() && filledIn) {
+          setTyped(formFields(new FormData(filledIn)))
+        }
+      },
+      { defer: true },
+    ),
+  )
   const now = (name: string, otherwise: string | number = '') => {
     const fields = typed()
     return fields ? String(fields[name] ?? '') : String(start(name, otherwise))
@@ -143,6 +196,59 @@ export function SubmitPage(props: { data: SubmitPageData }) {
     const fields = typed()
     return fields ? [fields[name] ?? []].flat().map(String) : initially
   }
+  /** The teams as the form holds them now, or null before it is typed in. */
+  const typedTeams = (): TeamSetup | null => {
+    const fields = typed() ?? draft()?.fields
+    const players = [fields?.teamPlayers ?? []].flat()
+    if (players.length === 0) return null
+    const bots = [fields?.teamBots ?? []].flat()
+    const held = (value: unknown) =>
+      Math.min(Math.max(Math.round(Number(value)) || 0, 0), info().maxPlayers)
+    return players.map((value, index) => ({
+      players: held(value),
+      bots: held(bots[index]),
+    }))
+  }
+  /**
+   * The teams the form starts with each time the page's data loads: as they
+   * were set, which going to the other game's form keeps, or else as Portal
+   * sets them out for the first map, or else two even teams. Worked out only
+   * then, not as they are typed in: an emptied box would otherwise be filled
+   * in again while it is still being typed in.
+   */
+  const startTeams = createMemo(
+    on(data, (): TeamSetup => {
+      const kept = typedTeams()
+      if (kept) return kept
+      const fromPortal = found()?.teams.filter((size) => size > 0) ?? []
+      if (fromPortal.length > 0) {
+        return fromPortal.map((players) => ({
+          players: Math.min(players, info().maxPlayers),
+          bots: 0,
+        }))
+      }
+      const even = info().maxPlayers / 4
+      return [
+        { players: even, bots: 0 },
+        { players: even, bots: 0 },
+      ]
+    }),
+  )
+  /**
+   * The category chosen: the one picked, if this game's form offers it, or
+   * else the one the form starts on. One game has categories another has not,
+   * and the router keeps the rows both share when the page goes from one
+   * form to the other, so a pick that is no longer offered would otherwise
+   * leave none chosen.
+   */
+  const category = createMemo(() => {
+    const offered = data().options.categories
+    const picked = typed()?.category
+    return (
+      offered.find((item) => item.slug === picked) ??
+      offered.find((item, index) => ticked('category', item.slug, index === 0))
+    )
+  })
   /** The card this would be in a listing, as far as the form says so far. */
   const preview = (): Card => {
     const allTags = data().options.tagGroups.flatMap((group) => group.tags)
@@ -152,35 +258,33 @@ export function SubmitPage(props: { data: SubmitPageData }) {
         .filter((tag) => ticked('tags', tag.slug, fromPortal(tag)))
         .map((tag) => tag.slug),
     )
-    const category = now(
-      'category',
-      data().options.categories.find((item, index) =>
-        ticked('category', item.slug, index === 0),
-      )?.slug,
-    )
     const built = nowChosen(
       'built',
       info().builtWith.filter((type) => ticked('built', type)),
     )
+    const listedIn = category()
     return {
       id: 0,
       game: data().game,
       slug: '',
-      title: now('title', data().found?.title) || 'Your title',
-      excerpt: now('description', data().found?.description).slice(0, 140),
+      title: now('title', found()?.title) || 'Your title',
+      excerpt: now('description', found()?.description).slice(0, 140),
       coverImgUrl:
-        now('coverImgUrl') || (data().found?.thumbnailUrl ?? null) || null,
-      category:
-        data().options.categories.find((item) => item.slug === category)
-          ?.name ?? '',
-      maxPlayers: Number(now('maxPlayers', data().found?.players || 0)) || 0,
-      maxBots: Number(now('maxBots', 0)) || 0,
+        now('coverImgUrl') || (found()?.thumbnailUrl ?? null) || null,
+      category: listedIn?.name ?? '',
+      maxPlayers: teamTotals(typedTeams() ?? startTeams()).players,
+      maxBots: teamTotals(typedTeams() ?? startTeams()).bots,
       types: info().builtWith.filter((type) => built.includes(type)),
-      isTemplate: nowChosen(
-        'isTemplate',
-        ticked('isTemplate', 'true') ? ['true'] : [],
-      ).includes('true'),
-      code: data().code,
+      // Chosen on the form where the game has that choice, or said by the
+      // category: the same rule the server applies.
+      isTemplate:
+        (info().hasExport &&
+          nowChosen(
+            'isTemplate',
+            ticked('isTemplate', 'true') ? ['true'] : [],
+          ).includes('true')) ||
+        (listedIn?.marksTemplate ?? false),
+      code: now('code', data().code || found()?.code || '') || null,
       likes: 0,
       featured: false,
       bugged: false,
@@ -200,10 +304,37 @@ export function SubmitPage(props: { data: SubmitPageData }) {
     form.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center' })
   }
 
+  let fetchButton: HTMLButtonElement | undefined
+  /** Goes to the page for the code or link in the form, keeping this one. */
+  const fetchDetails = (form: HTMLFormElement) => {
+    const fields = new FormData(form)
+    const typedIn = (name: string) =>
+      String(fields.get(name) ?? '').trim() || undefined
+    void navigate({
+      to: '/submit',
+      search: {
+        game: data().game === defaultGame.id ? undefined : data().game,
+        code: typedIn('code'),
+        link: typedIn('link'),
+      },
+      resetScroll: false,
+    })
+  }
+  // Enter in the code or the link is asking for its details.
+  const fetchOnEnter = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    fetchButton?.click()
+  }
+
   const submit = async (event: SubmitEvent) => {
     event.preventDefault()
-    if (sending()) return
     const form = event.currentTarget as HTMLFormElement
+    if (event.submitter === fetchButton) {
+      fetchDetails(form)
+      return
+    }
+    if (sending()) return
     setSending(true)
     let result: Awaited<ReturnType<typeof submitForReview>>
     try {
@@ -232,80 +363,17 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   }
 
   return (
-    <PageLayout title="Submit" lead={LEAD}>
+    <PageLayout title="Submit" lead={submitLead}>
       <div
         class="grid items-start gap-8 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10"
         data-game={data().game}
       >
         <div class="min-w-0">
-          {/* The game comes first, then the code. A GET form: both go in the
-              address, and the page comes back for that game with what Portal
-              says about the code. */}
-          <form method="get" action="/submit">
-            <FormSection title="Which game is it for?">
-              <div class="grid gap-2.5 sm:grid-cols-2">
-                <For each={gameList}>
-                  {(game) => (
-                    <label class="relative grid cursor-pointer gap-0.5 border border-line-strong px-3.5 pt-[11px] pb-3 hover:border-steel has-checked:border-accent has-checked:bg-accent/12 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
-                      <input
-                        type="radio"
-                        name="game"
-                        value={game.id}
-                        checked={game.id === data().game}
-                        class="sr-only"
-                      />
-                      <b class="text-[15px] font-semibold">{game.name}</b>
-                      <small class="text-[13px] text-fg-3">
-                        {game.submitNote}
-                      </small>
-                    </label>
-                  )}
-                </For>
-              </div>
-            </FormSection>
-
-            <FormSection
-              title="Start from your code"
-              note="We fill in most of the form from it."
-            >
-              <FormField
-                label="Experience code"
-                name="lookup-code"
-                hint="No code yet? A template can be shared as files alone: tick “Offer it as a template” below."
-              >
-                <div class="flex gap-2">
-                  <input
-                    id="lookup-code"
-                    name="code"
-                    value={data().code ?? ''}
-                    autocomplete="off"
-                    spellcheck={false}
-                    class={`${field} font-mono tracking-[0.12em] uppercase`}
-                  />
-                  <button type="submit" class={`${buttonGhost} h-[42px]`}>
-                    Fetch details
-                  </button>
-                </div>
-              </FormField>
-              <FormField
-                label="Or a link to it on Portal"
-                name="lookup-link"
-                optional
-              >
-                <input
-                  id="lookup-link"
-                  name="link"
-                  type="url"
-                  value={data().link ?? ''}
-                  placeholder="https://portal.battlefield.com/..."
-                  class={field}
-                />
-              </FormField>
-              <LookupNote data={data()} />
-            </FormSection>
-          </form>
+          {/* The game comes first, and choosing one goes to its form. */}
+          <SubmitStart game={data().game} kind="experience" />
 
           <form
+            ref={filledIn}
             method="post"
             action={submitForReview.url}
             onSubmit={submit}
@@ -313,16 +381,71 @@ export function SubmitPage(props: { data: SubmitPageData }) {
               setTyped(formFields(new FormData(event.currentTarget)))
             }
           >
+            {/* Enter in a field presses a form's first button. This is that
+                button, so Enter submits, as the button at the bottom does,
+                and does not fetch the details again. */}
+            <button type="submit" hidden />
             <input type="hidden" name="game" value={data().game} />
-            <input type="hidden" name="code" value={data().code ?? ''} />
-            <input type="hidden" name="link" value={data().link ?? ''} />
+
+            <FormSection
+              title="Start from your code"
+              note="We fill in most of the form from it."
+            >
+              <FormField
+                label="Experience code"
+                name="code"
+                // Said in the label, as the mockup has it, and not in a line
+                // under the field: a line only one game's form has moves
+                // everything below it.
+                optional={info().hasExport && 'Optional for a template'}
+                errors={errors()}
+              >
+                <div class="flex gap-2">
+                  <input
+                    id="code"
+                    name="code"
+                    value={data().code || found()?.code || ''}
+                    autocomplete="off"
+                    spellcheck={false}
+                    onKeyDown={fetchOnEnter}
+                    class={`${field} font-mono tracking-[0.12em] uppercase`}
+                  />
+                  {/* The code and link are what is submitted. With no
+                      script this posts the form to a function that goes to
+                      the page for the code; the script goes there itself. */}
+                  <button
+                    ref={fetchButton}
+                    type="submit"
+                    formaction={startFromCode.url}
+                    formnovalidate
+                    class={`${buttonGhost} h-[42px]`}
+                  >
+                    <Icon name="search" />
+                    Fetch details
+                  </button>
+                </div>
+              </FormField>
+              <FormField
+                label="Or a link to it on Portal"
+                name="link"
+                optional
+                errors={errors()}
+              >
+                <input
+                  id="link"
+                  name="link"
+                  type="url"
+                  value={data().link}
+                  placeholder="https://portal.battlefield.com/..."
+                  onKeyDown={fetchOnEnter}
+                  class={field}
+                />
+              </FormField>
+              <LookupNote data={data()} />
+            </FormSection>
 
             {/* What is wrong with no field of its own to sit under. */}
-            <Show
-              when={
-                errors().form ?? errors().code ?? errors().link ?? errors().game
-              }
-            >
+            <Show when={errors().form ?? errors().game}>
               {(message) => (
                 <p
                   class="mb-8 border-l-2 border-danger bg-danger/8 px-4 py-3 text-sm text-fg"
@@ -336,14 +459,14 @@ export function SubmitPage(props: { data: SubmitPageData }) {
             <FormSection title="How it is listed">
               <ChoiceGroup label="Category" error={errors().category}>
                 <For each={data().options.categories}>
-                  {(category, index) => (
+                  {(item) => (
                     <Choice
                       radio
                       name="category"
-                      value={category.slug}
-                      checked={ticked('category', category.slug, index() === 0)}
+                      value={item.slug}
+                      checked={category()?.slug === item.slug}
                     >
-                      {category.name}
+                      {item.name}
                     </Choice>
                   )}
                 </For>
@@ -368,14 +491,17 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 </ChoiceGroup>
               </Show>
               <div class="grid gap-1">
-                <Check
-                  name="isTemplate"
-                  value="true"
-                  checked={ticked('isTemplate', 'true')}
-                >
-                  Offer it as a template: others may take it and publish their
-                  own version
-                </Check>
+                {/* Without an export a template is a category, chosen above. */}
+                <Show when={info().hasExport}>
+                  <Check
+                    name="isTemplate"
+                    value="true"
+                    checked={ticked('isTemplate', 'true')}
+                  >
+                    Offer it as a template: others may take it and publish their
+                    own version
+                  </Check>
+                </Show>
                 <Check
                   name="copyAllowed"
                   value="true"
@@ -394,7 +520,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   required
                   minlength={3}
                   maxlength={80}
-                  value={start('title', data().found?.title)}
+                  value={start('title', found()?.title)}
                   class={field}
                 />
               </FormField>
@@ -411,7 +537,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                   maxlength={10000}
                   class={field}
                 >
-                  {start('description', data().found?.description)}
+                  {start('description', found()?.description)}
                 </textarea>
               </FormField>
 
@@ -486,126 +612,116 @@ export function SubmitPage(props: { data: SubmitPageData }) {
               </Show>
 
               <FormField
-                label="Made with"
+                label="Co-creators"
                 name="credits"
                 optional
-                hint={`Names to credit, one per line, up to ${MAX_CREDITS}. For people with an account here, add them from the experience's page once it is approved.`}
-                errors={errors()}
+                hint={`Up to ${MAX_CREDITS}. Someone with an account here is asked, and shown once they accept. Anyone else is added as a name.`}
+                errors={{
+                  credits: errors().credits ?? errors().creditAccounts ?? '',
+                }}
               >
-                <textarea id="credits" name="credits" rows={3} class={field}>
-                  {start('credits')}
-                </textarea>
+                <CreditsInput
+                  id="credits"
+                  names={[draft()?.fields.credits ?? []]
+                    .flat()
+                    .flatMap((name) => String(name).split('\n'))
+                    .map((name) => name.trim())
+                    .filter(Boolean)}
+                  accounts={data().credited}
+                  max={MAX_CREDITS}
+                />
               </FormField>
             </FormSection>
 
-            <FormSection title="Setup">
-              <div class="grid items-start gap-x-5 gap-y-[18px] sm:grid-cols-2">
-                <FormField
-                  label="Players"
-                  name="maxPlayers"
-                  hint="The most a match holds."
-                  errors={errors()}
-                >
-                  <input
-                    id="maxPlayers"
-                    name="maxPlayers"
-                    type="number"
-                    required
-                    min={1}
-                    max={256}
-                    value={start('maxPlayers', data().found?.players || '')}
-                    class={field}
-                  />
-                </FormField>
-                <FormField label="Bots" name="maxBots" errors={errors()}>
-                  <input
-                    id="maxBots"
-                    name="maxBots"
-                    type="number"
-                    min={0}
-                    max={256}
-                    value={start('maxBots', 0)}
-                    class={field}
-                  />
-                </FormField>
-              </div>
+            <FormSection title="Teams">
+              <TeamSetupInput
+                teams={startTeams()}
+                max={info().maxPlayers}
+                gameName={info().name}
+                error={
+                  errors().teams ?? errors().teamPlayers ?? errors().teamBots
+                }
+              />
             </FormSection>
 
             <FormSection title="Media and links">
+              {/* The picture beside its field on a wide window, and under
+                  it on a narrow one, where the label comes first. */}
+              <div class="grid items-start gap-x-5 gap-y-3 sm:grid-cols-[208px_minmax(0,1fr)]">
+                <div class="sm:col-start-2 sm:row-start-1">
+                  <FormField
+                    label="Cover image"
+                    name="coverImgUrl"
+                    optional
+                    hint="A direct https:// link to an image, 16:9. Empty uses the thumbnail from Portal."
+                    errors={errors()}
+                  >
+                    <LinkInput
+                      name="coverImgUrl"
+                      icon="image"
+                      value={start('coverImgUrl')}
+                      placeholder="https://..."
+                    />
+                  </FormField>
+                </div>
+                <ImagePreview
+                  src={now('coverImgUrl') || found()?.thumbnailUrl}
+                  note={
+                    now('coverImgUrl') || !found()?.thumbnailUrl
+                      ? undefined
+                      : 'From Portal'
+                  }
+                  class="max-sm:max-w-[240px] sm:col-start-1 sm:row-start-1"
+                />
+              </div>
               <FormField
-                label="Cover image"
-                name="coverImgUrl"
+                label="Media"
+                name="media"
                 optional
-                hint="A direct https:// link to an image. 16:9 works best. Leave it empty to use the thumbnail from Portal."
+                hint="Links to images or YouTube videos. Shown in a gallery after the cover, in this order."
                 errors={errors()}
               >
-                <input
-                  id="coverImgUrl"
-                  name="coverImgUrl"
-                  type="url"
-                  value={start('coverImgUrl')}
-                  class={field}
+                <MediaListInput
+                  name="media"
+                  links={[draft()?.fields.media ?? []]
+                    .flat()
+                    .map(String)
+                    .filter((url) => url.trim())}
+                  max={MAX_MEDIA}
                 />
               </FormField>
-              <FormField
-                label="More images"
-                name="images"
-                optional
-                hint={`One https:// link per line, up to ${MAX_IMAGES}. Shown in a gallery on the page, in this order.`}
-                errors={errors()}
-              >
-                <textarea id="images" name="images" rows={3} class={field}>
-                  {start('images')}
-                </textarea>
-              </FormField>
               <div class="grid items-start gap-x-5 gap-y-[18px] sm:grid-cols-2">
-                <FormField
-                  label="Video"
-                  name="vidUrl"
-                  optional
-                  hint={`A link to it on ${VIDEO_HOSTS.join(', ')}.`}
-                  errors={errors()}
-                >
-                  <input
-                    id="vidUrl"
-                    name="vidUrl"
-                    type="url"
-                    value={start('vidUrl')}
-                    placeholder="https://youtu.be/..."
-                    class={field}
-                  />
-                </FormField>
                 <FormField
                   label="Source repository"
                   name="repoUrl"
                   optional
+                  hint={`On ${REPO_HOSTS.join(', ')}.`}
                   errors={errors()}
                 >
-                  <input
-                    id="repoUrl"
+                  <LinkInput
                     name="repoUrl"
-                    type="url"
+                    icon="code"
                     value={start('repoUrl')}
                     placeholder="https://github.com/..."
-                    class={field}
                   />
                 </FormField>
+                <Show when={info().hasExport}>
+                  <FormField
+                    label="Larger files"
+                    name="filesUrl"
+                    optional
+                    hint="On GitHub, Dropbox or Google Drive."
+                    errors={errors()}
+                  >
+                    <LinkInput
+                      name="filesUrl"
+                      icon="download"
+                      value={start('filesUrl')}
+                      placeholder="https://..."
+                    />
+                  </FormField>
+                </Show>
               </div>
-              <FormField
-                label="Larger files"
-                name="filesUrl"
-                optional
-                hint="A link to files hosted elsewhere: GitHub, Dropbox or Google Drive."
-                errors={errors()}
-              >
-                <input
-                  id="filesUrl"
-                  name="filesUrl"
-                  type="url"
-                  value={start('filesUrl')}
-                  class={field}
-                />
-              </FormField>
             </FormSection>
 
             <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
@@ -615,6 +731,7 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 disabled={sending()}
               >
                 {sending() ? 'Submitting' : 'Submit for review'}
+                <Icon name="arrow-right" />
               </button>
               <a href="/" class={`${buttonGhost} h-11 px-6`}>
                 Cancel

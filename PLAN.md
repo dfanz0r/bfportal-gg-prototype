@@ -12,7 +12,7 @@ A better, more stable version of the current site:
 - Feature complete with the current site, implemented more cleanly.
 - Additions the current site does not have, all worked out in the mockups:
   - update posts on projects, with a site-wide feed, and a source repository link;
-  - an image gallery on each experience;
+  - a gallery of pictures and YouTube videos on each experience;
   - uploading the Portal export to fill in the submit form, and offering a project's
     files as a template;
   - tags for what a Battlefield 6 experience is built with;
@@ -241,7 +241,7 @@ listing, the old address redirects.
 | `/experiences/<slug>/`, `/experiences/<slug>/edit/` | Detail page; owner's edit form |
 | `/category/<name>/` | Old category listing; `_` stands for a space. Redirects to `/library/` with that category selected |
 | `/submit/` | Submit form for an experience (login required). The game is the first question; `?draft=true` draws a refused form again |
-| `/submit/snippet/` | New. Submit form for a snippet, Battlefield 6 only. Not built |
+| `/submit/snippet/` | New. Submit form for a snippet, Battlefield 6 only (login required). `?draft=true` draws a refused form again |
 | `/submissions/` | New. The signed-in visitor's own experiences and snippets, with the state of each. Not built |
 | `/users/<discord_id>/`, `…/experiences/`, `…/liked/` | Profile and its two lists |
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
@@ -322,17 +322,18 @@ tables use `timestamptz` throughout.
 | `playground_id` | New. Portal's own id for the experience. Both of its pages on EA's side are addressed by it; see "The two Portal pages of an experience" |
 | `copy_allowed` | New. Whether its creator lets others copy it in the Portal editor. Empty when nobody has said |
 | `exp_url` | The link the old site stored, kept as imported. New experiences store the playground id instead, and the column goes once the import has shown every old link carries one |
-| `cover_img_url`, `vid_url` | External URLs, as today |
+| `cover_img_url` | An external URL, as today. The old `vid_url` moves into `experience_media` |
 | `repo_url` | New. The project's source repository; owner-editable, so it goes through moderation like any edit |
 | `files_url` | New. A link to files too large to upload: Dropbox, Google Drive or GitHub |
-| `max_players`, `max_bots` | |
+| `max_players`, `max_bots` | All its people and all its bots. Worked out from `team_setup` where there is one, and kept for listings to show and filter on |
+| `team_setup` | New. For each team in order, how many people and how many bots, as its creator set them out. Null for an experience from the old site, which never asked; its page falls back to Portal's sizes for the first map |
 | `featured`, `trending` | Admin only |
 | `bugged`, `broken`, `xp_farm` | Health flags, set by people: the owner, an admin, or a moderator acting on reports. The nightly check no longer writes `broken` |
 | `portal_state`, `portal_checked_at`, `portal_state_since` | New. What the nightly check last saw on Portal, when it looked, and since when the answer has been what it is. See "Whether a code is still published" |
 | `xp_mode` | New. The progression mode gametools reports, stored by the nightly check: `portal-default` earns full XP |
 | `requires_full_game` | New. Whether playing it needs the paid game or the free version will do. Empty when not known, and for 2042, which has no free version. See "Whether a code is still published" for the check that fills it |
 | `sdk_version_id` | New, Battlefield 6 only. The SDK release that was current when it was submitted. Set by the site, not chosen; see "SDK versions" |
-| `is_template` | New. The community's word for what the old site called a prefab: the creator offers the files so others can publish their own version with their own changes. Set on creation; shows a Template tag and makes the files downloadable. The import sets it for every experience in the old Prefab category |
+| `is_template` | New. The community's word for what the old site called a prefab: the creator offers the files so others can publish their own version with their own changes. Set on creation; shows a Template tag and makes the files downloadable. The import sets it for every experience in the old Prefab category. On submit it is a choice on the form where the game's Portal has an export (`hasExport` in the games registry), and otherwise follows the category: see `marks_template` under "Categories" |
 | `allow_editing` | Stored and exposed by the API today but never enforced; keep the column, decide its meaning later |
 | `reviewed_by`, `reviewed_at`, `review_note` | The moderator's decision on the submission itself; edits are reviewed on their revision. `reviewed_by` is for the moderators' screens and is never shown to the creator |
 | `review_field_notes` | New. What the moderator wrote about particular fields when requesting changes, as JSON keyed by the form's field names. The form reopened to fix it shows each note at its field. Empty unless changes were requested |
@@ -346,10 +347,15 @@ Join tables:
 
 - `experience_creators`: the people it is by, besides the owner. See "Creators and
   collaborators"
-- `experience_images` (experience, position, url). New. Extra pictures for a gallery on
-  the experience page, shown after the cover image. Each is an external link and gets
-  the same checks as the cover; the mockup allows up to eight. Owner-editable, so they
-  are part of an edit's payload.
+- `experience_media` (experience, position, url). New. The gallery on the experience
+  page after the cover image, up to eight links in order: each to a picture or to a
+  YouTube video. The link is kept as typed; whether it is a picture or a video, and the
+  video's thumbnail and player, are worked out from it when it is shown (`mediaOf` in
+  `src/shared/media.ts`), so another video site is an addition there. Changed
+  2026-10-16 from a list of pictures beside one `vid_url`, which this replaces: the
+  import makes an old `vid_url` the first link, and one on Twitch or Vimeo, which
+  cannot be embedded, is kept but not shown. Owner-editable, so they are part of an
+  edit's payload.
 - `experience_tags` (experience, tag, source). Tags belong to a game and to one of its
   groups; see "Tags and filters per game". `source` says whether the creator chose the
   tag, Portal reported it for the code, or it came from a map in the rotation.
@@ -545,13 +551,16 @@ site does the least it must to agree with it:
 | Fixing something with changes requested and sending it again | Not built. Nothing moves `changes_requested` back to `pending` yet |
 | Writing notes against fields, and removing something for good | Not built. The review screen has one note box and two buttons |
 | "Your submissions" | Not built |
-| Submitting a snippet | Not built |
+| Submitting a snippet | Done, 2026-10-13. It is created `pending`; its owner sees it at its own address with its status, and nobody else does until it is approved |
+| Reviewing a snippet | Done, the least of it: waiting snippets are in the review queue, and Approve and Request changes are on the snippet's own page for a moderator |
 | The playtest copy | Not built. No playtest can be started from the site yet |
-| A snippet held to a size | Not built. `snippets.script` has no limit; the 400 lines in the mockup is a placeholder |
+| A snippet held to a size | Done in the form and the service: 400 lines, `MAX_SNIPPET_LINES` in `src/shared/snippet-form.ts`. The number is still a placeholder, and the column itself has no limit |
 
 `submission_drafts` is not the draft status. It keeps one refused form per user so a
 page posted with no script can be drawn again filled in, and may hold values a real
-row would refuse. Once drafts are built it may fold into them.
+row would refuse. Once drafts are built it may fold into them. Both submit forms use
+it, so the kept form says which it was for (`kind: 'snippet'`), and each page ignores
+the other's.
 
 **Not decided.** Raised on 2026-10-13 and left open:
 
@@ -595,6 +604,7 @@ them; experience subcategories became a tag group:
 | `name`, `slug` | Unique per kind |
 | `icon_svg` | Sanitized SVG markup stored in the row |
 | `visible`, `selectable_on_form`, `not_ready` | Same meaning as today |
+| `marks_template` | New in migration 0024. What is submitted in this category is a template. Set on Battlefield 2042's "Templates", whose form has no template choice of its own because its Portal has no export. The import must set it on the old Prefab category |
 | `description_md`, `meta_title`, `meta_description`, `meta_image` | |
 | `sort_order` | New; ordering is by id today |
 
@@ -645,7 +655,7 @@ remove them.
 | `sort_order` | The order in the Library's filter row and on the experience page |
 | `filter` | `own` gives the group its own filter in the Library, as Era has; `shared` puts its tags in the general Tags picker; `none` keeps it off the filter row |
 | `pick` | `any` or `one`: whether an experience may carry several tags from the group |
-| `creator_selectable` | Whether creators choose from this group on the submit form. Off for a group only Portal or an admin sets |
+| `creator_selectable` | Whether creators choose from this group on the submit form. Off for a group only Portal or an admin sets. As seeded 2026-10-13 the form asks for Style and Topic; Rules (both games) and Era (2042) are Portal's own tags and are off, which is what makes the 2042 form the short one in its mockup |
 | `show_on_card` | Whether a card shows a tag from this group |
 | `description` | A hint on the form and in the filter |
 
@@ -955,8 +965,22 @@ What a snippet is, agreed 2026-10-13:
   the same limits on how many may be waiting.
 - **It is held to a size.** The mockup shows 400 lines; the number is not decided.
 
-Still to read from production before the form is built: which `script_main`
-categories exist.
+Built 2026-10-13, in `src/server/services/snippet-submissions.ts`:
+
+- The form's rules are `snippetFormSchema` in `src/shared/snippet-form.ts`: a title
+  of 3 to 80 characters, a description, the snippet (not empty, at most 400 lines)
+  and a `script_main` category that exists.
+- The game is the one whose registry entry has `snippets: true`, and the SDK release
+  is that game's newest, as for an experience. Neither is asked for.
+- The limits on waiting and daily submissions are counted across experiences and
+  snippets together (`submissionLimit`).
+- With no script, a `.ts` file is read on the server: up to 500,000 bytes, and only
+  when the box is empty. With script, the file is read into the box in the browser.
+- A snippet that is not published is shown at `/scripts/<slug>/` to its owner and to
+  moderators, with its status and any note; anyone else gets "not found".
+
+Still to read from production: which `script_main` categories exist. The form offers
+whatever rows there are.
 
 Experiences and snippets stay separate tables. A shared "content item" table with
 per-type detail tables would make likes, creators and moderation generic, but it is the
@@ -1335,7 +1359,8 @@ event can gain a list of experiences then.
   original data.
 - `submission_drafts`: at most one row per user. The fields of a submit form that was
   posted with no script and refused, and what was wrong with each, so the page can come
-  back filled in. Removed when a submission of theirs goes through.
+  back filled in. Its `kind` field says which form, experience or snippet, and each
+  page reads back only its own. Removed when a submission of theirs goes through.
 - `redirects`: only if production has any rows in `wagtailredirects_redirect`.
 
 ## Moderation flow
@@ -1409,13 +1434,16 @@ What "feature complete" means, by area.
 - Markdown description, tags, "View on Battlefield" and, when copying is allowed,
   "Open in the Portal editor", the owner, credited accounts with Discord avatars and named
   credits,
-  player and bot counts, video embed.
+  player and bot counts.
 - The code in a panel that stays in view, with a copy button and whether the code still
   loads and when that was last checked. On a phone the panel comes first. The code
   rolls into place once on load, in under half a second, and not at all for people who
   ask for reduced motion.
-- An image gallery: the cover first, then the extra images, with arrows, thumbnails and
-  the arrow keys.
+- A gallery: the cover first, then the pictures and videos in their order, with arrows,
+  thumbnails and the arrow keys. A video shows its thumbnail with a play button, and
+  YouTube's player is loaded only when that is pressed, from youtube-nocookie.com, at
+  the time the link starts at. Moving on stops it. With no script the play button
+  opens the video on YouTube.
 - For Battlefield 6, the SDK release it works with, and how far behind the latest that
   is.
 - What it is built with, a Template tag with "Use as a template", the repository link,
@@ -1465,10 +1493,14 @@ What "feature complete" means, by area.
   editor today), named credits for people without an account, accounts to credit (user autocomplete)
   each with an edit access switch that starts off, tags (autocomplete), players,
   bots, style, cover
-  image URL, more image URLs for the gallery, video URL, repository
+  image URL, the gallery as one list of links to pictures and YouTube videos, repository
   link, and a link to larger files hosted elsewhere. A card preview updates beside the
   form. The SDK release is not asked for: the form says which release the submission
   will be listed for.
+  Built so far for credits: one "Co-creators" field that searches accounts by name as
+  it is typed, never offering a hidden name or the owner, and adds anything else as a
+  name. A chosen account is stored as an invitation. The edit access switch, and the
+  page where an account accepts, are not built yet.
 - Style replaces the old subcategories, as a tag group: Casual, Competitive, Showcase
   and Example.
   Portal Jam was a one-off and is no longer offered.
@@ -1826,22 +1858,71 @@ Look:
 Mocked up 2026-10-13 as `submit.html`, `submit-snippet.html`, `submissions.html` and
 `resubmit.html`, with a "Playtest" button added to `experience.html`. This section is
 what the screens show and why. The model behind them, the statuses and what the
-database holds, is "Submission states" under "Data model". The screens themselves are
-not built; "Order of work" says what comes first.
+database holds, is "Submission states" under "Data model". Built so far: both submit
+forms, with the game and "What are you sharing?" at the top of each. "Your
+submissions" and the form reopened to fix something are not; "Order of work" says
+what comes first.
 
 - **The game comes first, then what is being shared.** Agreed 2026-10-13: the game is
   the first question on submit, and what follows is what that game allows. Snippets
   are Battlefield 6 only, because 2042's Portal had no TypeScript. With 2042 chosen,
-  "A snippet" stays in view with that reason and cannot be chosen. Whether a game has
+  "Snippet" stays in view with that reason and cannot be chosen. Whether a game has
   snippets is a field of its entry in `src/shared/games.ts`, not a test of its name.
 - **An experience and a snippet are separate forms** at their own addresses,
   `/submit/` and `/submit/snippet/`, so the choice is two links and needs no script.
+  The game is links too: each game's experience form has its own address
+  (`/submit/?game=bf2042`), where the mockup switches with a script.
   On the snippet form the other game is a link to the experience form for that game.
   Snippets have had no public form until now; they were written in the admin.
 - **The two forms are one page to the eye.** The head ("Submit" and one lead), the
   game choice, the kind choice and the first panel of the side column are the same on
   both, word for word, so choosing a kind changes what is below and moves nothing
   above. What a kind is, is said in its choice, not in the page head.
+- **Nor does choosing a game move what both games have.** Fixed 2026-10-13, after
+  the page jumped between the two games' forms: everything down to "How it is
+  listed" sits at the same height for each game, at every width. Two lines differed.
+  The snippet choice says what a snippet is for one game and why there is none for
+  the other, and one wrapped where the other did not, so the card holds every line
+  it can say in the same place and shows the one that applies. And a code being
+  optional for a template is said in the field's label ("Optional for a template"),
+  as the mockup has it, not in a line under the field that only one game's form
+  had. Below that the forms differ by their fields: "Built with" and the template
+  choice are Battlefield 6's alone.
+- **Each game's card carries its Portal's logo,** where the mockup has the name
+  alone. Added 2026-10-14. The logo is a field of the game's entry (`logo`, a white
+  mark under `public`) and is drawn through a CSS mask, so it is steel until chosen
+  and then the game's accent. The picture in all four cards takes the logo's width,
+  so their text starts in one line.
+- **Players and bots are set per team,** in a "Teams" section, where the mockup has
+  two number boxes for the whole lobby. Agreed 2026-10-14: experiences are not all
+  two even teams. The 34 real ones in the seed include 4 v 8, 2 v 29, 10 v 11, 8
+  people against a team with no people, 6 teams of 1 and 17 teams of 2. Each team
+  is a row with a slider and a typed number for its people and for its bots, drawn
+  after the Portal editor's settings: a thin line with an upright bar, the number
+  beside it. "Add a team" copies the last one, so many equal teams are quick to set
+  out; adding and removing need the script, and with no script the teams the form
+  starts with can still be set. The form starts from Portal's team sizes for the
+  first map, or two even teams. One setup per experience, not per map: most use
+  one across their rotation, and Portal's per-map sizes stay in `map_rotation`.
+  Bots are a count per team. Whether they fill empty places or always play is not
+  asked; Portal has both.
+- **A match holds up to `maxPlayers` people, and as many bots,** from the game's
+  entry: 64 for Battlefield 6 and 128 for 2042, the largest among the experiences
+  shared so far, to be confirmed. Portal counts people and bots separately (a
+  team's `capacity` is its people; bots are `internalTeams`), so the two are held
+  to it separately. The service refuses more, and a team with no one on it.
+- **A choice that cannot be taken does not answer the pointer.** The snippet card on
+  the 2042 form is drawn with `choiceCardOff`: dashed, with no hover and no pointer.
+- **Choosing a card fades the form into the next,** with the browser's view
+  transition (the router's `viewTransition` on each card's link), about a quarter
+  of a second, and none under reduced motion. Added 2026-10-14. Fading each color by
+  itself was tried and dropped: the accent is a CSS variable, and Firefox runs a
+  transition of a color built from a variable that is itself animating toward the
+  old color, then jumps. Going to the other kind of form draws a new page, which a
+  transition could not fade in any case. A chosen card is filled in by its
+  `data-chosen`, set from the page's data, not by the `aria-current` the router
+  writes: the router writes that as soon as the address changes, before the new
+  form's data loads, and the clicked 2042 card flashed orange in the meantime.
 - **A snippet is pasted in or uploaded as one `.ts` file, and nothing else.** Agreed
   2026-10-13. It is a piece of script to copy into your own, not a whole experience,
   so the form does not take a Portal export: that is what submitting an experience
@@ -1915,7 +1996,7 @@ decision before its screen is built: add it, or take it off the screen.
 | Scripts list: comment counts | The site has no comments | Take it off. Discussion happens in Discord |
 | Scripts list and script page: download counts | No counter | A `downloads` count on snippets, or take it off |
 | Script page: "Used in" | No link between a snippet and an experience | A `snippet_experiences` join table, set by the snippet's author |
-| Scripts list: a second category tag per snippet, and a language | Snippets have one category and no tags or language | Language can be read from the export; leave tags out until snippets have a submit form |
+| Scripts list: a second category tag per snippet, and a language | Snippets have one category and no tags or language | Take both off. The submit form, built 2026-10-13, asks for one category, and every snippet is TypeScript |
 | 2042 library: an Era filter | Tags have no game and no grouping, so the era tags cannot be told from the rest | Four of 2042's Portal tags are the eras. They become an "Era" tag group; see "Tags and filters per game" |
 | Updates and script page: "Follow" | No follows | Not built. The Atom feeds and "only projects I liked" cover it |
 | Header: a notification dot | No notifications | Not built. Revisit with "Account email" |
@@ -2069,8 +2150,37 @@ was settled first, so the screens are built against seed data and the import fol
      the next page is not shown as an error either.
    - **A server function that takes a form never throws on bad input.** It answers
      with a refusal like any other.
+
+   Fixed after a second review, 2026-10-14:
+
+   - **The limits hold when two are sent at once.** The count and the write are one
+     transaction, and an account's submissions of either kind take a lock on the
+     account first, so the second waits and then counts the first. The count is
+     also made before Portal is looked up, so one over the limit is told without a
+     lookup. Before, an experience and a snippet sent together into the last place
+     both went in.
+   - **A refused form keeps every field that passed.** A kept form holds up to
+     100,000 characters, more than any form that passes its checks: a snippet may
+     have 60,000 characters of script (`MAX_SNIPPET_CHARS`, its 400 lines at 150
+     each) and 10,000 of description. Over that, what was refused goes first.
+     Before, a long snippet refused for its title lost its script.
+   - **What is submitted is what is in the boxes.** The code and link are fields of
+     the form that is submitted, not hidden copies of what was last fetched. "Fetch
+     details" is a button of that form: with no script it posts to `startFromCode`,
+     which goes to the page for the code; with a script the page goes there and
+     keeps what is typed. Enter in a field submits, and in the code or link fetches.
+   - **A file posted with the snippet form is the snippet,** over whatever the box
+     holds, and one too large to be a snippet is refused rather than ignored. With
+     a script the file is read into the box, and the form cannot be sent until it
+     is.
+   - **A moderator's refused decision comes back with its note,** on the page it was
+     made on, with no script as with one. Both kinds of review use one form,
+     `DecisionForm`.
+   - **A report is remembered for the experience it was sent about,** not for the
+     menu, which the router keeps from one experience to the next.
    - Addresses are built from titles with accents removed, so "Über" is "uber". A
-     video must be on YouTube, Twitch or Vimeo.
+     video in the gallery must be on YouTube, since that is the player it embeds;
+     a Twitch or Vimeo link is refused rather than taken for a picture.
 
    Not in submit yet: uploading the Portal export and a template's files; inviting
    accounts as collaborators, which is done from the page after approval; checking
@@ -2083,8 +2193,37 @@ was settled first, so the screens are built against seed data and the import fol
    the code has its "Fetch details" button beside it; and a side column holds "How
    it will look", a card that follows the form as it is typed, and "Before you
    submit". Still in the mockup and not on the page, because they are not built:
-   "What are you sharing?", the export upload, the "Your submissions" panel, the
-   Markdown editor's preview tab, and tags typed in freely.
+   the export upload, the "Your submissions" panel, the Markdown editor's preview
+   tab, and tags typed in freely.
+
+   Added 2026-10-13: "What are you sharing?" after the game, on both forms. With a
+   game that has no snippets the snippet choice stays in view with the registry's
+   reason and is not a link. The 2042 form is the short one of its mockup: it asks
+   for Style and Topic only, since Rules and Era are Portal's own tags and their
+   groups are no longer creator-selectable. It has no "Offer it as a template" and
+   no "Larger files": both belong to a game whose Portal has an export, which is
+   `hasExport` in the games registry. A 2042 template is one put in its "Templates"
+   category (`categories.marks_template`), and always needs its code or link. The
+   service applies the same two rules whatever the form sent. Still on the 2042
+   page and not in its mockup: "It can be copied in the Portal editor". In the
+   mockup and not on the page: Portal's tags shown read-only once a code is fetched.
+
+   **Choosing a game goes to that game's form.** Fixed 2026-10-13. The game cards
+   were radio buttons inside the "Fetch details" form, so choosing Battlefield 2042
+   changed nothing until that button was pressed: the page stayed orange, still
+   offered a snippet and kept Battlefield 6's fields. Each card is now a link to its
+   own address (`/submit`, `/submit?game=bf2042`, `/submit/snippet`), as "What are
+   you sharing?" already was, in `SubmitStart`. With script the router changes the
+   page in place and what was typed stays; without, it is a page load. Three things
+   that follow from changing in place, each found by using the page:
+
+   - An input is written to again whenever what it starts from is read again, so
+     what the fields start from (the kept form, what Portal said) is remembered by
+     what it says, not by which load it came from.
+   - The router keeps rows that are the same in both loads, so a category only one
+     game has can go while it is the one chosen. The chosen category is worked out
+     from what is offered now.
+   - The card beside the form reads the form again after the change.
 
    Changed with the submission states, 2026-10-13: migration 0023 (the six statuses,
    `changes_requested` in place of `rejected`, notes by field, the review columns on
@@ -2106,8 +2245,10 @@ was settled first, so the screens are built against seed data and the import fol
    4. **"Your submissions"** at `/submissions/`: the list, its three columns and the
       one button. Linked from the profile, the submit forms and the header menu.
    5. **Submitting a snippet** at `/submit/snippet/`, with "what are you sharing?"
-      added to the experience form, and `hasSnippets` or the like on the games
-      registry. Needs the size limit decided and the production categories read.
+      added to the experience form, and `snippets` on the games registry. Built
+      2026-10-13, ahead of 1 to 4, so a snippet can be sent in and reviewed but not
+      yet saved as a draft, edited or sent again. The size limit is still a
+      placeholder and the production categories are still to be read.
    6. **Playtests:** starting one for a draft, the "Playtest" button that copies a
       live experience, completing one, and discarding a copy. Depends on the
       playtest screens, which are read-only so far.
@@ -2138,9 +2279,15 @@ was settled first, so the screens are built against seed data and the import fol
    particular field when requesting changes, stored in `review_field_notes`, started
    from the screen's own checks where one applies; "Remove" as a third decision,
    separate from requesting changes, with a note and a confirmation, since it cannot
-   be undone by its owner; reviewing snippets; and seeing, on something submitted
-   again, what was asked for last time. The review screen's mockup has none of these
-   yet.
+   be undone by its owner; and seeing, on something submitted again, what was asked
+   for last time. The review screen's mockup has none of these yet.
+
+   Reviewing snippets, built 2026-10-13 as the least that lets one be published:
+   waiting snippets are listed in the queue above the experiences, each opening the
+   snippet's own page, which a moderator sees with a "Decision" panel: Approve, or
+   Request changes with a note. The page is what will be published, so there is no
+   second review screen and none of an experience's checks, which are about a code
+   and pictures. Decided once, like an experience. This is not mocked up.
 7. **Edges:** public API, Atom feeds, sitemap, robots, redirects from the old
    addresses, scheduled jobs.
 8. **Cutover:** rehearsals, then the switch.

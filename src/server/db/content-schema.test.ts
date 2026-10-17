@@ -6,8 +6,8 @@ import {
   banners,
   categories,
   experienceCreators,
-  experienceImages,
   experienceLikes,
+  experienceMedia,
   experiences,
   experienceTags,
   maps,
@@ -414,7 +414,7 @@ describe('content schema', () => {
     expect(constraint).toBe('experiences_owner_id_user_id_fk')
   })
 
-  it('keeps gallery images in order, one per position', async () => {
+  it('keeps gallery links in order, one per position', async () => {
     const { experience } = await seed()
     const image = (position: number, name: string) => ({
       experienceId: experience.id,
@@ -422,18 +422,18 @@ describe('content schema', () => {
       url: `https://example.com/${name}.png`,
     })
     await db
-      .insert(experienceImages)
+      .insert(experienceMedia)
       .values([image(2, 'scoreboard'), image(1, 'map')])
 
     const clash = await constraintOf(
-      db.insert(experienceImages).values(image(1, 'another')),
+      db.insert(experienceMedia).values(image(1, 'another')),
     )
-    expect(clash).toBe('experience_images_experience_id_position_pk')
+    expect(clash).toBe('experience_media_experience_id_position_pk')
 
     const stored = await db
       .select()
-      .from(experienceImages)
-      .orderBy(experienceImages.position)
+      .from(experienceMedia)
+      .orderBy(experienceMedia.position)
     expect(stored.map((row) => row.url)).toEqual([
       'https://example.com/map.png',
       'https://example.com/scoreboard.png',

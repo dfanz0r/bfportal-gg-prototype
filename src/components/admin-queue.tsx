@@ -18,14 +18,54 @@ export function AdminQueue(props: { data: Queue }) {
       title="Review queue"
       lead="Nothing below is public until someone here approves it."
     >
-      <Show
-        when={data().items.length > 0}
-        fallback={
-          <p class={`${panel} px-5 py-10 text-center text-fg-2`}>
-            Nothing is waiting.
-          </p>
-        }
-      >
+      <Show when={data().items.length + data().snippets.length === 0}>
+        <p class={`${panel} px-5 py-10 text-center text-fg-2`}>
+          Nothing is waiting.
+        </p>
+      </Show>
+
+      {/* A snippet is reviewed on its own page, which is what will be
+          published; the decision is made there. */}
+      <Show when={data().snippets.length > 0}>
+        <ul class={`${panel} mb-6 divide-y divide-line`}>
+          <For each={data().snippets}>
+            {(item) => (
+              <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5">
+                <span class={`${tag} border-steel/40 text-steel-hi`}>
+                  Snippet
+                </span>
+                <div class="min-w-0 flex-1 basis-64">
+                  <p class="truncate text-[15px] font-semibold">{item.title}</p>
+                  <Show when={item.category}>
+                    {(category) => (
+                      <p class="text-[13.5px] text-fg-2">{category()}.</p>
+                    )}
+                  </Show>
+                </div>
+                <span class="inline-flex items-center gap-2 text-[13px] text-fg-2">
+                  <Avatar
+                    name={item.ownerName}
+                    image={item.ownerImage}
+                    class="size-5 text-[9px]"
+                  />
+                  {item.ownerName}
+                </span>
+                <span class="font-mono text-xs text-fg-3">
+                  <DateText value={item.submittedAt} now={data().now} />
+                </span>
+                <a
+                  href={`/scripts/${item.slug}`}
+                  class={`${buttonGhost} h-[34px] px-3.5`}
+                >
+                  Review
+                </a>
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
+
+      <Show when={data().items.length > 0}>
         <ul class={`${panel} divide-y divide-line`}>
           <For each={data().items}>
             {(item) => (

@@ -11,7 +11,8 @@ export function FormField(props: {
   label: string
   name: string
   hint?: string
-  optional?: boolean
+  /** Text says when it is: "Optional for a template". */
+  optional?: boolean | string
   errors?: Record<string, string>
   children: JSX.Element
 }) {
@@ -22,7 +23,9 @@ export function FormField(props: {
       <label for={props.name} class="text-sm font-semibold">
         {props.label}
         <Show when={props.optional}>
-          <span class="ml-2 font-normal text-fg-3">Optional</span>
+          <span class="ml-2 font-normal text-fg-3">
+            {typeof props.optional === 'string' ? props.optional : 'Optional'}
+          </span>
         </Show>
       </label>
       {props.children}

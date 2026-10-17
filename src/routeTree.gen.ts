@@ -30,6 +30,7 @@ import { Route as PlaytestsIndexRouteImport } from './routes/playtests/index'
 import { Route as PlaytestsIdRouteImport } from './routes/playtests/$id'
 import { Route as ScriptsIndexRouteImport } from './routes/scripts/index'
 import { Route as ScriptsSlugRouteImport } from './routes/scripts/$slug'
+import { Route as SubmitSnippetRouteImport } from './routes/submit_.snippet'
 import { Route as UsersDiscordIdRouteImport } from './routes/users/$discordId'
 import { Route as AdminReviewIdRouteImport } from './routes/admin/review.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -140,6 +141,11 @@ const ScriptsSlugRoute = ScriptsSlugRouteImport.update({
   path: '/scripts/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SubmitSnippetRoute = SubmitSnippetRouteImport.update({
+  id: '/submit_/snippet',
+  path: '/submit/snippet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersDiscordIdRoute = UsersDiscordIdRouteImport.update({
   id: '/users/$discordId',
   path: '/users/$discordId',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
+  '/submit/snippet': typeof SubmitSnippetRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
   '/admin/': typeof AdminIndexRoute
   '/library/': typeof LibraryIndexRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
+  '/submit/snippet': typeof SubmitSnippetRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
   '/admin': typeof AdminIndexRoute
   '/library': typeof LibraryIndexRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/library/$game': typeof LibraryGameRoute
   '/playtests/$id': typeof PlaytestsIdRoute
   '/scripts/$slug': typeof ScriptsSlugRoute
+  '/submit_/snippet': typeof SubmitSnippetRoute
   '/users/$discordId': typeof UsersDiscordIdRoute
   '/admin/': typeof AdminIndexRoute
   '/library/': typeof LibraryIndexRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
+    | '/submit/snippet'
     | '/users/$discordId'
     | '/admin/'
     | '/library/'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
+    | '/submit/snippet'
     | '/users/$discordId'
     | '/admin'
     | '/library'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/library/$game'
     | '/playtests/$id'
     | '/scripts/$slug'
+    | '/submit_/snippet'
     | '/users/$discordId'
     | '/admin/'
     | '/library/'
@@ -343,6 +355,7 @@ export interface RootRouteChildren {
   LibraryGameRoute: typeof LibraryGameRoute
   PlaytestsIdRoute: typeof PlaytestsIdRoute
   ScriptsSlugRoute: typeof ScriptsSlugRoute
+  SubmitSnippetRoute: typeof SubmitSnippetRoute
   UsersDiscordIdRoute: typeof UsersDiscordIdRoute
   LibraryIndexRoute: typeof LibraryIndexRoute
   PlaytestsIndexRoute: typeof PlaytestsIndexRoute
@@ -500,6 +513,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ScriptsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/submit_/snippet': {
+      id: '/submit_/snippet'
+      path: '/submit/snippet'
+      fullPath: '/submit/snippet'
+      preLoaderRoute: typeof SubmitSnippetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/$discordId': {
       id: '/users/$discordId'
       path: '/users/$discordId'
@@ -563,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryGameRoute: LibraryGameRoute,
   PlaytestsIdRoute: PlaytestsIdRoute,
   ScriptsSlugRoute: ScriptsSlugRoute,
+  SubmitSnippetRoute: SubmitSnippetRoute,
   UsersDiscordIdRoute: UsersDiscordIdRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   PlaytestsIndexRoute: PlaytestsIndexRoute,

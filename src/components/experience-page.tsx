@@ -1,7 +1,6 @@
 import { For, Show } from 'solid-js'
 
 import type { Experience } from '../functions/experience'
-import { type ContentStatus, contentStatusLabels } from '../shared/content'
 import { formatBytes } from '../shared/dates'
 import { gameInfo } from '../shared/games'
 import { Avatar } from './avatar'
@@ -14,6 +13,7 @@ import { LikeButton } from './like-button'
 import { PersonLink } from './person-link'
 import { ReportMenu } from './report-menu'
 import { Section } from './section'
+import { StatusNote } from './status-note'
 import { buttonGhost, panel } from './ui'
 import { UpdatePost } from './update-post'
 
@@ -28,16 +28,6 @@ const FILE_GLYPHS = {
 
 const smallButton = `${buttonGhost} h-[34px] px-3 text-xs`
 
-/** What each status means, to the owner looking at a page that is not live. */
-const STATUS_NOTES: Record<ContentStatus, string> = {
-  draft: 'Not submitted yet.',
-  pending: 'Waiting for a moderator.',
-  changes_requested: 'Changes are needed before this can be published.',
-  published: '',
-  unpublished: 'Taken off the listings by a moderator.',
-  removed: 'Removed by a moderator. It cannot be submitted again.',
-}
-
 /** The head of an experience page, for search engines and link previews. */
 export function experienceHead(data: Experience | undefined) {
   if (!data) return {}
@@ -45,7 +35,7 @@ export function experienceHead(data: Experience | undefined) {
   const address = `${data.siteUrl}/experiences/${data.slug}`
   const description =
     data.summary || `A ${gameInfo(data.game).name} Portal experience.`
-  const image = data.images[0]
+  const image = data.gallery.find((item) => item.kind === 'image')?.url
   return {
     meta: [
       { title },
@@ -179,21 +169,7 @@ export function ExperiencePage(props: { data: Experience }) {
       <div class="wrap pt-6 pb-20 sm:pt-8 sm:pb-24">
         {/* Only its owner and the moderators get this far before it is
             published. */}
-        <Show when={data().status !== 'published'}>
-          <div class="mb-6 grid gap-1 border-l-2 border-steel bg-steel/8 px-4 py-3 text-sm text-fg-2">
-            <p>
-              <b class="font-semibold text-fg">
-                {contentStatusLabels[data().status]}.
-              </b>{' '}
-              {STATUS_NOTES[data().status]} Only its owner and the moderators
-              can see this page.
-            </p>
-            {/* Headed by what it is, never by who wrote it. */}
-            <Show when={data().reviewNote}>
-              {(note) => <p>Moderator note: {note()}</p>}
-            </Show>
-          </div>
-        </Show>
+        <StatusNote status={data().status} note={data().reviewNote} />
         <Show when={data().unavailable || data().bugged || data().xpFarm}>
           <div class="mb-6 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
             <Show when={data().unavailable}>
@@ -218,8 +194,8 @@ export function ExperiencePage(props: { data: Experience }) {
 
         <div class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10">
           <div class="min-w-0">
-            <Show when={data().images.length > 0}>
-              <Gallery images={data().images} />
+            <Show when={data().gallery.length > 0}>
+              <Gallery items={data().gallery} />
             </Show>
 
             <section id="about" class="pt-6">

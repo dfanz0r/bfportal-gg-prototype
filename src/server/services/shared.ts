@@ -1,6 +1,12 @@
+import type { db } from '../db'
 import { user } from '../db/schema'
 
 // Small things several services use and none of them owns.
+
+/** The database, or a transaction on it: whatever a query runs on. */
+export type Executor =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 export function groupBy<T, K>(items: T[], key: (item: T) => K) {
   const groups = new Map<K, T[]>()
@@ -10,6 +16,25 @@ export function groupBy<T, K>(items: T[], key: (item: T) => K) {
     else groups.set(key(item), [item])
   }
   return groups
+}
+
+/**
+ * Whether a failed write was refused by one unique constraint: the value was
+ * taken between reading it as free and writing it.
+ */
+export function violates(error: unknown, constraint: string) {
+  for (
+    let current = error;
+    current;
+    current = (current as { cause?: unknown }).cause
+  ) {
+    const { code, constraint_name: name } = current as {
+      code?: string
+      constraint_name?: string
+    }
+    if (code === '23505' && name === constraint) return true
+  }
+  return false
 }
 
 /** The first line of a description, without Markdown's markers. */

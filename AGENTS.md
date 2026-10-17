@@ -109,6 +109,18 @@ Reach for what exists before writing markup:
 | A field of a form, with its label, hint and error | `FormField`; a checkbox or radio is `Check`; an error with no field of its own is `FieldError` |
 | A titled part of a form | `FormSection` |
 | A row of choices drawn as boxes that fill in | `ChoiceGroup` with `Choice`s inside, radio or checkbox |
+| A choice drawn as a card, such as the game on a submit form | `choiceCard` from `ui.ts` |
+| The top of a submit form: which game, then what is being shared | `SubmitStart` |
+| A box for code, with line numbers and a file to upload | `CodeInput` |
+| A number chosen by dragging or typed, as Portal's settings are | `Slider` |
+| How an experience splits its players and bots into teams | `TeamSetupInput` on a form; `describeTeams` in `src/shared/teams.ts` in a line |
+| People to credit: accounts found as a name is typed, or plain names | `CreditsInput`, which searches with `searchPeople` |
+| The picture at a link someone typed, or why there is none | `ImagePreview` |
+| A list of links to pictures and videos, each beside what it shows, in order | `MediaListInput` |
+| What a gallery link shows, a picture or a YouTube video to embed | `mediaOf` in `src/shared/media.ts`; never parse a link in a component |
+| An experience's pictures and videos, one at a time | `Gallery` |
+| An item's status and the moderator's note, for its owner | `StatusNote` |
+| A moderator's decision: a note, approve or request changes | `DecisionForm` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |
 
 How we write them:
@@ -132,6 +144,17 @@ How we write them:
   and `page-head.test.tsx` counts the builds.
 - **Work without JavaScript where HTML can.** Menus are `<details>`; actions that
   change something are forms that post. Scripts improve them, they do not create them.
+- **A choice that changes what the page offers is a link to its own address,** not a
+  radio button waiting for a submit. The game on the submit form is the example:
+  `SubmitStart`. Choosing it then works with no script, and the page is that choice's
+  page and nothing left over from the other.
+- **A page whose data loads again keeps its fields.** The router changes the page in
+  place when only the search changes, and two things follow. An input is written to
+  whenever the expression for its value runs again, which wipes what was typed: take
+  what a field starts from through `createMemo` with an `equals` that compares what
+  it says. And the router keeps rows that are equal in both loads, so `<For>` keeps
+  their elements and their state: work out what is chosen from what is offered now.
+  `submit-page.tsx` does both.
 - **Label what has no text.** An icon-only control carries an `aria-label`; icons
   themselves are hidden from screen readers.
 - **Comments say why,** not what the next line does.
@@ -186,15 +209,25 @@ Anything that changes something follows `src/functions/likes.ts` and
 - **Bad input is a refusal, not an error thrown.** `formOr` hands the handler
   `input: null` and the errors by field; answer `refuse('invalid', data.errors)`.
 - **A form that takes typing gets it back when it is refused,** script or not. With
-  no script the page is gone by then, so keep what was sent and draw it again;
-  `submitForReview` and `/submit?draft=true` are the example.
+  no script the page is gone by then, so keep what was sent and draw it again:
+  `keepDraft` in `src/server/services/drafts.ts`, with `submitForReview` and
+  `/submit?draft=true` as the example. Keep every field that passed. A short form
+  can come back in the address instead, as a refused decision does
+  (`decisionSearchSchema`).
+- **What is sent is what the visitor sees.** Never a hidden copy of a field they
+  can still change. A second button that does something else with the same
+  fields is a button of the same form with its own `formaction`, as "Fetch
+  details" on the submit form is.
 - **In the page's script, tell three endings apart:** the server said no (show
   why), the server said yes (never show an error after this, whatever the
   navigation does), and no answer came back (say it may or may not have gone
   through; do not say nothing happened). Ignore a second press while one is out.
 - **What costs someone else is limited per account:** a count in the database, in
   the service, for what must hold across restarts; `allow()` from
-  `src/server/rate-limit.ts` for calls to a third party.
+  `src/server/rate-limit.ts` for calls to a third party. Count in the same
+  transaction as the write, under a lock on the account, or two requests at once
+  both fit in the last place: `withinLimit` in
+  `src/server/services/submission-limits.ts`.
 
 ## Design
 
@@ -272,7 +305,13 @@ that is not on this machine; keep it that way.
   own; conventions for people changing the code belong in this file.
 - Look at visual work. Render the page and its mockup to screenshots and compare
   them, the whole page down to the footer, at a few widths, before calling it done;
-  say plainly when something has not been rendered or not been compared. Use the dev server that is already running and do not start another.
+  say plainly when something has not been rendered or not been compared. Use the dev
+  server that is already running and do not start another.
+- Use what you build, not only load it. A screenshot of an address shows how a page
+  starts. Anything a visitor clicks, types or chooses is checked by doing that in a
+  browser and reading the page afterward: the address, what is chosen, the fields,
+  the colors. Each state loaded by its own address is not the same check as getting
+  there by a click.
 - Say what you verified and what you did not.
 - Change files with the editor's own edit and write tools, one visible change at a
   time. Do not create or rewrite files from the command line: no scripts that patch

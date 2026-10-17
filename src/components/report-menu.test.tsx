@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { createSignal } from 'solid-js'
 import { render } from 'solid-js/web'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -63,5 +64,30 @@ describe('ReportMenu', () => {
     expect(reportProblem).toHaveBeenLastCalledWith({
       data: { slug: 'gun-master', type: 'bugged' },
     })
+  })
+
+  it('keeps what was sent to the experience it was sent about', async () => {
+    // Going from one experience to the next keeps the menu and changes its
+    // slug, as the router does.
+    const [slug, setSlug] = createSignal('gun-master')
+    let answer = (_: { ok: true }) => {}
+    reportProblem.mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    )
+    const host = document.createElement('div')
+    document.body.append(host)
+    render(() => <ReportMenu slug={slug()} signedIn reported={[]} />, host)
+
+    choose(host, 'bugged')
+    await vi.waitFor(() => expect(reportProblem).toHaveBeenCalledTimes(1))
+    // The answer comes once the next experience is shown.
+    setSlug('zombie-rush')
+    answer({ ok: true })
+    await Promise.resolve()
+    expect(choice(host, 'bugged')?.disabled).toBe(false)
+
+    // Back on the first, it was sent.
+    setSlug('gun-master')
+    expect(choice(host, 'bugged')?.disabled).toBe(true)
   })
 })

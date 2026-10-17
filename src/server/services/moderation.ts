@@ -1,10 +1,19 @@
 import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm'
 
+import { NOTE_NEEDED } from '../../shared/decision'
+import { shownMedia } from '../../shared/media'
 import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
+import { teamSetupSchema } from '../../shared/teams'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
-import { categories, experienceImages, experiences, user } from '../db/schema'
+import {
+  categories,
+  experienceMedia,
+  experiences,
+  snippets,
+  user,
+} from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
 
@@ -35,6 +44,11 @@ function refusal(actor: Actor | null): Refusal | null {
   if (!actor) return refuse('signed-out')
   return isStaff(actor.role) ? null : refuse('forbidden')
 }
+
+const snippetWaiting = and(
+  eq(snippets.status, 'pending'),
+  isNull(snippets.deletedAt),
+)
 
 const waiting = and(
   eq(experiences.status, 'pending'),
@@ -70,7 +84,72 @@ export async function listQueue(actor: Actor | null) {
     .select({ value: count() })
     .from(experiences)
     .where(waiting)
-  return { ok: true as const, items: rows, total: total.value, now: new Date() }
+  // Snippets wait in the same queue. Each is reviewed on its own page.
+  const waitingSnippets = await db
+    .select({
+      id: snippets.id,
+      slug: snippets.slug,
+      title: snippets.title,
+      category: categories.name,
+      submittedAt: snippets.submittedAt,
+      ownerName: user.name,
+      ownerImage: user.image,
+    })
+    .from(snippets)
+    .innerJoin(user, eq(user.id, snippets.ownerId))
+    .leftJoin(categories, eq(categories.id, snippets.categoryId))
+    .where(snippetWaiting)
+    .orderBy(asc(snippets.submittedAt), asc(snippets.id))
+    .limit(QUEUE_PAGE)
+  return {
+    ok: true as const,
+    items: rows,
+    total: total.value,
+    snippets: waitingSnippets,
+    now: new Date(),
+  }
+}
+
+/**
+ * Approves a waiting snippet, or sends it back with changes requested. The
+ * same rules as for an experience: approving publishes it, requesting changes
+ * needs a note, and it is decided once each time it is sent in.
+ */
+export async function decideSnippet(
+  actor: Actor | null,
+  id: number,
+  decision: { approve: boolean; note?: string },
+  now = new Date(),
+): Promise<
+  | { ok: true; slug: string; status: 'published' | 'changes_requested' }
+  | Refusal
+> {
+  const refused = refusal(actor)
+  if (refused || !actor) return refused ?? refuse('signed-out')
+  const note = decision.note?.trim() ?? ''
+  if (!decision.approve && note.length < 3) {
+    return refuse('invalid', { note: NOTE_NEEDED })
+  }
+
+  const status = decision.approve ? 'published' : 'changes_requested'
+  // The condition is in the update itself, so two moderators deciding at
+  // once cannot both succeed.
+  const [decided] = await db
+    .update(snippets)
+    .set({
+      status,
+      reviewedBy: actor.id,
+      reviewedAt: now,
+      reviewNote: note || null,
+      ...(decision.approve
+        ? { firstPublishedAt: now, lastPublishedAt: now }
+        : {}),
+    })
+    .where(and(eq(snippets.id, id), snippetWaiting))
+    .returning({ slug: snippets.slug })
+  return decided
+    ? { ok: true, slug: decided.slug, status }
+    : refuse('not-found')
 }
 
 /**
@@ -105,11 +184,12 @@ export async function getSubmissionReview(
   if (!found) return refuse('not-found')
   const { experience } = found
 
-  const [gallery, sameCode, history, looked] = await Promise.all([
+  const [mediaRows, sameCode, history, looked] = await Promise.all([
     db
-      .select({ url: experienceImages.url })
-      .from(experienceImages)
-      .where(eq(experienceImages.experienceId, experience.id)),
+      .select({ url: experienceMedia.url })
+      .from(experienceMedia)
+      .where(eq(experienceMedia.experienceId, experience.id))
+      .orderBy(asc(experienceMedia.position)),
     experience.code
       ? db
           .select({
@@ -146,12 +226,14 @@ export async function getSubmissionReview(
   ])
   const earlier = (status: string) =>
     history.find((row) => row.status === status)?.value ?? 0
+  const media = shownMedia(mediaRows.map((row) => row.url))
   // Every picture the page will load: the description's, the cover and the
-  // gallery. Each is fetched by every visitor's browser.
+  // gallery. Each is fetched by every visitor's browser. A video's thumbnail
+  // comes from YouTube, whoever posted it.
   const pictures = new Set(pictureHosts(experience.descriptionHtml))
   for (const address of [
     experience.coverImgUrl,
-    ...gallery.map((g) => g.url),
+    ...media.flatMap((item) => (item.kind === 'image' ? [item.url] : [])),
   ]) {
     try {
       if (address) pictures.add(new URL(address).hostname)
@@ -173,11 +255,12 @@ export async function getSubmissionReview(
       coverImgUrl: experience.coverImgUrl,
       maxPlayers: experience.maxPlayers,
       maxBots: experience.maxBots,
+      teams: teamSetupSchema.safeParse(experience.teamSetup).data ?? [],
       types: experience.types,
       isTemplate: experience.isTemplate,
       repoUrl: experience.repoUrl,
       filesUrl: experience.filesUrl,
-      vidUrl: experience.vidUrl,
+      media,
       submittedAt: experience.submittedAt,
     },
     submitter: {
@@ -240,9 +323,7 @@ export async function decideSubmission(
   if (refused || !actor) return refused ?? refuse('signed-out')
   const note = decision.note?.trim() ?? ''
   if (!decision.approve && note.length < 3) {
-    return refuse('invalid', {
-      note: 'Say why, so its creator knows what to change.',
-    })
+    return refuse('invalid', { note: NOTE_NEEDED })
   }
 
   const status = decision.approve ? 'published' : 'changes_requested'

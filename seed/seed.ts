@@ -133,7 +133,7 @@ export async function seed(db: Db, now = new Date()) {
     mapTags,
     experiences,
     experienceTags,
-    experienceImages,
+    experienceMedia,
     experienceCreators,
     experienceLikes,
     experienceReports,
@@ -203,6 +203,7 @@ export async function seed(db: Db, now = new Date()) {
           game: category.game,
           name: category.name,
           slug: slugify(category.name),
+          marksTemplate: category.marksTemplate ?? false,
           sortOrder: index,
         })),
         ...scriptCategories.map((name, index) => ({
@@ -496,6 +497,7 @@ export async function seed(db: Db, now = new Date()) {
           filesUrl: item.filesUrl,
           maxPlayers: item.players,
           maxBots: item.bots ?? 0,
+          teamSetup: item.teams ?? null,
           types: item.types ?? [],
           isTemplate: item.isTemplate ?? false,
           gameMode: firstMap?.mode,
@@ -540,7 +542,7 @@ export async function seed(db: Db, now = new Date()) {
       })
 
       if (item.gallery) {
-        await tx.insert(experienceImages).values(
+        await tx.insert(experienceMedia).values(
           item.gallery.map((cover, position) => ({
             experienceId: row.id,
             position,

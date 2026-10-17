@@ -1,0 +1,1 @@
+ALTER TABLE "categories" ADD COLUMN "marks_template" boolean DEFAULT false NOT NULL;

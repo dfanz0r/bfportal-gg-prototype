@@ -1,14 +1,16 @@
 import { and, asc, desc, eq, gt, isNull, lte, ne, or } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { shownMedia } from '../../shared/media'
 import { isStaff as isStaffRole } from '../../shared/roles'
+import { teamSetupSchema } from '../../shared/teams'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import {
   categories,
   experienceCreators,
-  experienceImages,
   experienceLikes,
+  experienceMedia,
   experienceReports,
   experiences,
   experienceTags,
@@ -89,7 +91,7 @@ export async function getExperience(
   const rotation = read.success ? read.data : []
 
   const [
-    images,
+    media,
     creators,
     tagRows,
     mapRows,
@@ -102,10 +104,10 @@ export async function getExperience(
     ownReports,
   ] = await Promise.all([
     db
-      .select({ url: experienceImages.url })
-      .from(experienceImages)
-      .where(eq(experienceImages.experienceId, experience.id))
-      .orderBy(asc(experienceImages.position)),
+      .select({ url: experienceMedia.url })
+      .from(experienceMedia)
+      .where(eq(experienceMedia.experienceId, experience.id))
+      .orderBy(asc(experienceMedia.position)),
     // Credits: names, and accounts that have accepted being listed.
     db
       .select({
@@ -243,16 +245,23 @@ export async function getExperience(
     code: experience.code,
     playgroundId: experience.playgroundId,
     copyAllowed: experience.copyAllowed === true,
-    // The cover first, then the gallery in its order.
-    images: [
-      ...(experience.coverImgUrl ? [experience.coverImgUrl] : []),
-      ...images.map((image) => image.url),
+    // The cover first, then the rest in its order, each worked out into a
+    // picture or a video to embed.
+    gallery: [
+      ...(experience.coverImgUrl
+        ? [{ kind: 'image' as const, url: experience.coverImgUrl }]
+        : []),
+      ...shownMedia(media.map((item) => item.url)),
     ],
-    vidUrl: experience.vidUrl,
     repoUrl: experience.repoUrl,
     filesUrl: experience.filesUrl,
     maxPlayers: experience.maxPlayers,
     maxBots: experience.maxBots,
+    // As its creator set them out, or else the sizes Portal gives for the
+    // first map, which say nothing about bots.
+    teams:
+      teamSetupSchema.safeParse(experience.teamSetup).data ??
+      (rotation[0]?.teams ?? []).map((players) => ({ players, bots: 0 })),
     types: experience.types,
     isTemplate: experience.isTemplate,
     gameMode: experience.gameMode,

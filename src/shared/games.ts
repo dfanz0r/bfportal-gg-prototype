@@ -9,6 +9,11 @@ import type { ExperienceType, Game } from './content'
 export type GameInfo = {
   id: Game
   name: string
+  /**
+   * Its Portal's mark, under `public`: one white shape on clear, so a page
+   * can use it as a mask and draw it in whatever color the place calls for.
+   */
+  logo: string
   /** Where its Library tab lives. The first game has the bare address. */
   libraryPath: '/library' | `/library/${string}`
   /** A share code, as stored: lower case, no spaces. */
@@ -30,8 +35,25 @@ export type GameInfo = {
   builtWith: readonly ExperienceType[]
   /** Whether there is a free version, so "needs the full game" means something. */
   hasFreeVersion: boolean
+  /**
+   * The most players a match holds, which the submit form's sliders for
+   * players and bots go up to. The largest seen among the experiences shared
+   * so far.
+   */
+  maxPlayers: number
+  /**
+   * Whether its Portal can export an experience as files. Only then can one
+   * be offered as a template by its files, with no code, and have larger
+   * files to link to. A game without it marks a template by its category.
+   */
+  hasExport: boolean
   /** What can be submitted for it, said under its name on the submit form. */
   submitNote: string
+  /**
+   * Whether script snippets can be shared for it, and if not, why, in words
+   * for the submit form. A game whose editor has no scripting has none.
+   */
+  snippets: true | { why: string }
   library: {
     title: string
     lead: string
@@ -52,6 +74,7 @@ export const gameList: readonly GameInfo[] = [
   {
     id: 'bf6',
     name: 'Battlefield 6',
+    logo: '/bf6_portal_logo_64.svg',
     libraryPath: '/library',
     codePattern: /^[a-z0-9]{4,5}$/,
     gametools: 'bf6',
@@ -60,7 +83,10 @@ export const gameList: readonly GameInfo[] = [
     editor: { prefix: '/bf6/experience', param: 'id' },
     builtWith: ['script', 'blocks', 'spatial', 'verified'],
     hasFreeVersion: true,
-    submitNote: 'Experiences and templates.',
+    maxPlayers: 64,
+    hasExport: true,
+    submitNote: 'Experiences, templates and script snippets.',
+    snippets: true,
     library: {
       title: 'Experience library',
       lead: 'Every Battlefield 6 experience shared with the community. Filter by mode, size and tags, or paste a code to check it before you load in.',
@@ -71,6 +97,7 @@ export const gameList: readonly GameInfo[] = [
   {
     id: 'bf2042',
     name: 'Battlefield 2042',
+    logo: '/bf2042_portal_logo_64.svg',
     libraryPath: '/library/bf2042',
     codePattern: /^[a-z0-9]{6}$/,
     gametools: 'bf2042',
@@ -79,8 +106,11 @@ export const gameList: readonly GameInfo[] = [
     editor: { prefix: '/experience', param: 'playgroundId' },
     builtWith: [],
     hasFreeVersion: false,
+    maxPlayers: 128,
+    hasExport: false,
     submitNote:
       'Experiences only. Its Portal has no TypeScript and no export to upload.',
+    snippets: { why: "Battlefield 6 only. 2042's Portal has no TypeScript." },
     library: {
       title: 'Battlefield 2042 library',
       lead: "Every experience the community shared for 2042's Portal, from Bad Company Rush to wingsuit races. Still here, still searchable, and checked every night against the game.",

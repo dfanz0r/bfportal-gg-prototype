@@ -57,6 +57,22 @@ const LINE = {
   ),
   check: () => <path d="M20 6 9 17l-5-5" />,
   'chevron-down': () => <path d="m6 9 6 6 6-6" />,
+  'chevron-up': () => <path d="m18 15-6-6-6 6" />,
+  image: () => (
+    <>
+      <rect width="18" height="18" x="3" y="3" rx="1" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+    </>
+  ),
+  play: () => <polygon points="6 3 20 12 6 21 6 3" />,
+  download: () => (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </>
+  ),
   copy: () => (
     <>
       <rect x="9" y="9" width="12" height="12" rx="1" />
@@ -97,6 +113,13 @@ const LINE = {
       <path d="m12 2 9 5-9 5-9-5 9-5Z" />
       <path d="m3 12 9 5 9-5" />
       <path d="m3 17 9 5 9-5" />
+    </>
+  ),
+  upload: () => (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m17 8-5-5-5 5" />
+      <path d="M12 3v12" />
     </>
   ),
 } satisfies Record<string, () => JSX.Element>

@@ -3,6 +3,7 @@ import { For, Show } from 'solid-js'
 
 import type { Experience } from '../functions/experience'
 import { editorUrl, gameInfo, publicPageUrl } from '../shared/games'
+import { describeTeams } from '../shared/teams'
 import { Avatar } from './avatar'
 import { BuiltWithTags } from './built-with-tags'
 import { CopyCode } from './copy-code'
@@ -87,17 +88,8 @@ export function ExperienceSide(props: { data: Experience }) {
   const info = () => gameInfo(data().game)
   const style = () => data().tags.filter((item) => item.group === 'Style')
   const otherTags = () => data().tags.filter((item) => item.group !== 'Style')
-  // "16 v 16", from the first map of the rotation. Lobbies with many small
-  // teams are counted instead: "17 teams of 2".
-  const teams = () => {
-    const sizes = data().rotation[0]?.teams.filter((size) => size > 0) ?? []
-    if (sizes.length < 2) return null
-    if (sizes.length <= 4) return sizes.join(' v ')
-    const same = sizes.every((size) => size === sizes[0])
-    return same
-      ? `${sizes.length} teams of ${sizes[0]}`
-      : `${sizes.length} teams`
-  }
+  // "16 v 16", "8 v 12 bots", or "17 teams of 2".
+  const teams = () => describeTeams(data().teams)
   const publicPage = () => {
     const id = data().playgroundId
     return id ? publicPageUrl(data().game, id) : null

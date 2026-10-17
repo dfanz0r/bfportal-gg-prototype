@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 import { experienceTypes, games } from './content'
 import { formBoolean } from './form-input'
+import { type MediaProblem, mediaOf } from './media'
+import { MAX_TEAMS } from './teams'
 
 export { fieldErrors as formErrors } from './form-input'
 
@@ -51,10 +53,34 @@ const onHosts = (hosts: string[], message: string) =>
 
 const count = (max: number) => z.coerce.number().int().min(0).max(max)
 
-export const MAX_IMAGES = 8
+/** One number per team, in team order. A form sends one team as one value. */
+const perTeam = z.preprocess(
+  (value) => (value === undefined ? [] : [value].flat()),
+  z.array(count(256)).max(MAX_TEAMS),
+)
+
+const mediaProblems: Record<MediaProblem, string> = {
+  'not-https': 'Each link must be an https:// address.',
+  'not-a-video': 'A YouTube link must be to one video.',
+  'video-site': 'Videos must be on YouTube.',
+}
+
+const mediaLink = z
+  .string()
+  .max(500)
+  .superRefine((value, context) => {
+    const media = mediaOf(value)
+    if (media.kind === 'none') {
+      context.addIssue({
+        code: 'custom',
+        message: mediaProblems[media.problem],
+      })
+    }
+  })
+
+export const MAX_MEDIA = 8
 export const MAX_CREDITS = 10
 export const REPO_HOSTS = ['github.com', 'gitlab.com', 'codeberg.org']
-export const VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'twitch.tv', 'vimeo.com']
 export const FILE_HOSTS = [
   'github.com',
   'dropbox.com',
@@ -82,16 +108,13 @@ export const experienceFormSchema = z.object({
   built: lines(4, z.enum(experienceTypes)).default([]),
   isTemplate: formBoolean.default(false),
   copyAllowed: formBoolean.default(false),
-  maxPlayers: count(256).refine((value) => value > 0, 'Say how many can play.'),
-  maxBots: count(256).default(0),
+  /** How many people may play on each team. The service pairs these up. */
+  teamPlayers: perTeam,
+  /** How many bots play on each team, in the same order. */
+  teamBots: perTeam,
   coverImgUrl: optional(httpsUrl('The cover must be an https:// address.')),
-  images: lines(
-    MAX_IMAGES,
-    httpsUrl('Each picture must be an https:// address.'),
-  ).default([]),
-  vidUrl: optional(
-    onHosts(VIDEO_HOSTS, `The video must be on ${VIDEO_HOSTS.join(', ')}.`),
-  ),
+  /** Links to pictures and YouTube videos, shown after the cover. */
+  media: lines(MAX_MEDIA, mediaLink).default([]),
   repoUrl: optional(
     onHosts(REPO_HOSTS, `The repository must be on ${REPO_HOSTS.join(', ')}.`),
   ),
@@ -100,6 +123,14 @@ export const experienceFormSchema = z.object({
   ),
   /** People to credit by name, who have no account here. */
   credits: lines(MAX_CREDITS, z.string().max(60)).default([]),
+  /**
+   * People to credit who have an account here, by the Discord id their
+   * profile is at. Each is asked, and shown once they accept.
+   */
+  creditAccounts: lines(
+    MAX_CREDITS,
+    z.string().regex(/^\d{1,25}$/, 'Choose each account from the list.'),
+  ).default([]),
 })
 
 export type ExperienceForm = z.infer<typeof experienceFormSchema>

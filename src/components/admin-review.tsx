@@ -1,17 +1,19 @@
-import { Link, useNavigate } from '@tanstack/solid-router'
-import { createEffect, createSignal, For, type JSX, Show } from 'solid-js'
+import { Link } from '@tanstack/solid-router'
+import { For, type JSX, Show } from 'solid-js'
 
 import { decide, type SubmissionReview } from '../functions/moderation'
 import { experienceTypeLabels } from '../shared/content'
+import type { DecisionSearch } from '../shared/decision'
 import { gameInfo } from '../shared/games'
+import { describeTeams } from '../shared/teams'
 import { Avatar } from './avatar'
 import { DateText } from './date-text'
+import { DecisionForm } from './decision-form'
 import { Fact } from './fact'
 import { Facts } from './facts'
-import { FieldError } from './field-error'
 import { Icon } from './icon'
 import { PageLayout } from './page-layout'
-import { buttonAccent, buttonGhost, field, label, panel } from './ui'
+import { buttonGhost, label, panel } from './ui'
 
 /** One line of the checks: something to look at, or something that is fine. */
 function Check(props: { warn?: boolean; children: JSX.Element }) {
@@ -34,68 +36,15 @@ const QUICK_NOTES = [
   'It needs a cover picture.',
 ]
 
-const NOTE_NEEDED =
-  'Requesting changes needs a note, so its creator knows what to change.'
-
 /** Reviewing one submission: what it is, what to check, and the decision. */
 export function AdminReview(props: {
   data: SubmissionReview
-  /** What was wrong with a decision posted with no script, by name. */
-  problem?: 'note'
+  /** What a decision posted with no script and refused brought back. */
+  decision: DecisionSearch
 }) {
   const data = () => props.data
   const submission = () => data().submission
   const checks = () => data().checks
-  const navigate = useNavigate()
-  const [note, setNote] = createSignal('')
-  const [error, setError] = createSignal<string>()
-  createEffect(() => setError(props.problem ? NOTE_NEEDED : undefined))
-  const [sending, setSending] = createSignal(false)
-
-  const submit = async (event: SubmitEvent) => {
-    event.preventDefault()
-    if (sending()) return
-    const button = event.submitter as HTMLButtonElement | null
-    setSending(true)
-    let result: Awaited<ReturnType<typeof decide>>
-    try {
-      result = await decide({
-        data: {
-          id: submission().id,
-          approve: button?.value === 'true',
-          note: note(),
-        },
-      })
-    } catch {
-      // No answer came back, which does not say the request never arrived.
-      setError(
-        'Something went wrong before an answer came back, so this may or may not have been decided. Look at the queue: if it is still there, it was not.',
-      )
-      setSending(false)
-      return
-    }
-    if (result.ok) {
-      // It is decided. Whatever happens now, it must not read as a failure.
-      try {
-        await navigate({ to: '/admin' })
-      } catch {
-        window.location.assign('/admin')
-      }
-      return
-    }
-    setSending(false)
-    if (result.reason === 'signed-out') {
-      window.location.assign('/login')
-    } else if (result.reason === 'invalid') {
-      setError(result.errors?.note ?? 'That could not be decided.')
-    } else if (result.reason === 'forbidden') {
-      setError('Your account may no longer decide submissions.')
-    } else {
-      setError(
-        'This is no longer waiting. Someone may have decided it already.',
-      )
-    }
-  }
 
   return (
     <PageLayout
@@ -137,6 +86,9 @@ export function AdminReview(props: {
             <Fact name="Lobby size">
               Up to {submission().maxPlayers} players
             </Fact>
+            <Show when={describeTeams(submission().teams)}>
+              {(teams) => <Fact name="Teams">{teams()}</Fact>}
+            </Show>
             <Fact name="Bots">{submission().maxBots || 'None'}</Fact>
             <Show when={submission().types.length > 0}>
               <Fact name="Built with">
@@ -164,7 +116,10 @@ export function AdminReview(props: {
           </div>
           <For
             each={[
-              ['Video', submission().vidUrl],
+              ...submission().media.map((item) => [
+                item.kind === 'video' ? 'Video' : 'Image',
+                item.url,
+              ]),
               ['Repository', submission().repoUrl],
               ['Larger files', submission().filesUrl],
             ].filter(([, url]) => url)}
@@ -250,71 +205,15 @@ export function AdminReview(props: {
             </ul>
           </div>
 
-          <form
-            method="post"
-            action={decide.url}
-            onSubmit={submit}
-            class={`${panel} grid gap-3 p-5`}
-          >
-            <h2 class={label}>Decision</h2>
-            <input type="hidden" name="id" value={submission().id} />
-            <label for="note" class="text-sm font-semibold">
-              Note to the creator
-            </label>
-            <textarea
-              id="note"
-              name="note"
-              rows={3}
-              maxlength={1000}
-              value={note()}
-              onInput={(event) => setNote(event.currentTarget.value)}
-              class={field}
-            />
-            <ul class="flex flex-wrap gap-1.5">
-              <For each={QUICK_NOTES}>
-                {(quick) => (
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setNote((written) =>
-                          written.trim() ? `${written.trim()} ${quick}` : quick,
-                        )
-                      }
-                      class="border border-line px-2 py-1 text-left text-xs text-fg-2 hover:border-steel hover:text-fg"
-                    >
-                      {quick}
-                    </button>
-                  </li>
-                )}
-              </For>
-            </ul>
-            <FieldError message={error()} />
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                name="approve"
-                value="true"
-                disabled={sending()}
-                class={buttonAccent}
-              >
-                Approve
-              </button>
-              <button
-                type="submit"
-                name="approve"
-                value="false"
-                disabled={sending()}
-                class={buttonGhost}
-              >
-                Request changes
-              </button>
-            </div>
-            <p class="text-[13px] text-fg-3">
-              Approving publishes the page. Requesting changes needs a note; its
-              creator can fix it and submit it again.
-            </p>
-          </form>
+          <DecisionForm
+            decide={decide}
+            id={submission().id}
+            back={`/admin/review/${submission().id}`}
+            problem={props.decision.problem}
+            note={props.decision.note}
+            quickNotes={QUICK_NOTES}
+            hint="Approving publishes the page. Requesting changes needs a note; its creator can fix it and submit it again."
+          />
 
           <div class={`${panel} grid gap-3 p-5`}>
             <h2 class={label}>Submitter</h2>

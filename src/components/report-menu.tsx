@@ -23,10 +23,13 @@ export function ReportMenu(props: {
   reported: ReportType[]
 }) {
   const dismiss = createDismiss({ staysOpen: true })
-  const [justSent, setJustSent] = createSignal<ReportType[]>([])
+  // What has been sent since the page loaded, by experience. Going from one
+  // experience to another keeps this menu and changes its slug, and a report
+  // made on one says nothing about the next.
+  const [justSent, setJustSent] = createSignal<Record<string, ReportType[]>>({})
   // What the page was loaded with, and what has been sent since. A report is
   // made once, so each of these stays "Sent" however the page is reached.
-  const sent = () => [...props.reported, ...justSent()]
+  const sent = () => [...props.reported, ...(justSent()[props.slug] ?? [])]
 
   const submit = async (event: SubmitEvent) => {
     // Signing in is a full page load; let the form go there.
@@ -35,9 +38,13 @@ export function ReportMenu(props: {
     const button = event.submitter as HTMLButtonElement | null
     const type = button?.value as ReportType | undefined
     if (!type || sent().includes(type)) return
+    // The experience it was sent about, whichever is shown when it answers.
+    const slug = props.slug
     try {
-      const result = await reportProblem({ data: { slug: props.slug, type } })
-      if (result.ok) setJustSent((types) => [...types, type])
+      const result = await reportProblem({ data: { slug, type } })
+      if (result.ok) {
+        setJustSent((all) => ({ ...all, [slug]: [...(all[slug] ?? []), type] }))
+      }
     } catch {
       // The button stays as it was, to try again. Sending one twice is safe:
       // a report is recorded once.

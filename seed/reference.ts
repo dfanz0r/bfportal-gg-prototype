@@ -3,12 +3,18 @@ import type { Game } from '../src/shared/content'
 // Rows the site needs before it has any content: categories, tag groups, SDK
 // releases and both games' maps. Portal's own tags are in portal-tags.json.
 
-export const experienceCategories: { name: string; game: Game | null }[] = [
+export const experienceCategories: {
+  name: string
+  game: Game | null
+  /** What is submitted in it is a template. */
+  marksTemplate?: true
+}[] = [
   { name: 'Multiplayer', game: null },
   { name: 'Co-op', game: null },
   { name: 'Solo', game: null },
-  // The old site's "Prefab". In Battlefield 6 a template is a flag instead.
-  { name: 'Templates', game: 'bf2042' },
+  // The old site's "Prefab". In Battlefield 6 a template is a choice on the
+  // form instead.
+  { name: 'Templates', game: 'bf2042', marksTemplate: true },
 ]
 
 export const scriptCategories = ['Rules', 'AI', 'Interface', 'Admin tools']
@@ -32,7 +38,8 @@ export const tagGroups: TagGroupSeed[] = [
     name: 'Era',
     description: 'The Battlefield games its factions and maps come from.',
     filter: 'own',
-    creatorSelectable: true,
+    // Not asked on the submit form: the maps in the rotation say.
+    creatorSelectable: false,
     showOnCard: true,
     tags: [],
   },
@@ -41,7 +48,8 @@ export const tagGroups: TagGroupSeed[] = [
     name: 'Rules',
     description: 'What Portal says the experience changes.',
     filter: 'shared',
-    creatorSelectable: true,
+    // Not asked on the submit form: Portal says, for the code.
+    creatorSelectable: false,
     showOnCard: false,
     tags: [],
   },
@@ -78,7 +86,7 @@ export const tagGroups: TagGroupSeed[] = [
     name: 'Rules',
     description: 'What Portal says the experience changes.',
     filter: 'shared',
-    creatorSelectable: true,
+    creatorSelectable: false,
     showOnCard: false,
     tags: [],
   },

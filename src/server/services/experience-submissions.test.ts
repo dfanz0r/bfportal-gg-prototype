@@ -6,29 +6,26 @@ import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
 import {
   experienceCreators,
-  experienceImages,
+  experienceMedia,
   experiences,
   experienceTags,
   sdkVersions,
   submissionDrafts,
   tagGroups,
   tags,
+  user,
 } from '../db/schema'
 import type { Lookup } from '../integrations/gametools'
-import {
-  keepDraft,
-  MAX_PER_DAY,
-  MAX_WAITING,
-  readDraft,
-  submitExperience,
-} from './submissions'
+import { keepDraft, readDraft } from './drafts'
+import { EXPERIENCE_FIELDS, submitExperience } from './experience-submissions'
+import { MAX_PER_DAY, MAX_WAITING } from './submission-limits'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 const creator: Actor = { id: 'seed-vantage', role: 'user' }
 // Others to submit as, so no one account runs into the limit on how many it
 // may have waiting.
 const recruit = (n: number): Actor => ({
-  id: `seed-recruit-0${n}`,
+  id: `seed-recruit-${String(n).padStart(2, '0')}`,
   role: 'user',
 })
 
@@ -64,7 +61,8 @@ const form = (changes: Record<string, unknown> = {}) => ({
   category: 'multiplayer',
   title: 'Rush Hour',
   description: 'Two rounds of **Rush**.',
-  maxPlayers: '32',
+  teamPlayers: ['16', '16'],
+  teamBots: ['0', '0'],
   ...changes,
 })
 
@@ -111,7 +109,7 @@ describe('submitting an experience', () => {
       form({
         tags: ['gun-game', 'casual'],
         built: ['script'],
-        images: 'https://i.example/a.png\nhttps://i.example/b.png',
+        media: 'https://youtu.be/jNQXAC9IVRw\nhttps://i.example/b.png',
         credits: 'Coupe',
         copyAllowed: 'true',
         // Not a field any more; a form that still sends one is not obeyed.
@@ -130,6 +128,11 @@ describe('submitting an experience', () => {
       title: 'Rush Hour',
       descriptionHtml: '<p>Two rounds of <strong>Rush</strong>.</p>',
       maxPlayers: 32,
+      maxBots: 0,
+      teamSetup: [
+        { players: 16, bots: 0 },
+        { players: 16, bots: 0 },
+      ],
       types: ['script'],
       copyAllowed: true,
       firstPublishedAt: null,
@@ -156,18 +159,146 @@ describe('submitting an experience', () => {
       { name: 'Gun Game', source: 'creator' },
       { name: 'Hardcore', source: 'portal' },
     ])
+    // Kept as typed, in order. What each shows is worked out on the page.
     expect(
       await db
-        .select({ url: experienceImages.url })
-        .from(experienceImages)
-        .where(eq(experienceImages.experienceId, row.id)),
-    ).toHaveLength(2)
+        .select({ url: experienceMedia.url })
+        .from(experienceMedia)
+        .where(eq(experienceMedia.experienceId, row.id))
+        .orderBy(experienceMedia.position),
+    ).toEqual([
+      { url: 'https://youtu.be/jNQXAC9IVRw' },
+      { url: 'https://i.example/b.png' },
+    ])
     expect(
       await db
         .select({ name: experienceCreators.name })
         .from(experienceCreators)
         .where(eq(experienceCreators.experienceId, row.id)),
     ).toEqual([{ name: 'Coupe' }])
+  })
+
+  it('keeps teams that are not even, and a team of bots', async () => {
+    const result = await submitExperience(
+      recruit(10),
+      form({
+        title: 'Practice against bots',
+        teamPlayers: ['8', '0'],
+        teamBots: ['0', '12'],
+      }),
+      answers(found),
+    )
+    expect(result).toMatchObject({ ok: true })
+    const { row } = await stored('practice-against-bots')
+    expect(row).toMatchObject({
+      maxPlayers: 8,
+      maxBots: 12,
+      teamSetup: [
+        { players: 8, bots: 0 },
+        { players: 0, bots: 12 },
+      ],
+    })
+  })
+
+  it('asks the accounts it credits, and lists names after them', async () => {
+    const result = await submitExperience(
+      recruit(11),
+      form({
+        title: 'Made together',
+        // kestrel, Gala, and the one submitting it, who is the owner.
+        creditAccounts: [
+          '900000000000000002',
+          '900000000000000001',
+          '900000000000000002',
+        ],
+        credits: ['Coupe'],
+      }),
+      answers(found),
+    )
+    expect(result).toMatchObject({ ok: true })
+    const { row } = await stored('made-together')
+    expect(
+      await db
+        .select({
+          userId: experienceCreators.userId,
+          name: experienceCreators.name,
+          position: experienceCreators.position,
+          canEdit: experienceCreators.canEdit,
+          acceptedAt: experienceCreators.acceptedAt,
+        })
+        .from(experienceCreators)
+        .where(eq(experienceCreators.experienceId, row.id))
+        .orderBy(experienceCreators.position),
+    ).toEqual([
+      // Asked, not shown until they accept, and not able to edit.
+      {
+        userId: 'seed-kestrel',
+        name: null,
+        position: 0,
+        canEdit: false,
+        acceptedAt: null,
+      },
+      {
+        userId: 'seed-gala',
+        name: null,
+        position: 1,
+        canEdit: false,
+        acceptedAt: null,
+      },
+      {
+        userId: null,
+        name: 'Coupe',
+        position: 2,
+        canEdit: false,
+        acceptedAt: null,
+      },
+    ])
+  })
+
+  it('leaves the owner out of their own credits', async () => {
+    const result = await submitExperience(
+      recruit(12),
+      // recruit 12's own account.
+      form({ title: 'Mine alone', creditAccounts: ['900000000000000040'] }),
+      answers(found),
+    )
+    expect(result).toMatchObject({ ok: true })
+    const { row } = await stored('mine-alone')
+    expect(
+      await db
+        .select()
+        .from(experienceCreators)
+        .where(eq(experienceCreators.experienceId, row.id)),
+    ).toEqual([])
+  })
+
+  it('refuses an account that is not here or hides its name, and too many credits', async () => {
+    expect(
+      await errorsOf({ creditAccounts: ['123456789012345678'] }),
+    ).toMatchObject({ credits: expect.stringContaining('no longer here') })
+    expect(await errorsOf({ creditAccounts: ['not-an-id'] })).toMatchObject({
+      creditAccounts: 'Choose each account from the list.',
+    })
+    await db
+      .update(user)
+      .set({ hideUsername: true })
+      .where(eq(user.id, 'seed-kestrel'))
+    try {
+      expect(
+        await errorsOf({ creditAccounts: ['900000000000000002'] }),
+      ).toMatchObject({ credits: expect.stringContaining('no longer here') })
+    } finally {
+      await db
+        .update(user)
+        .set({ hideUsername: false })
+        .where(eq(user.id, 'seed-kestrel'))
+    }
+    expect(
+      await errorsOf({
+        creditAccounts: ['900000000000000001', '900000000000000002'],
+        credits: Array.from({ length: 9 }, (_, n) => `Name ${n}`),
+      }),
+    ).toMatchObject({ credits: 'Credit up to 10 people.' })
   })
 
   it('gives a second one with the same title its own address', async () => {
@@ -185,6 +316,20 @@ describe('submitting an experience', () => {
       'built',
     )
     expect(await errorsOf({ title: 'x' })).toHaveProperty('title')
+    // No teams; a team of no one; no people at all; more than a Battlefield 6
+    // match holds.
+    expect(await errorsOf({ teamPlayers: [], teamBots: [] })).toHaveProperty(
+      'teams',
+    )
+    expect(
+      await errorsOf({ teamPlayers: ['8', '0'], teamBots: ['0', '0'] }),
+    ).toHaveProperty('teams')
+    expect(
+      await errorsOf({ teamPlayers: ['0', '0'], teamBots: ['8', '8'] }),
+    ).toHaveProperty('teams')
+    expect(
+      await errorsOf({ teamPlayers: ['40', '40'], teamBots: ['0', '0'] }),
+    ).toEqual({ teams: 'A Battlefield 6 match holds up to 64 players.' })
     expect(
       await errorsOf({
         code: '',
@@ -363,40 +508,52 @@ describe('submitting an experience', () => {
     const sender = recruit(9)
     await keepDraft(
       sender,
+      'experience',
       { title: 'x', tags: ['casual'] },
       { title: 'Too short.' },
+      EXPERIENCE_FIELDS,
     )
 
-    expect(await readDraft(sender)).toEqual({
+    expect(await readDraft(sender, 'experience')).toEqual({
       fields: { title: 'x', tags: ['casual'] },
       errors: { title: 'Too short.' },
     })
-    expect(await readDraft(recruit(1))).toBeNull()
+    // It is the experience form's, and someone else has none.
+    expect(await readDraft(sender, 'snippet')).toBeNull()
+    expect(await readDraft(recruit(1), 'experience')).toBeNull()
 
     await submitExperience(
       sender,
       form({ title: 'Fixed and sent' }),
       answers(found),
     )
-    expect(await readDraft(sender)).toBeNull()
+    expect(await readDraft(sender, 'experience')).toBeNull()
   })
 
-  it("keeps only the form's own fields, and lets the longest go when it is too much", async () => {
+  it("keeps only the form's own fields, and lets what was refused go when it is too much", async () => {
     const sender = recruit(9)
     await keepDraft(
       sender,
+      'experience',
       {
         title: 'Kept',
-        description: 'x'.repeat(50_000),
+        description: 'x'.repeat(150_000),
+        // Valid, and longer than the title: still kept.
+        media: 'https://i.example/a.png',
         back: '/somewhere',
         upload: { name: 'not text' },
         tags: ['casual', 7],
       },
       { description: 'Keep the description to 10,000 characters.' },
+      EXPERIENCE_FIELDS,
     )
 
-    expect(await readDraft(sender)).toEqual({
-      fields: { title: 'Kept', tags: ['casual'] },
+    expect(await readDraft(sender, 'experience')).toEqual({
+      fields: {
+        title: 'Kept',
+        media: 'https://i.example/a.png',
+        tags: ['casual'],
+      },
       errors: { description: 'Keep the description to 10,000 characters.' },
     })
     await db.delete(submissionDrafts)
@@ -463,5 +620,50 @@ describe('submitting an experience', () => {
     })
     expect(tagged).toContainEqual({ name: 'BC2', source: 'map' })
     expect(tagged).toContainEqual({ name: 'NO VEHICLES', source: 'portal' })
+  })
+
+  it('takes a template from the category where a game has no export', async () => {
+    const unavailable = answers({ status: 'unavailable' })
+    // Its form has no "offer it as a template", so one sent anyway does not
+    // excuse the missing code, and does not make it a template.
+    const noCode = await submitExperience(
+      recruit(1),
+      form({ game: 'bf2042', code: '', title: 'No code', isTemplate: 'true' }),
+      unavailable,
+    )
+    expect(noCode).toMatchObject({
+      ok: false,
+      errors: { code: expect.stringContaining('link') },
+    })
+
+    await submitExperience(
+      recruit(1),
+      form({
+        game: 'bf2042',
+        code: 'AAZZ98',
+        title: 'Only said so',
+        isTemplate: 'true',
+        filesUrl: 'https://github.com/someone/files',
+      }),
+      unavailable,
+    )
+    expect((await stored('only-said-so')).row).toMatchObject({
+      isTemplate: false,
+      filesUrl: null,
+    })
+
+    await submitExperience(
+      recruit(1),
+      form({
+        game: 'bf2042',
+        code: 'AAZZ97',
+        title: 'Drill range',
+        category: 'templates',
+      }),
+      unavailable,
+    )
+    expect((await stored('drill-range')).row).toMatchObject({
+      isTemplate: true,
+    })
   })
 })

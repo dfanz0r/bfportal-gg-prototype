@@ -7,7 +7,6 @@ const base = {
   game: 'bf6',
   category: 'multiplayer',
   title: 'Gun Master',
-  maxPlayers: '32',
 }
 
 describe('the submit form', () => {
@@ -19,7 +18,7 @@ describe('the submit form', () => {
       link: '',
       description: '',
       isTemplate: 'true',
-      images: 'https://i.example/a.png\n\n https://i.example/b.png ',
+      media: 'https://i.example/a.png\n\n https://youtu.be/jNQXAC9IVRw ',
       credits: 'Coupe\nByte',
       repoUrl: '',
     })) {
@@ -28,6 +27,11 @@ describe('the submit form', () => {
     form.append('tags', 'gun-game')
     form.append('tags', 'casual')
     form.append('built', 'script')
+    // Two teams: 16 people, and 16 people with 4 bots.
+    form.append('teamPlayers', '16')
+    form.append('teamBots', '0')
+    form.append('teamPlayers', '16')
+    form.append('teamBots', '4')
 
     expect(experienceFormSchema.parse(formFields(form))).toEqual({
       game: 'bf6',
@@ -39,10 +43,11 @@ describe('the submit form', () => {
       built: ['script'],
       isTemplate: true,
       copyAllowed: false,
-      maxPlayers: 32,
-      maxBots: 0,
-      images: ['https://i.example/a.png', 'https://i.example/b.png'],
+      teamPlayers: [16, 16],
+      teamBots: [0, 4],
+      media: ['https://i.example/a.png', 'https://youtu.be/jNQXAC9IVRw'],
       credits: ['Coupe', 'Byte'],
+      creditAccounts: [],
     })
   })
 
@@ -50,20 +55,20 @@ describe('the submit form', () => {
     const result = experienceFormSchema.safeParse({
       ...base,
       title: 'x',
-      maxPlayers: '0',
+      teamPlayers: ['16', '300'],
       coverImgUrl: 'http://plain.example/a.png',
       repoUrl: 'https://evil.example/repo',
       filesUrl: 'https://github.com.evil.example/x',
-      images: Array.from({ length: 9 }, (_, n) => `https://i.example/${n}.png`),
+      media: Array.from({ length: 9 }, (_, n) => `https://i.example/${n}.png`),
     })
     expect(result.success).toBe(false)
     if (result.success) return
     expect(Object.keys(formErrors(result.error)).sort()).toEqual([
       'coverImgUrl',
       'filesUrl',
-      'images',
-      'maxPlayers',
+      'media',
       'repoUrl',
+      'teamPlayers',
       'title',
     ])
   })
@@ -78,14 +83,22 @@ describe('the submit form', () => {
     expect(ok.filesUrl).toMatch(/dropbox/)
   })
 
-  it('takes a video only from the hosts it knows', () => {
-    const video = (vidUrl: string) =>
-      experienceFormSchema.safeParse({ ...base, vidUrl }).success
-    expect(video('https://www.youtube.com/watch?v=abc')).toBe(true)
-    expect(video('https://youtu.be/abc')).toBe(true)
-    expect(video('https://clips.twitch.tv/abc')).toBe(true)
-    expect(video('https://youtube.com.evil.example/watch')).toBe(false)
-    expect(video('https://evil.example/?youtube.com')).toBe(false)
-    expect(video('http://youtube.com/watch?v=abc')).toBe(false)
+  it('takes pictures, and videos only from YouTube, and says why not', () => {
+    const problem = (link: string) => {
+      const result = experienceFormSchema.safeParse({ ...base, media: link })
+      return result.success ? null : formErrors(result.error).media
+    }
+    expect(problem('https://i.example/a.png')).toBeNull()
+    expect(problem('https://www.youtube.com/watch?v=jNQXAC9IVRw')).toBeNull()
+    expect(problem('https://youtube.com/shorts/jNQXAC9IVRw')).toBeNull()
+    expect(problem('http://i.example/a.png')).toBe(
+      'Each link must be an https:// address.',
+    )
+    expect(problem('https://www.youtube.com/@battlefield')).toBe(
+      'A YouTube link must be to one video.',
+    )
+    expect(problem('https://clips.twitch.tv/abc')).toBe(
+      'Videos must be on YouTube.',
+    )
   })
 })

@@ -1,15 +1,19 @@
 import { For, Show } from 'solid-js'
 
+import { decideOnSnippet } from '../functions/moderation'
 import type { Script } from '../functions/scripts'
+import type { DecisionSearch } from '../shared/decision'
 import { Byline } from './byline'
 import { CopyText } from './copy-text'
 import { DateText } from './date-text'
+import { DecisionForm } from './decision-form'
 import { Fact } from './fact'
 import { Facts } from './facts'
 import { Icon } from './icon'
 import { PageLayout } from './page-layout'
 import { RepoLink } from './repo-link'
 import { Section } from './section'
+import { StatusNote } from './status-note'
 import { buttonAccent, panel } from './ui'
 import { UpdatePost } from './update-post'
 
@@ -28,7 +32,11 @@ export function scriptHead(data: Script | undefined) {
 }
 
 /** A script's own page: its code, what it does and what has changed. */
-export function ScriptPage(props: { data: Script }) {
+export function ScriptPage(props: {
+  data: Script
+  /** What a decision posted with no script and refused brought back. */
+  decision: DecisionSearch
+}) {
   const data = () => props.data
 
   return (
@@ -51,6 +59,7 @@ export function ScriptPage(props: { data: Script }) {
         </>
       }
     >
+      <StatusNote status={data().status} note={data().reviewNote} />
       <div class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10">
         <div class="min-w-0">
           <div class={panel}>
@@ -92,6 +101,18 @@ export function ScriptPage(props: { data: Script }) {
         </div>
 
         <aside class="grid gap-4">
+          {/* This page is what a moderator reviews, so the decision is made
+              here. The service refuses anyone who is not one. */}
+          <Show when={data().viewer.isStaff && data().status === 'pending'}>
+            <DecisionForm
+              decide={decideOnSnippet}
+              id={data().id}
+              back={`/scripts/${data().slug}`}
+              problem={props.decision.problem}
+              note={props.decision.note}
+              hint="Approving publishes the page. Requesting changes needs a note."
+            />
+          </Show>
           {/* What most visitors came for. */}
           <div class={`${panel} grid gap-2.5 p-5`}>
             <CopyText
