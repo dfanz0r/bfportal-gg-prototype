@@ -138,7 +138,10 @@ export function AdminReview(props: {
               </p>
             )}
           </For>
-          <ProjectFileList files={submission().files} />
+          <ProjectFileList
+            files={submission().files}
+            isTemplate={submission().isTemplate}
+          />
         </div>
 
         <aside class="grid gap-4">

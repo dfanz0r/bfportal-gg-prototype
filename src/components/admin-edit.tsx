@@ -65,7 +65,11 @@ export function AdminEdit(props: {
               )}
             </For>
           </div>
-          <ProjectFileList files={edit().files} />
+          {/* As they are now: the change above says what approving does. */}
+          <ProjectFileList
+            files={edit().files}
+            isTemplate={experience().isTemplate}
+          />
           <Show when={experience().filesUrl}>
             {(url) => (
               <p class="text-sm">
