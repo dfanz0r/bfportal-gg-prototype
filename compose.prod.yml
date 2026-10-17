@@ -1,0 +1,75 @@
+# The test server: Postgres, the migrations, the site and a Cloudflare Tunnel.
+# Settings come from a .env file beside this one; .env.production.example
+# lists them. Start or update with:
+#
+#   docker compose -f compose.prod.yml up -d --build
+#
+# Nothing is published on the host. The tunnel reaches the site at
+# http://app:3000 on the compose network.
+
+name: bfportal
+
+services:
+  db:
+    image: docker.io/library/postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bfportal
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: bfportal
+    volumes:
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bfportal -d bfportal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Applies pending migrations and exits. The site waits for it to succeed.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgres://bfportal:${POSTGRES_PASSWORD}@db:5432/bfportal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://bfportal:${POSTGRES_PASSWORD}@db:5432/bfportal
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      start_interval: 2s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  tunnel:
+    image: docker.io/cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
