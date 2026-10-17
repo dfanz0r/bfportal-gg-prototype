@@ -13,6 +13,9 @@ export function initials(name: string) {
 /**
  * A person's picture, or their initials on steel. Decorative: the name is
  * always shown or announced next to it. Size it with `class`.
+ *
+ * A picture sits on the page's own dark, not on steel: many Discord pictures
+ * are partly transparent, and steel shows through them as a pale box.
  */
 export function Avatar(props: {
   name: string
@@ -21,7 +24,7 @@ export function Avatar(props: {
 }) {
   return (
     <span
-      class={`grid shrink-0 place-items-center overflow-hidden bg-steel font-mono text-xs font-semibold text-steel-ink ${props.class ?? 'size-9'}`}
+      class={`grid shrink-0 place-items-center overflow-hidden font-mono text-xs font-semibold ${props.image ? 'bg-surface-2' : 'bg-steel text-steel-ink'} ${props.class ?? 'size-9'}`}
       aria-hidden="true"
     >
       <Show when={props.image} fallback={initials(props.name)}>
