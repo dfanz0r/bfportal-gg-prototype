@@ -61,10 +61,20 @@ export async function getDraftEditPage(
   const saved = await ownDraft(actor, slug)
   if (!saved) return { state: 'not-found' as const }
   const kept = search.draft ? await readDraft(actor, 'experience') : null
+  // A draft saved before drafts kept their form, such as one from the
+  // seed, starts from what its row says.
+  const fromRow = {
+    fields: {
+      title: saved.title,
+      description: saved.descriptionMd,
+      category: saved.category,
+      ...(saved.coverImgUrl ? { coverImgUrl: saved.coverImgUrl } : {}),
+      ...(saved.isTemplate ? { isTemplate: 'true' } : {}),
+    },
+    errors: {},
+  }
   const draft =
-    kept?.fields.editing === slug
-      ? kept
-      : (saved.draftForm ?? { fields: { title: saved.title }, errors: {} })
+    kept?.fields.editing === slug ? kept : (saved.draftForm ?? fromRow)
   return pageFor(actor, search, draft, saved, options)
 }
 

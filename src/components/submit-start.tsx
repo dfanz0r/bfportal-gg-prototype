@@ -32,6 +32,10 @@ function Card(props: {
   game: Game
   kind: Kind
   current: boolean
+  /** The form this page is a kept one: the other game's form keeps it too. */
+  keepDraft?: boolean
+  /** Asked before going: false keeps the visitor here. */
+  mayLeave?: () => boolean
   class?: string
   children: JSX.Element
 }) {
@@ -40,16 +44,24 @@ function Card(props: {
   // same step as the game's colors.
   const chosen = () => (props.current ? '' : undefined)
   const classes = () => `${choiceCard} ${props.class ?? ''}`
+  const onClick = (event: MouseEvent) => {
+    if (props.mayLeave && !props.mayLeave()) event.preventDefault()
+  }
   return (
     <Show
       when={props.kind === 'snippet'}
       fallback={
         <Link
           to="/submit"
-          search={props.game === defaultGame.id ? {} : { game: props.game }}
+          search={{
+            ...(props.game === defaultGame.id ? {} : { game: props.game }),
+            // Without it the form loses what it was filled in from.
+            ...(props.keepDraft ? { draft: true as const } : {}),
+          }}
           activeOptions={EXACT}
           resetScroll={false}
           viewTransition
+          onClick={onClick}
           aria-current={current()}
           data-chosen={chosen()}
           class={classes()}
@@ -63,6 +75,7 @@ function Card(props: {
         activeOptions={EXACT}
         resetScroll={false}
         viewTransition
+        onClick={onClick}
         aria-current={current()}
         data-chosen={chosen()}
         class={classes()}
@@ -77,9 +90,27 @@ function Card(props: {
  * The top of both submit forms, the same on each word for word: which game,
  * then what is being shared. A game with no snippets still shows that
  * choice, with the reason, and it cannot be taken.
+ *
+ * Choosing the other game keeps what is filled in below. Choosing the other
+ * kind is another form, so when `filledIn` says there is something to lose,
+ * the visitor is asked first.
  */
-export function SubmitStart(props: { game: Game; kind: Kind }) {
+export function SubmitStart(props: {
+  game: Game
+  kind: Kind
+  /** The page is a kept form, `?draft=true`, which the other game keeps. */
+  draft?: boolean
+  /** Whether anything is filled in below that leaving would lose. */
+  filledIn?: () => boolean
+}) {
   const info = () => gameInfo(props.game)
+  /** Going to the other kind's form, after asking if there is anything to lose. */
+  const mayLeave = (kind: Kind) => () =>
+    kind === props.kind ||
+    !props.filledIn?.() ||
+    window.confirm(
+      `Go to the ${kind === 'snippet' ? 'snippet' : 'experience'} form? What you have filled in here is not kept.`,
+    )
   const whyNot = () => {
     const { snippets } = info()
     return snippets === true ? '' : snippets.why
@@ -135,6 +166,12 @@ export function SubmitStart(props: { game: Game; kind: Kind }) {
                     : 'experience'
                 }
                 current={game.id === props.game}
+                keepDraft={props.draft && props.kind === 'experience'}
+                mayLeave={mayLeave(
+                  props.kind === 'snippet' && game.snippets === true
+                    ? 'snippet'
+                    : 'experience',
+                )}
                 class={`${layout} group`}
               >
                 {/* Drawn through a mask so it takes the card's colors: steel,
@@ -158,6 +195,7 @@ export function SubmitStart(props: { game: Game; kind: Kind }) {
             game={props.game}
             kind="experience"
             current={props.kind === 'experience'}
+            mayLeave={mayLeave('experience')}
             class={layout}
           >
             <Icon name="box" class={`${icon} text-steel`} />
@@ -178,6 +216,7 @@ export function SubmitStart(props: { game: Game; kind: Kind }) {
               game={props.game}
               kind="snippet"
               current={props.kind === 'snippet'}
+              mayLeave={mayLeave('snippet')}
               class={layout}
             >
               <Icon name="code" class={`${icon} text-steel`} />

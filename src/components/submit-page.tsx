@@ -297,7 +297,12 @@ export function SubmitPage(props: { data: SubmitPageData }) {
     const picked = typed()?.category
     return (
       offered.find((item) => item.slug === picked) ??
-      offered.find((item, index) => ticked('category', item.slug, index === 0))
+      offered.find((item, index) =>
+        ticked('category', item.slug, index === 0),
+      ) ??
+      // A kept form with none of these, or none at all, still has one
+      // chosen: a form with no category cannot be sent.
+      offered[0]
     )
   })
   /** The card this would be in a listing, as far as the form says so far. */
@@ -559,7 +564,16 @@ export function SubmitPage(props: { data: SubmitPageData }) {
           {/* The game comes first, and choosing one goes to its form. A
               draft's game and kind were settled when it was first saved. */}
           <Show when={!data().editing}>
-            <SubmitStart game={data().game} kind="experience" />
+            <SubmitStart
+              game={data().game}
+              kind="experience"
+              draft={data().draft !== null}
+              filledIn={() =>
+                typed() !== undefined ||
+                data().draft !== null ||
+                data().held.length > 0
+              }
+            />
           </Show>
 
           <form

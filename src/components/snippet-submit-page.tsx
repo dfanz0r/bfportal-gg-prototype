@@ -37,6 +37,9 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
   const game = () => gameList.find((item) => item.snippets === true)
   // A form that was posted with no script and refused comes back as a draft.
   const draft = () => data().draft
+  // Whether anything has been typed in, which going to the experience form
+  // would lose.
+  const [typedIn, setTypedIn] = createSignal(false)
   const [errors, setErrors] = createSignal<Record<string, string>>(
     // Read once on purpose, so the server's HTML carries them too.
     props.data.draft?.errors ?? {},
@@ -98,7 +101,13 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
       >
         <div class="min-w-0">
           <Show when={game()}>
-            {(current) => <SubmitStart game={current().id} kind="snippet" />}
+            {(current) => (
+              <SubmitStart
+                game={current().id}
+                kind="snippet"
+                filledIn={() => typedIn() || draft() !== null}
+              />
+            )}
           </Show>
 
           <form
@@ -106,6 +115,7 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
             enctype="multipart/form-data"
             action={submitSnippetForReview.url}
             onSubmit={submit}
+            onInput={() => setTypedIn(true)}
           >
             <Show when={errors().form}>
               {(message) => (

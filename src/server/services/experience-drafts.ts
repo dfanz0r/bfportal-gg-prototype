@@ -55,10 +55,15 @@ export async function ownDraft(
       slug: experiences.slug,
       game: experiences.game,
       title: experiences.title,
+      descriptionMd: experiences.descriptionMd,
+      coverImgUrl: experiences.coverImgUrl,
+      isTemplate: experiences.isTemplate,
+      category: categories.slug,
       draftForm: experiences.draftForm,
       updatedAt: experiences.updatedAt,
     })
     .from(experiences)
+    .innerJoin(categories, eq(categories.id, experiences.categoryId))
     .where(
       and(
         eq(experiences.slug, slug),

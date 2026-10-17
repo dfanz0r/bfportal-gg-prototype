@@ -28,9 +28,11 @@ export const MAX_SNIPPET_FILE_BYTES = MAX_SNIPPET_CHARS * 4
 export const lineCount = (script: string) =>
   script === '' ? 0 : script.replace(/\n$/, '').split('\n').length
 
+// A field a form did not send at all, as an unchosen category is not, is said
+// the same way as an empty one, not as what Zod would say.
 export const snippetFormSchema = z.object({
   title: z
-    .string()
+    .string({ error: 'Give it a title of at least three characters.' })
     .trim()
     .min(3, 'Give it a title of at least three characters.')
     .max(80, 'Keep the title to 80 characters.'),
@@ -43,7 +45,7 @@ export const snippetFormSchema = z.object({
     .preprocess(
       (value) =>
         typeof value === 'string' ? value.replace(/\r\n?/g, '\n') : value,
-      z.string(),
+      z.string({ error: 'Paste the snippet, or upload its file.' }),
     )
     .refine(
       (value) => value.trim().length > 0,
@@ -57,7 +59,10 @@ export const snippetFormSchema = z.object({
       (value) => value.length <= MAX_SNIPPET_CHARS,
       `Keep it to ${MAX_SNIPPET_CHARS.toLocaleString('en-US')} characters.`,
     ),
-  category: z.string().min(1, 'Choose a category.').max(80),
+  category: z
+    .string({ error: 'Choose a category.' })
+    .min(1, 'Choose a category.')
+    .max(80),
 })
 
 export type SnippetForm = z.infer<typeof snippetFormSchema>

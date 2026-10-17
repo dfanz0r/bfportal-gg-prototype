@@ -92,14 +92,19 @@ export const FILE_HOSTS = [
 export const experienceFormSchema = z.object({
   /** The address of the draft this form is, when it is one being edited. */
   editing: optional(z.string().max(200)),
-  game: z.enum(games),
+  // A field a form did not send at all is said the same way as an empty one,
+  // not as what Zod would say.
+  game: z.enum(games, { error: 'Choose a game.' }),
   /** A share code, checked against the game's format by the service. */
   code: optional(z.string().max(20)),
   /** Either of the experience's Portal pages, instead of or beside the code. */
   link: optional(z.string().max(500)),
-  category: z.string().min(1, 'Choose a category.').max(80),
+  category: z
+    .string({ error: 'Choose a category.' })
+    .min(1, 'Choose a category.')
+    .max(80),
   title: z
-    .string()
+    .string({ error: 'Give it a title of at least three characters.' })
     .trim()
     .min(3, 'Give it a title of at least three characters.')
     .max(80, 'Keep the title to 80 characters.'),

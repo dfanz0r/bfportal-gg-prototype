@@ -74,6 +74,17 @@ describe('the submit form', () => {
     ])
   })
 
+  it('says what is missing in words, not as what Zod would say', () => {
+    // A radio button nobody chose is not sent at all.
+    const result = experienceFormSchema.safeParse({ game: 'bf6' })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(formErrors(result.error)).toMatchObject({
+      category: 'Choose a category.',
+      title: 'Give it a title of at least three characters.',
+    })
+  })
+
   it('takes a repository and files only from the hosts it knows', () => {
     const ok = experienceFormSchema.parse({
       ...base,
