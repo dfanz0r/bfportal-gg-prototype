@@ -12,9 +12,13 @@ import { ProjectFileList } from './project-file-list'
 import { buttonGhost, label, panel } from './ui'
 
 const columns =
-  'grid gap-x-6 gap-y-1 px-4 py-3 sm:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]'
+  'grid gap-x-6 gap-y-1 sm:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]'
 
-/** Reviewing an edit to a live experience: each change beside what is live. */
+/**
+ * Reviewing an edit to a live experience: each change beside what is live,
+ * and what approving it does. The page is named for the edit, not the
+ * experience, so it is not taken for a new submission.
+ */
 export function AdminEdit(props: {
   data: EditReview
   /** What a decision posted with no script and refused brought back. */
@@ -22,15 +26,35 @@ export function AdminEdit(props: {
 }) {
   const edit = () => props.data.edit
   const experience = () => edit().experience
+  const count = () =>
+    edit().changes.length === 1
+      ? '1 change'
+      : `${edit().changes.length} changes`
 
   return (
     <PageLayout
-      title={experience().title}
-      lead={`An edit to a live ${gameInfo(experience().game).name} experience.`}
+      title={`Edit to ${experience().title}`}
+      lead={`Its owner asks to change this live ${gameInfo(experience().game).name} experience. The live page stays as it is until you approve.`}
+      crumbs={[
+        { label: 'Review queue', href: '/admin' },
+        { label: 'Edit to a live experience' },
+      ]}
+      meta={
+        <span class="inline-flex items-center gap-2">
+          Asked for by
+          <Avatar
+            name={edit().submitter.name}
+            image={edit().submitter.image}
+            class="size-5 text-[9px]"
+          />
+          <span class="text-fg">{edit().submitter.name}</span>
+          <DateText value={edit().submittedAt} now={props.data.now} />
+        </span>
+      }
       actions={
         <>
           <a href={`/experiences/${experience().slug}`} class={buttonGhost}>
-            See its page
+            See the live page
           </a>
           <Link to="/admin" class={buttonGhost}>
             Back to the queue
@@ -43,32 +67,48 @@ export function AdminEdit(props: {
         data-game={experience().game}
       >
         <div class="grid min-w-0 gap-6">
-          <div class={`${panel} divide-y divide-line`}>
-            <div class={`${columns} max-sm:hidden`}>
-              <span class={label}>Field</span>
-              <span class={label}>Live now</span>
-              <span class={label}>Proposed</span>
+          <section>
+            <h2 class={`${label} mb-2 flex justify-between gap-4`}>
+              What changes
+              <span>{count()}</span>
+            </h2>
+            <div class={`${panel} divide-y divide-line`}>
+              <div class={`${columns} px-4 py-3 max-sm:hidden`}>
+                <span class={label}>Field</span>
+                <span class={label}>Live now</span>
+                <span class={label}>Once approved</span>
+              </div>
+              <For each={edit().changes}>
+                {(change) => (
+                  <div class="grid gap-2 px-4 py-3.5 text-sm">
+                    <div class={columns}>
+                      <span class="font-semibold">{change.field}</span>
+                      <span class="text-fg-2">
+                        <span class="text-fg-3 sm:hidden">Live now: </span>
+                        {change.live}
+                      </span>
+                      <span class="font-semibold text-steel-hi">
+                        <span class="font-normal text-fg-3 sm:hidden">
+                          Once approved:{' '}
+                        </span>
+                        {change.proposed}
+                      </span>
+                    </div>
+                    <p class="border-l-2 border-steel bg-steel/8 px-3 py-2 text-[13px] text-fg-2">
+                      {change.effect}
+                    </p>
+                  </div>
+                )}
+              </For>
             </div>
-            <For each={edit().changes}>
-              {(change) => (
-                <div class={`${columns} text-sm`}>
-                  <span class="font-semibold">{change.field}</span>
-                  <span class="text-fg-2">
-                    <span class="text-fg-3 sm:hidden">Live now: </span>
-                    {change.live}
-                  </span>
-                  <span class="text-fg">
-                    <span class="text-fg-3 sm:hidden">Proposed: </span>
-                    {change.proposed}
-                  </span>
-                </div>
-              )}
-            </For>
-          </div>
-          {/* As they are now: the change above says what approving does. */}
+            <p class="mt-2 text-[13px] text-fg-3">
+              Nothing else on its page changes.
+            </p>
+          </section>
           <ProjectFileList
             files={edit().files}
             isTemplate={experience().isTemplate}
+            becomePublic={edit().offersFiles}
           />
           <Show when={experience().filesUrl}>
             {(url) => (
@@ -93,22 +133,8 @@ export function AdminEdit(props: {
             back={`/admin/edits/${edit().id}`}
             problem={props.decision.problem}
             note={props.decision.note}
-            hint="Approving changes the live page. Requesting changes needs a note, which its owner sees on the page."
+            hint="Approving applies this edit to the live page. Requesting changes leaves the page as it is and needs a note, which its owner sees."
           />
-          <div class={`${panel} p-5`}>
-            <h2 class={`${label} mb-3`}>Asked for by</h2>
-            <p class="flex items-center gap-2.5 text-sm">
-              <Avatar
-                name={edit().submitter.name}
-                image={edit().submitter.image}
-                class="size-7"
-              />
-              <span class="font-semibold">{edit().submitter.name}</span>
-              <span class="ml-auto font-mono text-xs text-fg-3">
-                <DateText value={edit().submittedAt} now={props.data.now} />
-              </span>
-            </p>
-          </div>
         </aside>
       </div>
     </PageLayout>

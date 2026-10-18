@@ -214,7 +214,7 @@ describe('offering files as a template after submitting', () => {
     const queue = await listQueue(moderator)
     if (!queue.ok) throw new Error('expected the queue')
     expect(queue.edits.find((item) => item.id === edit.id)).toMatchObject({
-      changes: ['Template'],
+      changes: ['Offer its files as a template'],
     })
     const review = await getEditReview(moderator, edit.id)
     if (!review.ok) throw new Error('expected the review')
@@ -222,9 +222,11 @@ describe('offering files as a template after submitting', () => {
       {
         field: 'Template',
         live: 'No',
-        proposed: 'Yes: anyone can download its files',
+        proposed: 'Yes',
+        effect: 'Once approved, anyone can download its file.',
       },
     ])
+    expect(review.edit.offersFiles).toBe(true)
     expect(review.edit.files.map((file) => file.filename)).toEqual([
       'mode.json',
     ])

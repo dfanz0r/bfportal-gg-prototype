@@ -21,6 +21,8 @@ export function ProjectFileList(props: {
   }[]
   /** Whether they are offered as a template, which makes them public. */
   isTemplate: boolean
+  /** Whether what is being reviewed would offer them, though they are not. */
+  becomePublic?: boolean
 }) {
   // A file opened from here comes back here.
   const location = useLocation()
@@ -32,11 +34,19 @@ export function ProjectFileList(props: {
           <Show
             when={props.isTemplate}
             fallback={
-              <>
-                <b class="font-semibold text-fg">Private.</b> It is not a
-                template, so only its owner and the moderators can download
-                these.
-              </>
+              <Show
+                when={props.becomePublic}
+                fallback={
+                  <>
+                    <b class="font-semibold text-fg">Private.</b> It is not a
+                    template, so only its owner and the moderators can download
+                    these.
+                  </>
+                }
+              >
+                <b class="font-semibold text-fg">Private now.</b> Approving
+                makes them public: anyone can download these.
+              </Show>
             }
           >
             <b class="font-semibold text-fg">Public once published.</b> It is

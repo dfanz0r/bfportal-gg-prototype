@@ -1136,8 +1136,11 @@ Built 2026-10-16, on the submit form's "Project files" section:
   template", "Cancel request" while a moderator has not decided, "Stop offering".
   A request is a pending revision of kind `edit` whose payload is `{ isTemplate:
   true }`, joining the experience's one pending edit if there is one. It is in the
-  review queue as an edit and decided at `/admin/edits/<id>`, which shows each change
-  beside what is live, and the files. A note sent back shows to the owner above the
+  review queue as an edit, with what it asks for ("Offer its files as a template"),
+  and decided at `/admin/edits/<id>`. Since 2026-10-17 that screen is titled "Edit to
+  <title>", says the live page stays as it is until it is approved, shows each change
+  beside what is live with what approving it does, says nothing else changes, and
+  says when approving would make the files public. A note sent back shows to the owner above the
   files.
 - The queue offers only edits whose every change the site can apply, which is the
   template offer alone for now. Any other edit waits for the edit form: approving it

@@ -147,11 +147,15 @@ export async function listQueue(actor: Actor | null) {
   }
 }
 
-/** What a pending edit changes, each as the field's name. */
+/** What a pending edit asks for, a few words each, for the queue. */
 function changesIn(payload: EditPayload) {
-  return Object.entries(EDIT_FIELDS).flatMap(([key, name]) =>
-    payload[key as keyof EditPayload] === undefined ? [] : [name],
-  )
+  return payload.isTemplate === undefined
+    ? []
+    : [
+        payload.isTemplate
+          ? 'Offer its files as a template'
+          : 'Stop offering its files as a template',
+      ]
 }
 
 /** The name each field an edit can change goes by. */
@@ -215,6 +219,7 @@ export async function getEditReview(actor: Actor | null, id: number) {
     .where(eq(projectFiles.experienceId, found.experience.id))
     .orderBy(asc(projectFiles.id))
   const yesNo = (value: boolean) => (value ? 'Yes' : 'No')
+  const offered = files.length === 1 ? 'its file' : `its ${files.length} files`
   return {
     ok: true as const,
     edit: {
@@ -222,7 +227,8 @@ export async function getEditReview(actor: Actor | null, id: number) {
       submittedAt: found.submittedAt,
       submitter: found.submitter,
       experience: found.experience,
-      // Each change as its field, what is live and what is asked for.
+      // Each change as its field, what is live, what is asked for, and what
+      // approving it does.
       changes:
         payload.isTemplate === undefined
           ? []
@@ -230,11 +236,14 @@ export async function getEditReview(actor: Actor | null, id: number) {
               {
                 field: EDIT_FIELDS.isTemplate,
                 live: yesNo(found.experience.isTemplate),
-                proposed: payload.isTemplate
-                  ? 'Yes: anyone can download its files'
-                  : 'No',
+                proposed: yesNo(payload.isTemplate),
+                effect: payload.isTemplate
+                  ? `Once approved, anyone can download ${offered}${found.experience.filesUrl ? ' and open the link to its larger files' : ''}.`
+                  : 'Once approved, only its owner and the moderators can download its files.',
               },
             ],
+      // Whether approving makes its files public, which the files below say.
+      offersFiles: payload.isTemplate === true,
       files,
     },
     now: new Date(),
