@@ -5,6 +5,7 @@ import {
   deleteExperience,
   removeExperienceForGood,
 } from '../functions/experience'
+import { deleteSnippet, removeSnippetForGood } from '../functions/snippets'
 import type { ContentStatus } from '../shared/content'
 import { MAX_NOTE } from '../shared/decision'
 import { FieldError } from './field-error'
@@ -12,6 +13,20 @@ import { Icon } from './icon'
 import { buttonDanger, field, label, panel } from './ui'
 
 const danger = `${buttonDanger} h-[34px] px-3 text-xs`
+
+/** What can be ended, where its page is, and the functions that end it. */
+const KINDS = {
+  experience: {
+    path: '/experiences',
+    remove: deleteExperience,
+    removeForGood: removeExperienceForGood,
+  },
+  snippet: {
+    path: '/snippets',
+    remove: deleteSnippet,
+    removeForGood: removeSnippetForGood,
+  },
+}
 
 /** One action, closed until it is opened: nothing ends by a stray press. */
 function Action(props: { title: string; children: JSX.Element }) {
@@ -30,12 +45,14 @@ function Action(props: { title: string; children: JSX.Element }) {
 }
 
 /**
- * Ending an experience, at the foot of its page: its owner deleting it, and a
- * moderator removing it for good with a note. Each is a form posted to the
- * function the script calls, so it works before the script has loaded, and
- * each asks to be meant: a box ticked, or a note written.
+ * Ending an experience or a snippet, at the foot of its page: its owner
+ * deleting it, and a moderator removing it for good with a note. Each is a
+ * form posted to the function the script calls, so it works before the
+ * script has loaded, and each asks to be meant: a box ticked, or a note
+ * written.
  */
-export function ExperienceManage(props: {
+export function ContentManage(props: {
+  kind: keyof typeof KINDS
   slug: string
   status: ContentStatus
   isOwner: boolean
@@ -45,7 +62,8 @@ export function ExperienceManage(props: {
   const router = useRouter()
   const [sending, setSending] = createSignal(false)
   const [error, setError] = createSignal<string>()
-  const back = () => `/experiences/${props.slug}`
+  const ends = () => KINDS[props.kind]
+  const back = () => `${ends().path}/${props.slug}`
   // A draft has been sent to nobody, and one removed is ended already.
   const removable = () =>
     props.isStaff && props.status !== 'draft' && props.status !== 'removed'
@@ -58,27 +76,37 @@ export function ExperienceManage(props: {
       errors?: Record<string, string>
     }>,
     done: () => Promise<unknown>,
+    /** Where to go once it is done, loaded whole if `done` fails. */
+    address: string,
   ) => {
     event.preventDefault()
     if (sending()) return
     setSending(true)
     setError(undefined)
+    let result: Awaited<ReturnType<typeof act>>
     try {
-      const result = await act()
-      if (result.ok) {
-        await done()
-      } else if (result.reason === 'signed-out') {
-        window.location.assign('/login')
-      } else {
-        setError(result.errors?.note ?? 'That could not be done.')
-      }
+      result = await act()
     } catch {
       setError(
         'No answer came back, so this may or may not have been done. Reload the page to see.',
       )
-    } finally {
       setSending(false)
+      return
     }
+    if (result.ok) {
+      // It is done. A page that then fails to load is never reported as
+      // the action failing.
+      try {
+        await done()
+      } catch {
+        window.location.assign(address)
+      }
+    } else if (result.reason === 'signed-out') {
+      window.location.assign('/login')
+    } else {
+      setError(result.errors?.note ?? 'That could not be done.')
+    }
+    setSending(false)
   }
 
   return (
@@ -86,15 +114,16 @@ export function ExperienceManage(props: {
       <div class={`${panel} grid gap-3 p-5`}>
         <h2 class={label}>Manage</h2>
         <Show when={props.isOwner}>
-          <Action title="Delete this experience">
+          <Action title={`Delete this ${props.kind}`}>
             <form
               method="post"
-              action={deleteExperience.url}
+              action={ends().remove.url}
               onSubmit={(event) =>
                 send(
                   event,
-                  () => deleteExperience({ data: { slug: props.slug } }),
+                  () => ends().remove({ data: { slug: props.slug } }),
                   () => navigate({ to: '/submissions' }),
+                  '/submissions',
                 )
               }
               class="grid gap-3"
@@ -121,7 +150,7 @@ export function ExperienceManage(props: {
           <Action title="Remove for good">
             <form
               method="post"
-              action={removeExperienceForGood.url}
+              action={ends().removeForGood.url}
               onSubmit={(event) => {
                 const note = new FormData(
                   event.currentTarget as HTMLFormElement,
@@ -129,10 +158,11 @@ export function ExperienceManage(props: {
                 return send(
                   event,
                   () =>
-                    removeExperienceForGood({
+                    ends().removeForGood({
                       data: { slug: props.slug, note: String(note ?? '') },
                     }),
                   () => router.invalidate(),
+                  back(),
                 )
               }}
               class="grid gap-3"

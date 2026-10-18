@@ -128,7 +128,7 @@ Reach for what exists before writing markup:
 | The square that says what kind of file a row is | `fileGlyph` from `ui.ts`, with `fileGlyphs` from `src/shared/project-files.ts` |
 | A project's files for a moderator, each to download | `ProjectFileList` |
 | The owner's switch for offering files as a template | `TemplateOffer` |
-| Deleting an experience, or a moderator removing it | `ExperienceManage`, at the foot of its page |
+| Deleting an experience or a snippet, or a moderator removing it | `ContentManage` with its `kind`, at the foot of its page |
 | A button that ends something, such as Delete | `buttonDanger` from `ui.ts` |
 | The experience form for one of the owner's: a draft, one sent back, one in review, or one live | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which. Checking the form and writing it are `prepareExperience` and `writeAround` in `src/server/services/prepare-experience.ts`, shared by a submission and an edit |
 | The snippet form for one of the owner's: one sent back, one in review, or one live | `SnippetSubmitPage` with `editing` in its data, from `getSnippetEditPage`; a live one's edit is `submitSnippetEdit` in `src/server/services/snippet-edits.ts` |

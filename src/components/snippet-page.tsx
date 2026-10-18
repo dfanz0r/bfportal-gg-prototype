@@ -5,6 +5,7 @@ import type { Snippet } from '../functions/snippets'
 import type { DecisionSearch } from '../shared/decision'
 import { Byline } from './byline'
 import { CodeView } from './code-view'
+import { ContentManage } from './content-manage'
 import { CopyText } from './copy-text'
 import { DateText } from './date-text'
 import { DecisionForm } from './decision-form'
@@ -126,6 +127,18 @@ export function SnippetPage(props: {
               </For>
             </Section>
           </Show>
+
+          {/* For its owner and the moderators, under the page as on an
+              experience's. */}
+          <div class="mt-10 max-w-xl">
+            <ContentManage
+              kind="snippet"
+              slug={data().slug}
+              status={data().status}
+              isOwner={data().viewer.isOwner}
+              isStaff={data().viewer.isStaff}
+            />
+          </div>
         </div>
 
         <aside class="grid gap-4">

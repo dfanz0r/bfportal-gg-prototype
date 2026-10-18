@@ -5,9 +5,9 @@ import { formatBytes } from '../shared/dates'
 import { gameInfo } from '../shared/games'
 import { fileGlyphs } from '../shared/project-files'
 import { Avatar } from './avatar'
+import { ContentManage } from './content-manage'
 import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
-import { ExperienceManage } from './experience-manage'
 import { ExperienceSide } from './experience-side'
 import { Gallery } from './gallery'
 import { Icon } from './icon'
@@ -372,7 +372,8 @@ export function ExperiencePage(props: { data: Experience }) {
                 than in the side column, which stays in view and would hide
                 whatever is opened at its foot. */}
             <div class="mt-10 max-w-xl">
-              <ExperienceManage
+              <ContentManage
+                kind="experience"
                 slug={data().slug}
                 status={data().status}
                 isOwner={data().viewer.isOwner}
