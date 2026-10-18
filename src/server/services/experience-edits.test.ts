@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto'
 import { and, eq, ne } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
+import { portalExport } from '../../../tests/portal-export'
 import { CHANGED_SINCE_OPENED } from '../../shared/decision'
 import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
@@ -9,6 +11,7 @@ import {
   experienceCreators,
   experiences,
   experienceTags,
+  projectFiles,
   revisions,
   user,
 } from '../db/schema'
@@ -16,7 +19,10 @@ import type { Lookup } from '../integrations/gametools'
 import { getExperience } from './experience'
 import { saveExperienceDraft } from './experience-drafts'
 import { submitExperience } from './experience-submissions'
+import { getProposedFile, getProposedFileView } from './file-view'
+import { holdFiles } from './held-files'
 import { decideEdit, getEditReview, listQueue } from './moderation'
+import { listOwnSubmissions } from './own-submissions'
 import { getDraftEditPage } from './submit-page'
 import { offerAsTemplate } from './template-offers'
 
@@ -340,5 +346,113 @@ describe('editing a live experience', () => {
       portalState: 'unchecked',
       mapRotation: null,
     })
+  })
+
+  it('lists it as done once an edit sent back, fixed and sent again is approved', async () => {
+    // Above, an edit was sent back, then fixed and sent again, and that one
+    // approved.
+    const { id } = await live()
+    const kinds = await db
+      .select({ status: revisions.status })
+      .from(revisions)
+      .where(eq(revisions.experienceId, id))
+    expect(kinds.map((row) => row.status)).toContain('changes_requested')
+    const listed = await listOwnSubmissions(owner)
+    if (!listed.ok) throw new Error('expected the list')
+    const item = listed.items.find((row) => row.href === `/experiences/${SLUG}`)
+    expect(item).toBeDefined()
+    expect(item?.review).not.toBe('Changes requested')
+    expect(item?.request).not.toBe('Edit')
+  })
+
+  // Last: approving it stores an export, which the tests above do not expect.
+  it('shows a moderator the files an edit would store, and which have new contents', async () => {
+    const { id } = await live()
+    const sha = (text: string) =>
+      createHash('sha256').update(text).digest('hex')
+    const exportText = portalExport()
+    // Live: an export and a scene.
+    await db.delete(projectFiles).where(eq(projectFiles.experienceId, id))
+    await db.insert(projectFiles).values(
+      [
+        { kind: 'export' as const, filename: 'mode.json', body: exportText },
+        { kind: 'scene' as const, filename: 'Map.tscn', body: 'old scene' },
+      ].map((file) => ({
+        ...file,
+        experienceId: id,
+        sizeBytes: file.body.length,
+        sha256: sha(file.body),
+        uploadedBy: owner.id,
+      })),
+    )
+    // Sent: the same export, and a scene of the same name with something
+    // else in it.
+    const held = await holdFiles(
+      owner,
+      [
+        { slot: 'export', filename: 'mode.json', text: exportText },
+        { slot: 'added', filename: 'Map.tscn', text: 'new scene' },
+      ],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the files to be held')
+    const [exported, scene] = held.held.map((file) => file.id)
+    expect(
+      await submitExperience(
+        owner,
+        { ...(await formFor(owner)), files: [exported, scene] },
+        nobody,
+      ),
+    ).toEqual({ ok: true, slug: SLUG })
+    const [edit] = await pending(id)
+    const review = await getEditReview(moderator, edit.id)
+    if (!review.ok) throw new Error('expected the review')
+    expect(
+      review.edit.changes.find((change) => change.field === 'Files'),
+    ).toMatchObject({
+      live: 'mode.json, Map.tscn',
+      proposed: 'mode.json, Map.tscn (new contents)',
+    })
+    expect(review.edit.proposed.map((file) => file.filename)).toEqual([
+      'mode.json',
+      'Map.tscn',
+    ])
+    expect(review.edit.proposed[1]).toMatchObject({
+      view: `/edits/${edit.id}/files/${scene}`,
+      download: `/api/edits/${edit.id}/files/${scene}`,
+    })
+
+    // A moderator reads what was sent. Nobody else does, its owner included,
+    // and only a file this edit names.
+    expect((await getProposedFile(moderator, edit.id, scene))?.body).toBe(
+      'new scene',
+    )
+    expect(
+      (await getProposedFileView(moderator, edit.id, scene))?.download,
+    ).toBe(`/api/edits/${edit.id}/files/${scene}`)
+    for (const viewer of [null, owner, { id: 'seed-vantage', role: 'user' }]) {
+      expect(
+        await getProposedFile(viewer as Actor | null, edit.id, scene),
+      ).toBeNull()
+    }
+    const other = await holdFiles(
+      owner,
+      [{ slot: 'added', filename: 'Other.tscn', text: 'other' }],
+      NOW,
+    )
+    if (!other.ok) throw new Error('expected the file to be held')
+    expect(
+      await getProposedFile(moderator, edit.id, other.held[0].id),
+    ).toBeNull()
+    expect(await getProposedFile(moderator, edit.id + 1000, scene)).toBeNull()
+
+    // Decided, it is no longer something waiting to be read.
+    await decideEdit(
+      moderator,
+      edit.id,
+      { approve: true, version: edit.version },
+      NOW,
+    )
+    expect(await getProposedFile(moderator, edit.id, scene)).toBeNull()
   })
 })

@@ -297,6 +297,129 @@ describe('drafts', () => {
     ).toMatchObject({ ok: true, status: 'published' })
   })
 
+  it('holds no more with a live one than its saved form and its edit name, however often it is saved', async () => {
+    const owner = writer(24)
+    const { id } = await row('with-files')
+    expect((await row('with-files')).status).toBe('published')
+    const hold = async (slot: 'export' | 'added', filename: string) => {
+      const held = await holdFiles(
+        owner,
+        [
+          {
+            slot,
+            filename,
+            text: slot === 'export' ? portalExport() : '[gd_scene]',
+          },
+        ],
+        NOW,
+      )
+      if (!held.ok) throw new Error('expected the file to be held')
+      return held.held[0].id
+    }
+    const withIt = async () =>
+      (
+        await db
+          .select({ id: heldFiles.id })
+          .from(heldFiles)
+          .where(eq(heldFiles.experienceId, id))
+      )
+        .map((file) => file.id)
+        .sort()
+    const save = (files: string[]) =>
+      saveExperienceDraft(
+        owner,
+        form({ editing: 'with-files', title: 'With Files', files }),
+        NOW,
+      )
+
+    // Saved again and again, each time with a new file: only the last is
+    // held with it, and nothing is left loose to count.
+    let last = ''
+    for (let round = 0; round < 5; round += 1) {
+      last = await hold('added', `Round${round}.tscn`)
+      expect(await save([last])).toEqual({ ok: true, slug: 'with-files' })
+      expect(await withIt()).toEqual([last])
+    }
+
+    // Sent as an edit with a new export: what the edit names stays held
+    // while a later save names something else.
+    const sentExport = await hold('export', 'mode.json')
+    expect(
+      await submitExperience(
+        owner,
+        form({
+          editing: 'with-files',
+          title: 'With Files',
+          isTemplate: 'true',
+          teamPlayers: ['16', '16'],
+          files: [sentExport],
+        }),
+        { ...nobody, now: NOW },
+      ),
+    ).toEqual({ ok: true, slug: 'with-files' })
+    expect(await withIt()).toEqual([sentExport])
+    const savedAfter = await hold('added', 'After.tscn')
+    await save([savedAfter])
+    expect(await withIt()).toEqual([sentExport, savedAfter].sort())
+    const savedAgain = await hold('added', 'Again.tscn')
+    await save([savedAgain])
+    expect(await withIt()).toEqual([sentExport, savedAgain].sort())
+  })
+
+  it('submits a draft and deletes it at once without the two waiting on each other', async () => {
+    const owner = writer(32)
+    const held = await holdFiles(
+      owner,
+      [{ slot: 'export', filename: 'mode.json', text: portalExport() }],
+      NOW,
+    )
+    if (!held.ok) throw new Error('expected the file to be held')
+    const files = held.held.map((file) => file.id)
+    const draft = form({ title: 'Both At Once', files })
+    expect(await saveExperienceDraft(owner, draft, NOW)).toEqual({
+      ok: true,
+      slug: 'both-at-once',
+    })
+    const { id } = await row('both-at-once')
+
+    // Deleting takes the experience, then its files. The submission starts
+    // while the experience is held, and must wait for it before taking the
+    // files, or each holds what the other wants.
+    let submitting: Promise<unknown> = Promise.resolve()
+    await db.transaction(async (tx) => {
+      await tx
+        .select({ id: experiences.id })
+        .from(experiences)
+        .where(eq(experiences.id, id))
+        .for('update')
+      submitting = submitExperience(
+        owner,
+        {
+          ...draft,
+          editing: 'both-at-once',
+          isTemplate: 'true',
+          teamPlayers: ['16', '16'],
+        },
+        { ...nobody, now: NOW },
+      )
+      // Until the submission is waiting on a lock.
+      for (let tries = 0; tries < 100; tries += 1) {
+        const [{ waiting }] =
+          await sql`select count(*)::int as waiting from pg_locks where not granted`
+        if (waiting > 0) break
+        await new Promise((done) => setTimeout(done, 50))
+      }
+      await tx.delete(heldFiles).where(eq(heldFiles.experienceId, id))
+      await tx
+        .update(experiences)
+        .set({ deletedAt: NOW })
+        .where(eq(experiences.id, id))
+    })
+    // The submission then finds its files gone, and says so.
+    expect(await submitting).toMatchObject({ ok: false })
+    expect(await row('both-at-once')).toMatchObject({ status: 'draft' })
+  })
+
   it(`keeps up to ${MAX_DRAFTS} drafts an account`, async () => {
     const owner = writer(25)
     for (let n = 0; n < MAX_DRAFTS; n += 1) {

@@ -17,7 +17,7 @@ import {
   user,
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
-import { allow } from '../rate-limit'
+import { allowLookup } from '../rate-limit'
 import { type Draft, readDraft } from './drafts'
 import type { PreparedExperience } from './edit-payload'
 import { type Editable, isLive, ownEditable } from './experience-drafts'
@@ -30,9 +30,6 @@ import { groupBy } from './shared'
 // What the page for sharing an experience starts from: what the form offers
 // for the game, what Portal says about a code, and a refused form to show
 // again.
-
-/** How many codes one account may look up in a minute. */
-const LOOKUPS_PER_MINUTE = 20
 
 /** What the page's address can ask for. */
 export type SubmitSearch = {
@@ -233,8 +230,7 @@ async function pageFor(
       ? { playgroundId: linked.playgroundId }
       : null
   // Each lookup is a request to someone else's service.
-  const limited =
-    by !== null && !allow(`lookup:${actor.id}`, LOOKUPS_PER_MINUTE, 60 * 1000)
+  const limited = by !== null && !allowLookup(actor.id)
 
   const [offered, looked, credited, held, tally] = await Promise.all([
     getSubmitOptions(game),

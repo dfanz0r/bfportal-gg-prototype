@@ -1,4 +1,14 @@
-import { and, asc, count, eq, isNull, ne, notInArray, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNull,
+  ne,
+  notInArray,
+  sql,
+} from 'drizzle-orm'
 
 import type { Game } from '../../shared/content'
 import { CHANGED_SINCE_OPENED, NOTE_NEEDED } from '../../shared/decision'
@@ -13,6 +23,7 @@ import {
   experienceMedia,
   experienceReports,
   experiences,
+  heldFiles,
   projectFiles,
   revisions,
   snippets,
@@ -331,6 +342,7 @@ export async function getEditReview(actor: Actor | null, id: number) {
         unchanged: described.unchanged,
         offersFiles: false,
         files: [],
+        proposed: [],
       },
       now: new Date(),
     }
@@ -365,6 +377,34 @@ export async function getEditReview(actor: Actor | null, id: number) {
     .from(projectFiles)
     .where(eq(projectFiles.experienceId, experience.id))
     .orderBy(asc(projectFiles.id))
+  // What approving would store in their place, held for the edit until then,
+  // each to open and download here before deciding.
+  const sentFiles = payload.form?.files ?? []
+  const proposed =
+    sentFiles.length > 0
+      ? (
+          await db
+            .select({
+              id: heldFiles.id,
+              kind: heldFiles.kind,
+              filename: heldFiles.filename,
+              sizeBytes: heldFiles.sizeBytes,
+            })
+            .from(heldFiles)
+            .where(
+              and(
+                inArray(heldFiles.id, sentFiles),
+                eq(heldFiles.experienceId, experience.id),
+              ),
+            )
+            .orderBy(asc(heldFiles.createdAt))
+        ).map((file) => ({
+          ...file,
+          fromExport: false,
+          view: `/edits/${found.id}/files/${file.id}`,
+          download: `/api/edits/${found.id}/files/${file.id}`,
+        }))
+      : []
   const yesNo = (value: boolean) => (value ? 'Yes' : 'No')
   const offered = files.length === 1 ? 'its file' : `its ${files.length} files`
   const described = await describeEdit(experience.id, payload)
@@ -403,6 +443,7 @@ export async function getEditReview(actor: Actor | null, id: number) {
       // Whether approving makes its files public, which the files below say.
       offersFiles: payload.isTemplate === true,
       files,
+      proposed,
     },
     now: new Date(),
   }

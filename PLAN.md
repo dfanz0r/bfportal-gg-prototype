@@ -1691,7 +1691,10 @@ What "feature complete" means, by area.
   warning stays worth reading. That list is settings an admin can edit, drawn up when
   the review screen is built.
 - Reviewing an edit shows live against proposed, field by field, with changed text
-  marked and the unchanged fields listed.
+  marked and the unchanged fields listed. Since 2026-10-18 the files it sends are
+  listed beside the live ones, each to read and download before deciding, and a
+  file sent under a name it already has is compared by what is in it: "(new
+  contents)".
 - Reports: counts per experience by kind, the flags set now, and "set flags" or
   "dismiss". A report never changes a flag by itself. Either deals with the open
   reports, which move from "Open" to "Dealt with"; the mockup's second tab said

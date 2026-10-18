@@ -214,8 +214,11 @@ export async function applyEdit(
  * what the form held and the moderator's note on one sent back. Null when
  * there is none, or the last was approved. The form opens on it.
  */
-export async function lastSentEdit(experienceId: number) {
-  const [last] = await db
+export async function lastSentEdit(
+  experienceId: number,
+  executor: Executor = db,
+) {
+  const [last] = await executor
     .select({
       status: revisions.status,
       payload: revisions.payload,
@@ -324,7 +327,7 @@ export async function describeEdit(experienceId: number, payload: EditPayload) {
       .where(eq(experienceCreators.experienceId, experienceId))
       .orderBy(asc(experienceCreators.position)),
     db
-      .select({ filename: projectFiles.filename })
+      .select({ filename: projectFiles.filename, sha256: projectFiles.sha256 })
       .from(projectFiles)
       .where(
         and(
@@ -355,7 +358,7 @@ export async function describeEdit(experienceId: number, payload: EditPayload) {
       : [],
     form && form.files.length > 0
       ? db
-          .select({ filename: heldFiles.filename })
+          .select({ filename: heldFiles.filename, sha256: heldFiles.sha256 })
           .from(heldFiles)
           .where(inArray(heldFiles.id, form.files))
           .orderBy(asc(heldFiles.createdAt))
@@ -481,7 +484,20 @@ export async function describeEdit(experienceId: number, payload: EditPayload) {
               {
                 field: 'Files',
                 live: list(liveFiles.map((file) => file.filename)),
-                proposed: list(newFiles.map((file) => file.filename)),
+                // By what is in them, not only their names: a file sent
+                // again under its old name with something else in it is a
+                // change, and says so.
+                proposed: list(
+                  newFiles.map((file) => {
+                    const named = liveFiles.find(
+                      (old) => old.filename === file.filename,
+                    )
+                    if (!named) return file.filename
+                    return named.sha256 === file.sha256
+                      ? file.filename
+                      : `${file.filename} (new contents)`
+                  }),
+                ),
                 effect:
                   'Once approved, these replace its files, with what is inside a new export.',
               },

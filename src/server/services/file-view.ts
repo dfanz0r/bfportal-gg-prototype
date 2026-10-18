@@ -1,10 +1,14 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
+import type { FileKind } from '../../shared/content'
 import { formatBytes } from '../../shared/dates'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
-import { experiences, projectFiles } from '../db/schema'
+import { experiences, heldFiles, projectFiles, revisions } from '../db/schema'
+import { needsStaff } from './access'
+import { editPayloadSchema } from './edit-payload'
 import { fileReadableBy } from './experience'
+import { heldIdsIn } from './held-files'
 
 // One project file, to read on a page rather than download: for a moderator
 // reviewing a submission's files, and for anyone looking at a template's.
@@ -66,8 +70,87 @@ export async function getFileView(publicId: string, viewer: Actor | null) {
     .innerJoin(experiences, eq(experiences.id, projectFiles.experienceId))
     .where(and(eq(projectFiles.publicId, publicId), fileReadableBy(viewer)))
     .limit(1)
-  if (!found) return null
+  return found ? viewOf(found, `/api/files/${found.file.id}`) : null
+}
 
+/**
+ * A file an edit waiting for review would store in place of the live one's,
+ * for a moderator to read before deciding. Only staff, only while the edit
+ * waits, and only a file it names. Null otherwise.
+ */
+export async function getProposedFile(
+  viewer: Actor | null,
+  editId: number,
+  fileId: string,
+) {
+  if (needsStaff(viewer) || heldIdsIn([fileId]).length === 0) return null
+  const [edit] = await db
+    .select({
+      experienceId: revisions.experienceId,
+      payload: revisions.payload,
+    })
+    .from(revisions)
+    .where(
+      and(
+        eq(revisions.id, editId),
+        eq(revisions.kind, 'edit'),
+        eq(revisions.status, 'pending'),
+      ),
+    )
+  const named = editPayloadSchema.catch({}).parse(edit?.payload).form?.files
+  if (!edit?.experienceId || !named?.includes(fileId)) return null
+  const [found] = await db
+    .select({
+      file: {
+        id: heldFiles.id,
+        kind: heldFiles.kind,
+        filename: heldFiles.filename,
+        sizeBytes: heldFiles.sizeBytes,
+      },
+      body: heldFiles.body,
+      experience: {
+        slug: experiences.slug,
+        title: experiences.title,
+        isTemplate: experiences.isTemplate,
+      },
+    })
+    .from(heldFiles)
+    .innerJoin(experiences, eq(experiences.id, heldFiles.experienceId))
+    .where(
+      and(
+        eq(heldFiles.id, fileId),
+        eq(heldFiles.experienceId, edit.experienceId),
+        isNull(experiences.deletedAt),
+      ),
+    )
+  return found ? { ...found, file: { ...found.file, fromExport: false } } : null
+}
+
+/** The same, to read on a page. */
+export async function getProposedFileView(
+  viewer: Actor | null,
+  editId: number,
+  fileId: string,
+) {
+  const found = await getProposedFile(viewer, editId, fileId)
+  return found ? viewOf(found, `/api/edits/${editId}/files/${fileId}`) : null
+}
+
+/** A file as a page shows it, cut where it is too long to show. */
+function viewOf(
+  found: {
+    file: {
+      id: string
+      kind: FileKind
+      filename: string
+      sizeBytes: number
+      fromExport: boolean
+    }
+    body: string
+    experience: { slug: string; title: string; isTemplate: boolean }
+  },
+  download: string,
+) {
   const { text, reformatted } = readable(found.file.filename, found.body)
   // A file ends with a line break, which is not a line.
   const lines = text.replace(/\n$/, '').split('\n')
@@ -84,6 +167,8 @@ export async function getFileView(publicId: string, viewer: Actor | null) {
   return {
     file: found.file,
     experience: found.experience,
+    /** Where the file as it was uploaded is downloaded. */
+    download,
     text: shown,
     lines: lines.length,
     shownLines,

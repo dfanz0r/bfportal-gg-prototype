@@ -18,39 +18,48 @@ export function ProjectFileList(props: {
     filename: string
     sizeBytes: number
     fromExport: boolean
+    /** Where to read it and download it, for a file that is not stored yet. */
+    view?: string
+    download?: string
   }[]
   /** Whether they are offered as a template, which makes them public. */
   isTemplate: boolean
   /** Whether what is being reviewed would offer them, though they are not. */
   becomePublic?: boolean
+  /** Its heading, if not "Files". */
+  title?: string
+  /** What it says in place of who may download them. */
+  note?: string
 }) {
   // A file opened from here comes back here.
   const location = useLocation()
   return (
     <Show when={props.files.length > 0}>
       <div>
-        <h2 class={`${label} mb-2`}>Files</h2>
+        <h2 class={`${label} mb-2`}>{props.title ?? 'Files'}</h2>
         <p class="mb-2 text-[13px] text-fg-2">
-          <Show
-            when={props.isTemplate}
-            fallback={
-              <Show
-                when={props.becomePublic}
-                fallback={
-                  <>
-                    <b class="font-semibold text-fg">Private.</b> It is not a
-                    template, so only its owner and the moderators can download
-                    these.
-                  </>
-                }
-              >
-                <b class="font-semibold text-fg">Private now.</b> Approving
-                makes them public: anyone can download these.
-              </Show>
-            }
-          >
-            <b class="font-semibold text-fg">Public once published.</b> It is
-            offered as a template, so anyone can download these.
+          <Show when={props.note === undefined} fallback={props.note}>
+            <Show
+              when={props.isTemplate}
+              fallback={
+                <Show
+                  when={props.becomePublic}
+                  fallback={
+                    <>
+                      <b class="font-semibold text-fg">Private.</b> It is not a
+                      template, so only its owner and the moderators can
+                      download these.
+                    </>
+                  }
+                >
+                  <b class="font-semibold text-fg">Private now.</b> Approving
+                  makes them public: anyone can download these.
+                </Show>
+              }
+            >
+              <b class="font-semibold text-fg">Public once published.</b> It is
+              offered as a template, so anyone can download these.
+            </Show>
           </Show>
         </p>
         <ul class={`${panel} divide-y divide-line`}>
@@ -72,13 +81,16 @@ export function ProjectFileList(props: {
                   {formatBytes(file.sizeBytes)}
                 </span>
                 <a
-                  href={`/files/${file.id}?back=${encodeURIComponent(location().pathname)}`}
+                  href={
+                    file.view ??
+                    `/files/${file.id}?back=${encodeURIComponent(location().pathname)}`
+                  }
                   class="text-sm text-steel-hi underline"
                 >
                   View
                 </a>
                 <a
-                  href={`/api/files/${file.id}`}
+                  href={file.download ?? `/api/files/${file.id}`}
                   download={file.filename}
                   class="text-sm text-steel-hi underline"
                 >

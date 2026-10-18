@@ -33,3 +33,22 @@ export function allow(
   current.used += 1
   return true
 }
+
+/**
+ * Forgets every count, for tests: each starts with its accounts' allowances
+ * whole, as a test of one thing should not run out of another's.
+ */
+export function forgetAllowances() {
+  windows.clear()
+}
+
+/** How many codes one account may look up on Portal in a minute. */
+const LOOKUPS_PER_MINUTE = 20
+
+/**
+ * Whether an account may ask gametools about one more code: by "Fetch
+ * details" and by submitting alike, so a submission refused for its code is
+ * not a way round the limit. Counts it when it may.
+ */
+export const allowLookup = (accountId: string, now = Date.now()) =>
+  allow(`lookup:${accountId}`, LOOKUPS_PER_MINUTE, 60 * 1000, now)

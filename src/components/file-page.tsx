@@ -51,7 +51,7 @@ export function FilePage(props: {
             {backLabel()}
           </a>
           <a
-            href={`/api/files/${file().id}`}
+            href={data().download}
             download={file().filename}
             class={buttonGhost}
           >

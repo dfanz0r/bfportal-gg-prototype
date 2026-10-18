@@ -152,136 +152,146 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
             )}
           </Show>
 
-          <form
-            method="post"
-            enctype="multipart/form-data"
-            action={submitSnippetForReview.url}
-            onSubmit={submit}
-            onInput={() => setTypedIn(true)}
-          >
-            <Show when={editing()}>
-              {(sent) => (
-                <input type="hidden" name="editing" value={sent().slug} />
-              )}
-            </Show>
-            <Show when={errors().form}>
-              {(message) => (
-                <p
-                  class="mb-8 border-l-2 border-danger bg-danger/8 px-4 py-3 text-sm text-fg"
-                  role="alert"
-                >
-                  {message()}
-                </p>
-              )}
-            </Show>
-
-            <FormSection title="Your snippet">
-              <FormField label="Title" name="title" errors={errors()}>
-                <input
-                  id="title"
-                  name="title"
-                  required
-                  minlength={3}
-                  maxlength={80}
-                  value={start('title')}
-                  class={field}
-                />
-              </FormField>
-              <FormField
-                label="Description"
-                name="description"
-                hint="Explain what the snippet does and how to use it. Markdown is supported."
-                errors={errors()}
+          {/* One of theirs is its own form. The snippet's box keeps what is
+              typed in it across a reload of the page's data; given another
+              snippet, the form is drawn again from the start, so it never
+              sends the last one's code under this one's address. */}
+          <Show when={editing()?.slug ?? 'new'} keyed>
+            {(_formFor) => (
+              <form
+                method="post"
+                enctype="multipart/form-data"
+                action={submitSnippetForReview.url}
+                onSubmit={submit}
+                onInput={() => setTypedIn(true)}
               >
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={4}
-                  maxlength={10000}
-                  class={field}
-                >
-                  {start('description')}
-                </textarea>
-              </FormField>
-              <div class="grid content-start gap-1.5">
-                <label for="script" class="text-sm font-semibold">
-                  Snippet
-                </label>
-                <CodeInput
-                  id="script"
-                  name="script"
-                  value={start('script')}
-                  maxLines={MAX_SNIPPET_LINES}
-                  onReading={setReading}
-                />
-                <p class="text-[13px] text-fg-3">
-                  Snippets are small, reusable bits of script. To share a whole
-                  experience, submit it as an experience instead.
-                </p>
-                <FieldError message={errors().script} />
-              </div>
-              <ChoiceGroup
-                label="Category"
-                hint="One category: where someone would look for it."
-                error={errors().category}
-              >
-                <For each={data().options.categories}>
-                  {(category, index) => (
-                    <Choice
-                      radio
-                      name="category"
-                      value={category.slug}
-                      checked={
-                        draft()
-                          ? start('category') === category.slug
-                          : index() === 0
-                      }
-                    >
-                      {category.name}
-                    </Choice>
+                <Show when={editing()}>
+                  {(sent) => (
+                    <input type="hidden" name="editing" value={sent().slug} />
                   )}
-                </For>
-              </ChoiceGroup>
-              {/* Not asked for: a game only runs its latest release. */}
-              <Show when={data().options.currentSdk}>
-                {(sdk) => (
-                  <p class="flex items-center gap-2 text-[13px] text-fg-3">
-                    <Icon name="check" class="size-3.5 text-fg" />
-                    It will be listed for Portal SDK {sdk().version}, the
-                    current release.
-                  </p>
-                )}
-              </Show>
-            </FormSection>
+                </Show>
+                <Show when={errors().form}>
+                  {(message) => (
+                    <p
+                      class="mb-8 border-l-2 border-danger bg-danger/8 px-4 py-3 text-sm text-fg"
+                      role="alert"
+                    >
+                      {message()}
+                    </p>
+                  )}
+                </Show>
 
-            <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
-              <button
-                type="submit"
-                class={`${buttonAccent} h-11 px-6`}
-                disabled={sending() || reading()}
-              >
-                {sending()
-                  ? 'Submitting'
-                  : sentBack() || inReview()
-                    ? 'Resubmit'
-                    : live()
-                      ? 'Submit changes'
-                      : 'Submit for review'}
-                <Icon name="arrow-right" />
-              </button>
-              <a
-                href={editing() ? `/snippets/${editing()?.slug}` : '/snippets'}
-                class={`${buttonGhost} h-11 px-6`}
-              >
-                Cancel
-              </a>
-              <p class="max-w-[34em] text-[13.5px] text-fg-3">
-                {live()
-                  ? 'Its page stays as it is until a moderator approves the changes.'
-                  : 'Nothing is public until a moderator approves it.'}
-              </p>
-            </div>
-          </form>
+                <FormSection title="Your snippet">
+                  <FormField label="Title" name="title" errors={errors()}>
+                    <input
+                      id="title"
+                      name="title"
+                      required
+                      minlength={3}
+                      maxlength={80}
+                      value={start('title')}
+                      class={field}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Description"
+                    name="description"
+                    hint="Explain what the snippet does and how to use it. Markdown is supported."
+                    errors={errors()}
+                  >
+                    <textarea
+                      id="description"
+                      name="description"
+                      rows={4}
+                      maxlength={10000}
+                      class={field}
+                    >
+                      {start('description')}
+                    </textarea>
+                  </FormField>
+                  <div class="grid content-start gap-1.5">
+                    <label for="script" class="text-sm font-semibold">
+                      Snippet
+                    </label>
+                    <CodeInput
+                      id="script"
+                      name="script"
+                      value={start('script')}
+                      maxLines={MAX_SNIPPET_LINES}
+                      onReading={setReading}
+                    />
+                    <p class="text-[13px] text-fg-3">
+                      Snippets are small, reusable bits of script. To share a
+                      whole experience, submit it as an experience instead.
+                    </p>
+                    <FieldError message={errors().script} />
+                  </div>
+                  <ChoiceGroup
+                    label="Category"
+                    hint="One category: where someone would look for it."
+                    error={errors().category}
+                  >
+                    <For each={data().options.categories}>
+                      {(category, index) => (
+                        <Choice
+                          radio
+                          name="category"
+                          value={category.slug}
+                          checked={
+                            draft()
+                              ? start('category') === category.slug
+                              : index() === 0
+                          }
+                        >
+                          {category.name}
+                        </Choice>
+                      )}
+                    </For>
+                  </ChoiceGroup>
+                  {/* Not asked for: a game only runs its latest release. */}
+                  <Show when={data().options.currentSdk}>
+                    {(sdk) => (
+                      <p class="flex items-center gap-2 text-[13px] text-fg-3">
+                        <Icon name="check" class="size-3.5 text-fg" />
+                        It will be listed for Portal SDK {sdk().version}, the
+                        current release.
+                      </p>
+                    )}
+                  </Show>
+                </FormSection>
+
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
+                  <button
+                    type="submit"
+                    class={`${buttonAccent} h-11 px-6`}
+                    disabled={sending() || reading()}
+                  >
+                    {sending()
+                      ? 'Submitting'
+                      : sentBack() || inReview()
+                        ? 'Resubmit'
+                        : live()
+                          ? 'Submit changes'
+                          : 'Submit for review'}
+                    <Icon name="arrow-right" />
+                  </button>
+                  <a
+                    href={
+                      editing() ? `/snippets/${editing()?.slug}` : '/snippets'
+                    }
+                    class={`${buttonGhost} h-11 px-6`}
+                  >
+                    Cancel
+                  </a>
+                  <p class="max-w-[34em] text-[13.5px] text-fg-3">
+                    {live()
+                      ? 'Its page stays as it is until a moderator approves the changes.'
+                      : 'Nothing is public until a moderator approves it.'}
+                  </p>
+                </div>
+              </form>
+            )}
+          </Show>
         </div>
 
         <aside class="grid gap-4 min-[1100px]:sticky min-[1100px]:top-20">

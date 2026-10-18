@@ -47,6 +47,8 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files/$id'
 import { Route as ExperiencesSlugEditRouteImport } from './routes/experiences/$slug_.edit'
 import { Route as SnippetsSlugEditRouteImport } from './routes/snippets/$slug_.edit'
+import { Route as EditsIdFilesFileRouteImport } from './routes/edits/$id.files.$file'
+import { Route as ApiEditsIdFilesFileRouteImport } from './routes/api/edits/$id.files.$file'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -238,6 +240,16 @@ const SnippetsSlugEditRoute = SnippetsSlugEditRouteImport.update({
   path: '/snippets/$slug/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EditsIdFilesFileRoute = EditsIdFilesFileRouteImport.update({
+  id: '/edits/$id/files/$file',
+  path: '/edits/$id/files/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEditsIdFilesFileRoute = ApiEditsIdFilesFileRouteImport.update({
+  id: '/api/edits/$id/files/$file',
+  path: '/api/edits/$id/files/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -278,6 +290,8 @@ export interface FileRoutesByFullPath {
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
   '/snippets/$slug/edit': typeof SnippetsSlugEditRoute
+  '/edits/$id/files/$file': typeof EditsIdFilesFileRoute
+  '/api/edits/$id/files/$file': typeof ApiEditsIdFilesFileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -317,6 +331,8 @@ export interface FileRoutesByTo {
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
   '/snippets/$slug/edit': typeof SnippetsSlugEditRoute
+  '/edits/$id/files/$file': typeof EditsIdFilesFileRoute
+  '/api/edits/$id/files/$file': typeof ApiEditsIdFilesFileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -358,6 +374,8 @@ export interface FileRoutesById {
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug_/edit': typeof ExperiencesSlugEditRoute
   '/snippets/$slug_/edit': typeof SnippetsSlugEditRoute
+  '/edits/$id/files/$file': typeof EditsIdFilesFileRoute
+  '/api/edits/$id/files/$file': typeof ApiEditsIdFilesFileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -400,6 +418,8 @@ export interface FileRouteTypes {
     | '/api/files/$id'
     | '/experiences/$slug/edit'
     | '/snippets/$slug/edit'
+    | '/edits/$id/files/$file'
+    | '/api/edits/$id/files/$file'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -439,6 +459,8 @@ export interface FileRouteTypes {
     | '/api/files/$id'
     | '/experiences/$slug/edit'
     | '/snippets/$slug/edit'
+    | '/edits/$id/files/$file'
+    | '/api/edits/$id/files/$file'
   id:
     | '__root__'
     | '/'
@@ -479,6 +501,8 @@ export interface FileRouteTypes {
     | '/api/files/$id'
     | '/experiences/$slug_/edit'
     | '/snippets/$slug_/edit'
+    | '/edits/$id/files/$file'
+    | '/api/edits/$id/files/$file'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -512,6 +536,8 @@ export interface RootRouteChildren {
   ApiFilesIdRoute: typeof ApiFilesIdRoute
   ExperiencesSlugEditRoute: typeof ExperiencesSlugEditRoute
   SnippetsSlugEditRoute: typeof SnippetsSlugEditRoute
+  EditsIdFilesFileRoute: typeof EditsIdFilesFileRoute
+  ApiEditsIdFilesFileRoute: typeof ApiEditsIdFilesFileRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -782,6 +808,20 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof SnippetsSlugEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/edits/$id/files/$file': {
+      id: '/edits/$id/files/$file'
+      path: '/edits/$id/files/$file'
+      fullPath: '/edits/$id/files/$file'
+      preLoaderRoute: typeof EditsIdFilesFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/edits/$id/files/$file': {
+      id: '/api/edits/$id/files/$file'
+      path: '/api/edits/$id/files/$file'
+      fullPath: '/api/edits/$id/files/$file'
+      preLoaderRoute: typeof ApiEditsIdFilesFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -842,6 +882,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFilesIdRoute: ApiFilesIdRoute,
   ExperiencesSlugEditRoute: ExperiencesSlugEditRoute,
   SnippetsSlugEditRoute: SnippetsSlugEditRoute,
+  EditsIdFilesFileRoute: EditsIdFilesFileRoute,
+  ApiEditsIdFilesFileRoute: ApiEditsIdFilesFileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

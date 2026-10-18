@@ -165,6 +165,13 @@ export function AdminEdit(props: {
             </p>
           </section>
           <ProjectFileList
+            title="Files sent with the edit"
+            note="Approving stores these in place of its files below."
+            files={edit().proposed}
+            isTemplate={subject().isTemplate}
+          />
+          <ProjectFileList
+            title={edit().proposed.length > 0 ? 'Its files now' : 'Files'}
             files={edit().files}
             isTemplate={subject().isTemplate}
             becomePublic={edit().offersFiles}

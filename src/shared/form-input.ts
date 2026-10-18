@@ -35,6 +35,16 @@ export function formOr<T extends z.ZodType>(schema: T) {
   return (given: z.input<T>) => {
     const raw: unknown = given
     const viaForm = raw instanceof FormData
+    // Read before anyone is signed in, so a form no page sends is refused
+    // before it costs anything to read.
+    if (viaForm && tooManyFields(raw)) {
+      return {
+        input: null,
+        errors: { form: 'The form has too many fields.' },
+        viaForm,
+        back: safeBackPath(raw.get('back')),
+      }
+    }
     const read = schema.safeParse(viaForm ? formFields(raw) : raw)
     return {
       input: read.success ? (read.data as z.output<T>) : null,
@@ -60,10 +70,27 @@ export function fieldErrors(error: z.ZodError) {
  * group of checkboxes does, becomes a list.
  */
 export function formFields(form: FormData) {
-  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {}
-  for (const name of new Set(form.keys())) {
-    const values = form.getAll(name)
-    fields[name] = values.length > 1 ? values : values[0]
+  // One pass: asking the form for each name's values reads all of it again
+  // for every name.
+  const fields = new Map<string, FormDataEntryValue | FormDataEntryValue[]>()
+  for (const [name, value] of form) {
+    const had = fields.get(name)
+    if (had === undefined) fields.set(name, value)
+    else if (Array.isArray(had)) had.push(value)
+    else fields.set(name, [had, value])
   }
-  return fields
+  // Own properties, so a field named "__proto__" is only a field.
+  return Object.fromEntries(fields)
+}
+
+/** More fields than any form on the site sends, the submit form included. */
+export const MAX_FORM_FIELDS = 1000
+
+function tooManyFields(form: FormData) {
+  let count = 0
+  for (const _ of form.keys()) {
+    count += 1
+    if (count > MAX_FORM_FIELDS) return true
+  }
+  return false
 }

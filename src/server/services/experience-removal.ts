@@ -104,6 +104,8 @@ export async function removeExperience(
       .returning({ id: experiences.id })
     if (!removed) return refuse('not-found')
     await dropPendingEdits(tx, removed.id)
+    // It cannot be sent again, so what its owner saved to send goes too.
+    await letGoOfDraftFiles(tx, removed.id)
     return { ok: true as const }
   })
 }

@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
 import { portalExport } from '../../../tests/portal-export'
@@ -19,6 +19,7 @@ import {
   user,
 } from '../db/schema'
 import type { Lookup } from '../integrations/gametools'
+import { allowLookup, forgetAllowances } from '../rate-limit'
 import { keepDraft, readDraft } from './drafts'
 import { getProjectFile } from './experience'
 import { EXPERIENCE_FIELDS, submitExperience } from './experience-submissions'
@@ -95,6 +96,11 @@ const errorsOf = async (
 describe('submitting an experience', () => {
   beforeAll(async () => {
     await seed(db, NOW)
+  })
+
+  // Each test submits as many times as it needs to.
+  beforeEach(() => {
+    forgetAllowances()
   })
 
   afterAll(async () => {
@@ -676,6 +682,32 @@ describe('submitting an experience', () => {
         now: tomorrow,
       }),
     ).toMatchObject({ ok: true })
+  })
+
+  it('asks Portal no more often by submitting than by fetching details', async () => {
+    const eager = recruit(9)
+    // The minute's lookups spent, as "Fetch details" spends them.
+    while (allowLookup(eager.id)) {}
+    let asked = 0
+    const counting = {
+      lookup: async (): Promise<Lookup> => {
+        asked += 1
+        return { status: 'missing' }
+      },
+      now: NOW,
+    }
+    expect(
+      await submitExperience(
+        eager,
+        form({ title: 'Guessing', code: 'zzzz9' }),
+        counting,
+      ),
+    ).toMatchObject({
+      ok: false,
+      reason: 'invalid',
+      errors: { code: expect.stringContaining('a lot of lookups') },
+    })
+    expect(asked).toBe(0)
   })
 
   it('takes one tag from a group set to one choice', async () => {

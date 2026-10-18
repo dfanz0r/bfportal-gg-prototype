@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 
 import type { ContentStatus, Game } from '../../shared/content'
 import { refuse } from '../../shared/results'
@@ -119,7 +119,9 @@ export async function listOwnSubmissions(actor: Actor | null) {
     of: waitingSince.length,
   })
 
-  // The latest edit of each live experience and snippet, where there is one.
+  // The latest edit of each live experience and snippet, where there is one
+  // still open. The latest of all of them, approved ones included: one sent
+  // back and then fixed and approved is done, not waiting on its owner.
   const liveIds = (items: { id: number; status: ContentStatus }[]) =>
     items.filter((item) => item.status === 'published').map((item) => item.id)
   const latestEdits = (
@@ -135,24 +137,19 @@ export async function listOwnSubmissions(actor: Actor | null) {
             reviewedAt: revisions.reviewedAt,
           })
           .from(revisions)
-          .where(
-            and(
-              inArray(column, ids),
-              eq(revisions.kind, 'edit'),
-              or(
-                eq(revisions.status, 'pending'),
-                eq(revisions.status, 'changes_requested'),
-              ),
-            ),
-          )
-          .orderBy(column, desc(revisions.submittedAt))
+          .where(and(inArray(column, ids), eq(revisions.kind, 'edit')))
+          .orderBy(column, desc(revisions.submittedAt), desc(revisions.id))
       : []
   const [experienceEdits, snippetEdits] = await Promise.all([
     latestEdits(revisions.experienceId, liveIds(ownExperiences)),
     latestEdits(revisions.snippetId, liveIds(ownSnippets)),
   ])
-  const editOf = new Map(experienceEdits.map((edit) => [edit.of, edit]))
-  const snippetEditOf = new Map(snippetEdits.map((edit) => [edit.of, edit]))
+  const open = <T extends { status: string }>(edits: T[]) =>
+    edits.filter((edit) => edit.status !== 'approved')
+  const editOf = new Map(open(experienceEdits).map((edit) => [edit.of, edit]))
+  const snippetEditOf = new Map(
+    open(snippetEdits).map((edit) => [edit.of, edit]),
+  )
 
   /** Where an edit to something live stands, for its row. */
   const asEdit = (

@@ -16,6 +16,7 @@ import { db } from '../db'
 import { categories, experiences } from '../db/schema'
 import { renderMarkdown } from '../markdown'
 import { DRAFT_LIMIT, discardDraft } from './drafts'
+import { lastSentEdit } from './experience-edits'
 import { heldIdsIn, keepFilesWithDraft, letGoOfDraftFiles } from './held-files'
 import { type Executor, violates } from './shared'
 
@@ -254,8 +255,15 @@ export async function saveExperienceDraft(
         )
         .returning({ id: experiences.id })
       if (!saved) return refuse('not-found')
+      // A live one's edit, waiting or sent back, still names the files it
+      // was sent with. One in review was stored as sent, so its saved form
+      // is all that names any. Read after the row is held: an edit sent
+      // meanwhile has finished, and what it names is seen.
+      const sentEdit = isLive(draft.status)
+        ? await lastSentEdit(draft.id, tx)
+        : null
       await keepFilesWithDraft(tx, actor, draft.id, files, now, {
-        letGo: !sent,
+        alsoKeep: sentEdit?.form.files,
       })
       await discardDraft(tx, actor)
       return { ok: true as const, slug: draft.slug }

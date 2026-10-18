@@ -281,8 +281,19 @@ Anything that changes something follows `src/functions/likes.ts` and
 - **Decide on the row as it is now.** A write that depends on a row's status
   reads it again inside its transaction, `for update`, and its final update
   repeats the conditions, `deleted_at is null` included. Rows are locked in one
-  order everywhere: an experience before its revisions, through `lockEdits` in
-  `src/server/services/template-offers.ts`.
+  order everywhere: an experience before its revisions and its held files,
+  through `lockEdits` in `src/server/services/template-offers.ts`, or a `for
+  update` on the experience before the files are taken, as `submitExperience`
+  does.
+- **Every ask of gametools counts against one budget,** `allowLookup` in
+  `src/server/rate-limit.ts`, whichever path makes it: "Fetch details" and a
+  submission alike, refused or not.
+- **What is held for something is only what names it.** Files held with an
+  experience are those its saved form or its open edit names; saving lets go
+  of the rest, so saving again and again does not store more.
+- **A moderator can open what they approve.** Files an edit would store are
+  read and downloaded at `/edits/<edit>/files/<file>`, staff only, and a file
+  sent again under its old name is compared by its contents.
 - **A moderator decides on the version they were shown.** Nobody is locked out
   while a review is open. Whatever its owner can change while it waits has a
   `version` that every change they send moves on; the review screen passes it to

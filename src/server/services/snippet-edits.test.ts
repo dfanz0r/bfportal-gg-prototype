@@ -6,6 +6,7 @@ import { CHANGED_SINCE_OPENED } from '../../shared/decision'
 import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
 import { revisions, snippets } from '../db/schema'
+import { forgetAllowances } from '../rate-limit'
 import {
   decideEdit,
   decideSnippet,
@@ -15,6 +16,7 @@ import {
 import { listOwnSubmissions } from './own-submissions'
 import { getSnippetEditPage, submitSnippet } from './snippet-submissions'
 import { getSnippet } from './snippets'
+import { RESENDS_PER_HOUR } from './submission-limits'
 
 const NOW = new Date('2026-10-18T12:00:00Z')
 const owner: Actor = { id: 'seed-recruit-31', role: 'user' }
@@ -246,5 +248,22 @@ describe('changing a snippet after it was sent', () => {
       editWaiting: false,
     })
     expect(page.draft.fields.title).toBe('Timer')
+  })
+
+  it(`takes ${RESENDS_PER_HOUR} edits to a live one an hour, each counted once`, async () => {
+    forgetAllowances()
+    const send = (n: number) =>
+      submitSnippet(
+        owner,
+        form({ editing: 'round-timer', title: `Timer ${n}` }),
+        { now: NOW },
+      )
+    for (let n = 1; n <= RESENDS_PER_HOUR; n += 1) {
+      expect(await send(n)).toEqual({ ok: true, slug: 'round-timer' })
+    }
+    expect(await send(RESENDS_PER_HOUR + 1)).toMatchObject({
+      ok: false,
+      errors: { form: expect.stringContaining(`${RESENDS_PER_HOUR} times`) },
+    })
   })
 })

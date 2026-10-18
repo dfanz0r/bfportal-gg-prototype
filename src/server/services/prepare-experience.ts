@@ -22,6 +22,7 @@ import {
   user,
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
+import { allowLookup } from '../rate-limit'
 import type { PreparedExperience } from './edit-payload'
 import type { Editable } from './experience-drafts'
 import { heldFilesFor, type takeHeldFiles } from './held-files'
@@ -231,6 +232,15 @@ export async function prepareExperience(
     : linked?.playgroundId
       ? { playgroundId: linked.playgroundId }
       : null
+  // Each lookup is a request to someone else's service, counted with those
+  // "Fetch details" makes: a submission refused for its code is not a way
+  // round the limit.
+  if (by && Object.keys(errors).length === 0 && !allowLookup(actor.id)) {
+    return refuse('invalid', {
+      [typed ? 'code' : 'link']:
+        'That is a lot of lookups in a short time. Wait a minute, then submit it again.',
+    })
+  }
   const looked =
     by && Object.keys(errors).length === 0
       ? await (options.lookup ?? lookupExperience)(game, by)

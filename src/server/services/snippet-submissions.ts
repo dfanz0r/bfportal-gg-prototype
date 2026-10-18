@@ -80,12 +80,16 @@ export async function submitSnippet(
 
   // Told early, before anything else is read. The write is what holds to it.
   // One already waiting is not another submission: sending it again is held
-  // to its own limit.
+  // to its own limit. An edit to one that is live counts against that limit
+  // where it is made, in `submitSnippetEdit`, and only there, as an
+  // experience's does.
   const resending = sent?.status === 'pending'
   const limited =
-    resending || sent?.status === 'published'
-      ? resendLimit(actor)
-      : await submissionLimit(actor, now)
+    sent?.status === 'published'
+      ? null
+      : resending
+        ? resendLimit(actor)
+        : await submissionLimit(actor, now)
   if (limited) return limited
 
   const [available, sdk] = await Promise.all([

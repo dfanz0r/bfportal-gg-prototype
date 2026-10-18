@@ -83,6 +83,15 @@ export async function submitExperience(
     for (let n = 2; used.has(slug); n += 1) slug = `${base}-${n}`
     try {
       const write = async (tx: Executor) => {
+        // The experience before its files, the order deleting it takes them
+        // in: the other way round, the two wait on each other.
+        if (draft) {
+          await tx
+            .select({ id: experiences.id })
+            .from(experiences)
+            .where(eq(experiences.id, draft.id))
+            .for('update')
+        }
         // The files read above, taken again before anything is written: one
         // let go since, by another form or by its day running out, means
         // this is not the submission its sender saw.
