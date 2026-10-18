@@ -20,7 +20,8 @@ const searchSchema = z.object({
   draft: z.literal(true).optional().catch(undefined),
 })
 
-// A draft, opened in the submit form to go on with it.
+// One of the visitor's experiences, opened in the submit form to go on with
+// it: a draft, one sent back, one in review, or one that is live.
 export const Route = createFileRoute('/experiences/$slug_/edit')({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({
@@ -39,7 +40,7 @@ export const Route = createFileRoute('/experiences/$slug_/edit')({
   },
   head: () => ({
     meta: [
-      ...pageTitle('Edit a draft').meta,
+      ...pageTitle('Edit an experience').meta,
       { name: 'robots', content: 'noindex' },
     ],
   }),

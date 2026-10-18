@@ -30,18 +30,15 @@ export const fetchSubmissionReview = createServerFn({ method: 'GET' })
     getSubmissionReview(await currentActor(), data.id),
   )
 
-/** What a decision sends, from the page's script or a form. */
+/**
+ * What a decision sends, from the page's script or a form: with the version
+ * the moderator was shown, which the decision must still be about, since its
+ * owner can change it while it waits.
+ */
 const decisionSchema = z.object({
   id: z.coerce.number().int().positive(),
   approve: formBoolean,
   note: z.string().max(MAX_NOTE).optional(),
-})
-
-/**
- * The same, for what its owner can change while it waits: with the version
- * the moderator was shown, which the decision must still be about.
- */
-const versionedDecisionSchema = decisionSchema.extend({
   version: z.coerce.number().int().positive(),
 })
 
@@ -67,7 +64,7 @@ function decisionAnswer(
 
 /** Approves a waiting submission, or sends it back with changes requested. */
 export const decide = createServerFn({ method: 'POST' })
-  .validator(formOr(versionedDecisionSchema))
+  .validator(formOr(decisionSchema))
   .handler(async ({ data }) => {
     assertFromThisSite()
     const { input } = data
@@ -98,7 +95,7 @@ export const fetchEditReview = createServerFn({ method: 'GET' })
 
 /** Approves a pending edit, or sends it back with changes requested. */
 export const decideOnEdit = createServerFn({ method: 'POST' })
-  .validator(formOr(versionedDecisionSchema))
+  .validator(formOr(decisionSchema))
   .handler(async ({ data }) => {
     assertFromThisSite()
     const { input } = data

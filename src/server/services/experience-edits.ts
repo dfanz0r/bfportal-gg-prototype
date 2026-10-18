@@ -248,6 +248,8 @@ export type EditChange = {
   proposed: string
   /** Text long enough to show as a block, line breaks and all. */
   long?: boolean
+  /** TypeScript, shown as code, the live version above the new one. */
+  code?: boolean
   /** What approving it does, where that is more than the new value. */
   effect?: string
 }

@@ -31,6 +31,8 @@ export const lineCount = (script: string) =>
 // A field a form did not send at all, as an unchosen category is not, is said
 // the same way as an empty one, not as what Zod would say.
 export const snippetFormSchema = z.object({
+  /** The address of the snippet of theirs this form changes, if it is one. */
+  editing: z.string().max(200).optional(),
   title: z
     .string({ error: 'Give it a title of at least three characters.' })
     .trim()

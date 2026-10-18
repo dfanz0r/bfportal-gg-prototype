@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, like } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, like, sql } from 'drizzle-orm'
 
 import { fieldErrors } from '../../shared/form-input'
 import { gameList } from '../../shared/games'
@@ -9,9 +9,14 @@ import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { categories, sdkVersions, snippets } from '../db/schema'
 import { renderMarkdown } from '../markdown'
-import { discardDraft } from './drafts'
+import { discardDraft, readDraft } from './drafts'
 import { violates } from './shared'
-import { submissionLimit, withinLimit } from './submission-limits'
+import {
+  lastSentSnippetEdit,
+  ownSnippet,
+  submitSnippetEdit,
+} from './snippet-edits'
+import { resendLimit, submissionLimit, withinLimit } from './submission-limits'
 
 // Sharing a snippet: a small, reusable piece of script. Like an experience it
 // waits as `pending` until a moderator approves it; nothing here publishes
@@ -51,7 +56,10 @@ const snippetCategories = () =>
     .orderBy(asc(categories.sortOrder))
 
 /**
- * Creates a pending snippet from a submitted form, for whoever is acting.
+ * Sends the snippet form for review, for whoever is acting: a new snippet,
+ * one sent back, or one already waiting, whose new version takes the old
+ * one's place in the queue. For one that is live it is an edit, which waits
+ * beside the live page: `submitSnippetEdit`.
  *
  * It counts against the same limits as an experience. The SDK release it is
  * listed for is not asked: it is the current one.
@@ -66,9 +74,18 @@ export async function submitSnippet(
   if (!parsed.success) return refuse('invalid', fieldErrors(parsed.error))
   const form = parsed.data
   const now = options.now ?? new Date()
+  // One of theirs being sent again, rather than something new.
+  const sent = form.editing ? await ownSnippet(actor, form.editing) : null
+  if (form.editing && !sent) return refuse('not-found')
 
   // Told early, before anything else is read. The write is what holds to it.
-  const limited = await submissionLimit(actor, now)
+  // One already waiting is not another submission: sending it again is held
+  // to its own limit.
+  const resending = sent?.status === 'pending'
+  const limited =
+    resending || sent?.status === 'published'
+      ? resendLimit(actor)
+      : await submissionLimit(actor, now)
   if (limited) return limited
 
   const [available, sdk] = await Promise.all([
@@ -80,6 +97,54 @@ export async function submitSnippet(
     return refuse('invalid', {
       category: 'Choose one of the categories offered.',
     })
+  }
+  if (sent?.status === 'published') {
+    return submitSnippetEdit(actor, form, sent, category.id, now)
+  }
+
+  const values = {
+    status: 'pending' as const,
+    title: form.title,
+    descriptionMd: form.description,
+    descriptionHtml: renderMarkdown(form.description),
+    categoryId: category.id,
+    script: form.script,
+    sdkVersionId: sdk?.id ?? null,
+  }
+  if (sent) {
+    return withinLimit(
+      actor,
+      now,
+      async (tx) => {
+        // In place, at its address. What it had is replaced, its version
+        // moves on so a decision on what was there before is refused, and
+        // the last decision, which was about that, is cleared.
+        const [written] = await tx
+          .update(snippets)
+          .set({
+            ...values,
+            // One waiting keeps its place in the queue.
+            ...(resending ? {} : { submittedAt: now }),
+            version: sql`${snippets.version} + 1`,
+            reviewedBy: null,
+            reviewedAt: null,
+            reviewNote: null,
+            reviewFieldNotes: {},
+          })
+          .where(
+            and(
+              eq(snippets.id, sent.id),
+              inArray(snippets.status, ['changes_requested', 'pending']),
+              isNull(snippets.deletedAt),
+            ),
+          )
+          .returning({ id: snippets.id })
+        if (!written) return refuse('not-found')
+        await discardDraft(tx, actor)
+        return { ok: true as const, slug: sent.slug }
+      },
+      { counted: !resending },
+    )
   }
 
   // The address is the title, with a number after it if that is taken. As
@@ -97,15 +162,9 @@ export async function submitSnippet(
     try {
       return await withinLimit(actor, now, async (tx) => {
         await tx.insert(snippets).values({
+          ...values,
           slug,
-          status: 'pending',
-          title: form.title,
-          descriptionMd: form.description,
-          descriptionHtml: renderMarkdown(form.description),
           ownerId: actor.id,
-          categoryId: category.id,
-          script: form.script,
-          sdkVersionId: sdk?.id ?? null,
           submittedAt: now,
         })
         // It went through, so a kept copy of a refused form has done its job.
@@ -118,6 +177,60 @@ export async function submitSnippet(
       }
       used.add(slug)
     }
+  }
+}
+
+/**
+ * The snippet form for one of theirs to change: one sent back, one in review,
+ * or one that is live. As it was last sent and refused when `search.draft`
+ * says so, or else as it was last sent: for one that is live, its waiting or
+ * sent-back edit, and otherwise its row. `not-found` for one that is not
+ * theirs.
+ */
+export async function getSnippetEditPage(
+  actor: Actor | null,
+  slug: string,
+  search: { draft?: boolean },
+) {
+  if (!actor) return { state: 'login' as const }
+  const sent = await ownSnippet(actor, slug)
+  if (!sent) return { state: 'not-found' as const }
+  const [options, kept, sentEdit] = await Promise.all([
+    getSnippetOptions(),
+    search.draft ? readDraft(actor, 'snippet') : null,
+    sent.status === 'published' ? lastSentSnippetEdit(sent.id) : null,
+  ])
+  const draft =
+    kept?.fields.editing === slug
+      ? kept
+      : {
+          fields: {
+            ...(sentEdit?.fields ?? {
+              title: sent.title,
+              description: sent.descriptionMd,
+              script: sent.script,
+              category: sent.category ?? '',
+            }),
+            editing: slug,
+          },
+          errors: {},
+        }
+  return {
+    state: 'ok' as const,
+    options,
+    draft,
+    editing: {
+      slug: sent.slug,
+      title: sent.title,
+      status: sent.status,
+      // What a moderator wrote when sending it, or its last edit, back. Who
+      // wrote it is not passed on.
+      reviewNote:
+        sent.status === 'changes_requested'
+          ? sent.reviewNote
+          : (sentEdit?.note ?? null),
+      editWaiting: sentEdit?.waiting === true,
+    },
   }
 }
 

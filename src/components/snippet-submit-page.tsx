@@ -52,6 +52,26 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
     return typeof value === 'string' ? value : ''
   }
 
+  // One of theirs being changed, rather than a new snippet.
+  const editing = () => data().editing
+  const sentBack = () => editing()?.status === 'changes_requested'
+  const inReview = () => editing()?.status === 'pending'
+  const live = () => editing()?.status === 'published'
+  const lead = () => {
+    if (sentBack()) {
+      return 'Changes were requested. Fix what the note says and resubmit it.'
+    }
+    if (inReview()) {
+      return 'In review. Resubmit it and the moderator reviews the new version.'
+    }
+    if (live()) {
+      return editing()?.editWaiting
+        ? 'Live. Your changes are waiting for a moderator. Send more and they are reviewed together.'
+        : 'Live. Changes you send are reviewed before they show on its page.'
+    }
+    return submitLead
+  }
+
   const fail = (form: HTMLFormElement, problems: Record<string, string>) => {
     setErrors(problems)
     setSending(false)
@@ -94,13 +114,35 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
   }
 
   return (
-    <PageLayout title="Submit" lead={submitLead}>
+    <PageLayout
+      title={editing()?.title ?? 'Submit'}
+      lead={lead()}
+      crumbs={
+        editing()
+          ? [
+              { label: 'Your submissions', href: '/submissions' },
+              { label: sentBack() ? 'Fix and resubmit' : 'Edit' },
+            ]
+          : undefined
+      }
+    >
       <div
         class="grid items-start gap-8 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10"
         data-game={game()?.id}
       >
         <div class="min-w-0">
-          <Show when={game()}>
+          {/* What the moderator wrote, headed by what it is, never by who
+              wrote it. */}
+          <Show when={editing()?.reviewNote}>
+            {(note) => (
+              <div class="mb-8 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
+                <b class="font-semibold text-fg">Moderator note</b>
+                <p class="whitespace-pre-line">{note()}</p>
+              </div>
+            )}
+          </Show>
+          {/* What is being shared was settled when it was first sent. */}
+          <Show when={!editing() && game()}>
             {(current) => (
               <SubmitStart
                 game={current().id}
@@ -117,6 +159,11 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
             onSubmit={submit}
             onInput={() => setTypedIn(true)}
           >
+            <Show when={editing()}>
+              {(sent) => (
+                <input type="hidden" name="editing" value={sent().slug} />
+              )}
+            </Show>
             <Show when={errors().form}>
               {(message) => (
                 <p
@@ -213,14 +260,25 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
                 class={`${buttonAccent} h-11 px-6`}
                 disabled={sending() || reading()}
               >
-                {sending() ? 'Submitting' : 'Submit for review'}
+                {sending()
+                  ? 'Submitting'
+                  : sentBack() || inReview()
+                    ? 'Resubmit'
+                    : live()
+                      ? 'Submit changes'
+                      : 'Submit for review'}
                 <Icon name="arrow-right" />
               </button>
-              <a href="/snippets" class={`${buttonGhost} h-11 px-6`}>
+              <a
+                href={editing() ? `/snippets/${editing()?.slug}` : '/snippets'}
+                class={`${buttonGhost} h-11 px-6`}
+              >
                 Cancel
               </a>
               <p class="max-w-[34em] text-[13.5px] text-fg-3">
-                Nothing is public until a moderator approves it.
+                {live()
+                  ? 'Its page stays as it is until a moderator approves the changes.'
+                  : 'Nothing is public until a moderator approves it.'}
               </p>
             </div>
           </form>

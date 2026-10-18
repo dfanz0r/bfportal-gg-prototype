@@ -1,6 +1,8 @@
 import { and, asc, count, eq, isNull, ne, notInArray, sql } from 'drizzle-orm'
 
+import type { Game } from '../../shared/content'
 import { CHANGED_SINCE_OPENED, NOTE_NEEDED } from '../../shared/decision'
+import { gameList } from '../../shared/games'
 import { shownMedia } from '../../shared/media'
 import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
@@ -20,6 +22,11 @@ import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
 import { type EditPayload, editPayloadSchema } from './edit-payload'
 import { applyEdit, describeEdit, type EditChange } from './experience-edits'
+import {
+  applySnippetEdit,
+  describeSnippetEdit,
+  lockSnippetEdits,
+} from './snippet-edits'
 import { lockEdits } from './template-offers'
 
 // What the moderators do: look at what is waiting, and decide. Every function
@@ -117,27 +124,48 @@ export async function listQueue(actor: Actor | null) {
     .orderBy(asc(snippets.submittedAt), asc(snippets.id))
     .limit(QUEUE_PAGE)
   // Changes to something already published, each reviewed on its own screen.
-  const waitingEdits = await db
-    .select({
-      id: revisions.id,
-      payload: revisions.payload,
-      submittedAt: revisions.submittedAt,
-      title: experiences.title,
-      ownerName: user.name,
-      ownerImage: user.image,
-    })
-    .from(revisions)
-    .innerJoin(experiences, eq(experiences.id, revisions.experienceId))
-    .innerJoin(user, eq(user.id, revisions.submittedBy))
-    .where(editWaiting)
-    .orderBy(asc(revisions.submittedAt), asc(revisions.id))
-    .limit(QUEUE_PAGE)
+  const editColumns = {
+    id: revisions.id,
+    payload: revisions.payload,
+    submittedAt: revisions.submittedAt,
+    ownerName: user.name,
+    ownerImage: user.image,
+  }
+  const [experienceEdits, snippetEdits] = await Promise.all([
+    db
+      .select({ ...editColumns, title: experiences.title })
+      .from(revisions)
+      .innerJoin(experiences, eq(experiences.id, revisions.experienceId))
+      .innerJoin(user, eq(user.id, revisions.submittedBy))
+      .where(and(editWaiting, isNull(experiences.deletedAt)))
+      .orderBy(asc(revisions.submittedAt), asc(revisions.id))
+      .limit(QUEUE_PAGE),
+    db
+      .select({ ...editColumns, title: snippets.title })
+      .from(revisions)
+      .innerJoin(snippets, eq(snippets.id, revisions.snippetId))
+      .innerJoin(user, eq(user.id, revisions.submittedBy))
+      .where(and(editWaiting, isNull(snippets.deletedAt)))
+      .orderBy(asc(revisions.submittedAt), asc(revisions.id))
+      .limit(QUEUE_PAGE),
+  ])
+  const edits = [
+    ...experienceEdits.map((edit) => ({
+      ...edit,
+      kind: 'experience' as const,
+    })),
+    ...snippetEdits.map((edit) => ({ ...edit, kind: 'snippet' as const })),
+  ]
+    .sort(
+      (one, other) => one.submittedAt.getTime() - other.submittedAt.getTime(),
+    )
+    .slice(0, QUEUE_PAGE)
   return {
     ok: true as const,
     items: rows,
     total: total.value,
     snippets: waitingSnippets,
-    edits: waitingEdits.map(({ payload, ...edit }) => ({
+    edits: edits.map(({ payload, ...edit }) => ({
       ...edit,
       changes: changesIn(editPayloadSchema.catch({}).parse(payload)),
     })),
@@ -148,7 +176,7 @@ export async function listQueue(actor: Actor | null) {
 /** What a pending edit asks for, a few words each, for the queue. */
 function changesIn(payload: EditPayload) {
   return [
-    ...(payload.form ? ['Changes to its page'] : []),
+    ...(payload.form || payload.snippet ? ['Changes to its page'] : []),
     ...(payload.isTemplate === undefined
       ? []
       : [
@@ -163,6 +191,7 @@ function changesIn(payload: EditPayload) {
 const EDIT_FIELDS: Record<keyof EditPayload, string> = {
   isTemplate: 'Template',
   form: 'Its page',
+  snippet: 'Its page',
 }
 
 /**
@@ -175,13 +204,25 @@ const appliable = sql`(${revisions.payload} - ${sql.raw(`'{${Object.keys(EDIT_FI
 const editWaiting = and(
   eq(revisions.kind, 'edit'),
   eq(revisions.status, 'pending'),
-  isNull(experiences.deletedAt),
   appliable,
 )
 
+/** What an edit changes: its kind, and what its screen says about it. */
+type EditSubject = {
+  kind: 'experience' | 'snippet'
+  slug: string
+  title: string
+  /** Its live page. */
+  href: string
+  game: Game
+  isTemplate: boolean
+  filesUrl: string | null
+}
+
 /**
- * One pending edit, beside the page as it is live now. Its files are
- * included: an edit that offers them as a template is about them.
+ * One pending edit, beside the page as it is live now: to an experience or a
+ * snippet. An experience's files are included: an edit that offers them as a
+ * template is about them.
  */
 export async function getEditReview(actor: Actor | null, id: number) {
   const refused = refusal(actor)
@@ -192,23 +233,75 @@ export async function getEditReview(actor: Actor | null, id: number) {
       version: revisions.version,
       payload: revisions.payload,
       submittedAt: revisions.submittedAt,
-      experience: {
-        id: experiences.id,
-        slug: experiences.slug,
-        title: experiences.title,
-        game: experiences.game,
-        isTemplate: experiences.isTemplate,
-        filesUrl: experiences.filesUrl,
-      },
+      experienceId: revisions.experienceId,
+      snippetId: revisions.snippetId,
       submitter: { name: user.name, image: user.image },
     })
     .from(revisions)
-    .innerJoin(experiences, eq(experiences.id, revisions.experienceId))
     .innerJoin(user, eq(user.id, revisions.submittedBy))
     .where(and(eq(revisions.id, id), editWaiting))
     .limit(1)
   if (!found) return refuse('not-found')
   const payload = editPayloadSchema.catch({}).parse(found.payload)
+  const about = {
+    id: found.id,
+    // Which version this screen shows. The decision says it back.
+    version: found.version,
+    submittedAt: found.submittedAt,
+    submitter: found.submitter,
+  }
+
+  if (found.snippetId !== null) {
+    const [snippet] = await db
+      .select({ slug: snippets.slug, title: snippets.title })
+      .from(snippets)
+      .where(and(eq(snippets.id, found.snippetId), isNull(snippets.deletedAt)))
+    if (!snippet) return refuse('not-found')
+    const described = await describeSnippetEdit(
+      found.snippetId,
+      payload.snippet,
+    )
+    const subject: EditSubject = {
+      kind: 'snippet',
+      slug: snippet.slug,
+      title: snippet.title,
+      href: `/snippets/${snippet.slug}`,
+      // Snippets are for the one game that has them.
+      game: gameList.find((game) => game.snippets === true)?.id ?? 'bf6',
+      isTemplate: false,
+      filesUrl: null,
+    }
+    return {
+      ok: true as const,
+      edit: {
+        ...about,
+        subject,
+        changes: described.changes,
+        unchanged: described.unchanged,
+        offersFiles: false,
+        files: [],
+      },
+      now: new Date(),
+    }
+  }
+
+  const [experience] = await db
+    .select({
+      id: experiences.id,
+      slug: experiences.slug,
+      title: experiences.title,
+      game: experiences.game,
+      isTemplate: experiences.isTemplate,
+      filesUrl: experiences.filesUrl,
+    })
+    .from(experiences)
+    .where(
+      and(
+        eq(experiences.id, found.experienceId ?? 0),
+        isNull(experiences.deletedAt),
+      ),
+    )
+  if (!experience) return refuse('not-found')
   const files = await db
     .select({
       // The one its addresses use.
@@ -219,34 +312,39 @@ export async function getEditReview(actor: Actor | null, id: number) {
       fromExport: projectFiles.fromExport,
     })
     .from(projectFiles)
-    .where(eq(projectFiles.experienceId, found.experience.id))
+    .where(eq(projectFiles.experienceId, experience.id))
     .orderBy(asc(projectFiles.id))
   const yesNo = (value: boolean) => (value ? 'Yes' : 'No')
   const offered = files.length === 1 ? 'its file' : `its ${files.length} files`
-  const described = await describeEdit(found.experience.id, payload)
+  const described = await describeEdit(experience.id, payload)
   const template: EditChange[] =
     payload.isTemplate === undefined ||
-    payload.isTemplate === found.experience.isTemplate
+    payload.isTemplate === experience.isTemplate
       ? []
       : [
           {
             field: EDIT_FIELDS.isTemplate,
-            live: yesNo(found.experience.isTemplate),
+            live: yesNo(experience.isTemplate),
             proposed: yesNo(payload.isTemplate),
             effect: payload.isTemplate
-              ? `Once approved, anyone can download ${offered}${found.experience.filesUrl ? ' and open the link to its larger files' : ''}.`
+              ? `Once approved, anyone can download ${offered}${experience.filesUrl ? ' and open the link to its larger files' : ''}.`
               : 'Once approved, only its owner and the moderators can download its files.',
           },
         ]
+  const subject: EditSubject = {
+    kind: 'experience',
+    slug: experience.slug,
+    title: experience.title,
+    href: `/experiences/${experience.slug}`,
+    game: experience.game,
+    isTemplate: experience.isTemplate,
+    filesUrl: experience.filesUrl,
+  }
   return {
     ok: true as const,
     edit: {
-      id: found.id,
-      // Which version this screen shows. The decision says it back.
-      version: found.version,
-      submittedAt: found.submittedAt,
-      submitter: found.submitter,
-      experience: found.experience,
+      ...about,
+      subject,
       // Each change as its field, what is live, what is asked for, and what
       // approving it does. Then what it leaves as it is.
       changes: [...described.changes, ...template],
@@ -280,17 +378,25 @@ export async function decideEdit(
   const status = decision.approve ? 'approved' : 'changes_requested'
   return db.transaction(async (tx) => {
     const [asked] = await tx
-      .select({ experienceId: revisions.experienceId })
+      .select({
+        experienceId: revisions.experienceId,
+        snippetId: revisions.snippetId,
+      })
       .from(revisions)
       .where(eq(revisions.id, id))
     if (!asked) return refuse('not-found')
-    // The experience before the revision, as its owner changing the same
+    // What it changes before the revision, as its owner changing the same
     // edit takes them. Its owner sending it again waits until this is done,
     // or has finished, and then its version says so.
-    await lockEdits(tx, asked.experienceId)
+    if (asked.snippetId !== null) {
+      await lockSnippetEdits(tx, asked.snippetId)
+    } else if (asked.experienceId !== null) {
+      await lockEdits(tx, asked.experienceId)
+    }
     const [current] = await tx
       .select({
         experienceId: revisions.experienceId,
+        snippetId: revisions.snippetId,
         payload: revisions.payload,
         version: revisions.version,
         submittedBy: revisions.submittedBy,
@@ -309,13 +415,16 @@ export async function decideEdit(
     if (current.version !== decision.version) {
       return refuse('invalid', { form: CHANGED_SINCE_OPENED })
     }
-    if (decision.approve) {
-      // Only what an edit may change, as the schema reads it.
+    // Only what an edit may change, as the schema reads it.
+    const payload = editPayloadSchema.catch({}).parse(current.payload)
+    if (decision.approve && current.snippetId !== null) {
+      await applySnippetEdit(tx, current.snippetId, payload.snippet, now)
+    } else if (decision.approve && current.experienceId !== null) {
       const applied = await applyEdit(
         tx,
         current.experienceId,
         current.submittedBy,
-        editPayloadSchema.catch({}).parse(current.payload),
+        payload,
         now,
       )
       if (!applied.ok) return applied
@@ -329,11 +438,17 @@ export async function decideEdit(
         reviewNote: note || null,
       })
       .where(eq(revisions.id, id))
-    const [experience] = await tx
-      .select({ slug: experiences.slug })
-      .from(experiences)
-      .where(eq(experiences.id, current.experienceId))
-    return { ok: true as const, slug: experience.slug, status }
+    const [changed] =
+      current.snippetId !== null
+        ? await tx
+            .select({ slug: snippets.slug })
+            .from(snippets)
+            .where(eq(snippets.id, current.snippetId))
+        : await tx
+            .select({ slug: experiences.slug })
+            .from(experiences)
+            .where(eq(experiences.id, current.experienceId ?? 0))
+    return { ok: true as const, slug: changed.slug, status }
   })
 }
 
@@ -345,7 +460,7 @@ export async function decideEdit(
 export async function decideSnippet(
   actor: Actor | null,
   id: number,
-  decision: { approve: boolean; note?: string },
+  decision: { approve: boolean; note?: string; version: number },
   now = new Date(),
 ): Promise<
   | { ok: true; slug: string; status: 'published' | 'changes_requested' }
@@ -359,8 +474,9 @@ export async function decideSnippet(
   }
 
   const status = decision.approve ? 'published' : 'changes_requested'
-  // The condition is in the update itself, so two moderators deciding at
-  // once cannot both succeed.
+  // The conditions are in the update itself, so two moderators deciding at
+  // once cannot both succeed, and a version its owner has replaced since the
+  // moderator was shown it is not what gets decided.
   const [decided] = await db
     .update(snippets)
     .set({
@@ -372,10 +488,22 @@ export async function decideSnippet(
         ? { firstPublishedAt: now, lastPublishedAt: now }
         : {}),
     })
-    .where(and(eq(snippets.id, id), snippetWaiting))
+    .where(
+      and(
+        eq(snippets.id, id),
+        snippetWaiting,
+        eq(snippets.version, decision.version),
+      ),
+    )
     .returning({ slug: snippets.slug })
-  return decided
-    ? { ok: true, slug: decided.slug, status }
+  if (decided) return { ok: true, slug: decided.slug, status }
+  const [still] = await db
+    .select({ id: snippets.id })
+    .from(snippets)
+    .where(and(eq(snippets.id, id), snippetWaiting))
+    .limit(1)
+  return still
+    ? refuse('invalid', { form: CHANGED_SINCE_OPENED })
     : refuse('not-found')
 }
 

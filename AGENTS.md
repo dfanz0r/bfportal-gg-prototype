@@ -131,8 +131,9 @@ Reach for what exists before writing markup:
 | Deleting an experience, or a moderator removing it | `ExperienceManage`, at the foot of its page |
 | A button that ends something, such as Delete | `buttonDanger` from `ui.ts` |
 | The experience form for one of the owner's: a draft, one sent back, one in review, or one live | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which. Checking the form and writing it are `prepareExperience` and `writeAround` in `src/server/services/prepare-experience.ts`, shared by a submission and an edit |
+| The snippet form for one of the owner's: one sent back, one in review, or one live | `SnippetSubmitPage` with `editing` in its data, from `getSnippetEditPage`; a live one's edit is `submitSnippetEdit` in `src/server/services/snippet-edits.ts` |
 | Everything someone has made, and where each stands | `YourSubmissions`, from `listOwnSubmissions` |
-| A moderator's screen for a pending edit, each change beside what is live | `AdminEdit`, from `describeEdit` in `src/server/services/experience-edits.ts`; what an edit may change is `editPayloadSchema` in `src/server/services/edit-payload.ts` |
+| A moderator's screen for a pending edit to an experience or a snippet, each change beside what is live | `AdminEdit`, from `describeEdit` in `src/server/services/experience-edits.ts` or `describeSnippetEdit` in `snippet-edits.ts`; what an edit may change is `editPayloadSchema` in `src/server/services/edit-payload.ts` |
 | An item's status and the moderator's note, for its owner | `StatusNote` |
 | A moderator's decision: a note, approve or request changes | `DecisionForm` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |

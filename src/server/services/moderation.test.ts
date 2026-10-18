@@ -244,18 +244,26 @@ describe('moderation', () => {
       [null, 'signed-out'],
       [someone, 'forbidden'],
     ] as const) {
-      expect(await decideSnippet(actor, waiting.id, { approve: true })).toEqual(
-        { ok: false, reason },
-      )
+      expect(
+        await decideSnippet(actor, waiting.id, { approve: true, version: 1 }),
+      ).toEqual({ ok: false, reason })
     }
     // Changes need a note; then it is out of the queue, and still not public.
     expect(
-      await decideSnippet(moderator, waiting.id, { approve: false }),
+      await decideSnippet(moderator, waiting.id, {
+        approve: false,
+        version: 1,
+      }),
     ).toMatchObject({ ok: false, reason: 'invalid' })
     expect(await getSnippet(sent.slug, NOW)).toBeNull()
 
     expect(
-      await decideSnippet(admin, waiting.id, { approve: true }, NOW),
+      await decideSnippet(
+        admin,
+        waiting.id,
+        { approve: true, version: 1 },
+        NOW,
+      ),
     ).toEqual({ ok: true, slug: sent.slug, status: 'published' })
     expect(await getSnippet(sent.slug, NOW)).toMatchObject({
       status: 'published',
@@ -266,6 +274,7 @@ describe('moderation', () => {
       await decideSnippet(moderator, waiting.id, {
         approve: false,
         note: 'changed my mind',
+        version: 1,
       }),
     ).toEqual({ ok: false, reason: 'not-found' })
   })

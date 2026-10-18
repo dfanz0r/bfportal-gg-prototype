@@ -12,6 +12,7 @@ import {
   user,
 } from '../db/schema'
 import { excerpt, personColumns, publicPerson } from './shared'
+import { lastSentSnippetEdit, SNIPPET_EDITABLE } from './snippet-edits'
 
 // Snippets: small, reusable pieces others copy into their own experiences.
 // For now each is TypeScript, kept in `snippets.script`.
@@ -136,6 +137,7 @@ export async function getSnippet(
       id: snippets.id,
       slug: snippets.slug,
       status: snippets.status,
+      version: snippets.version,
       ownerId: snippets.ownerId,
       reviewNote: snippets.reviewNote,
       title: snippets.title,
@@ -164,24 +166,28 @@ export async function getSnippet(
   const isStaff = viewer !== null && isStaffRole(viewer.role)
   if (row.status !== 'published' && !isOwner && !isStaff) return null
 
-  const posts = await db
-    .select({
-      id: updates.id,
-      title: updates.title,
-      bodyHtml: updates.bodyHtml,
-      publishedAt: updates.publishedAt,
-      author: personColumns,
-    })
-    .from(updates)
-    .innerJoin(user, eq(user.id, updates.authorId))
-    .where(
-      and(
-        eq(updates.snippetId, row.id),
-        eq(updates.status, 'published'),
-        isNull(updates.deletedAt),
-      ),
-    )
-    .orderBy(desc(updates.publishedAt))
+  const [posts, sentEdit] = await Promise.all([
+    db
+      .select({
+        id: updates.id,
+        title: updates.title,
+        bodyHtml: updates.bodyHtml,
+        publishedAt: updates.publishedAt,
+        author: personColumns,
+      })
+      .from(updates)
+      .innerJoin(user, eq(user.id, updates.authorId))
+      .where(
+        and(
+          eq(updates.snippetId, row.id),
+          eq(updates.status, 'published'),
+          isNull(updates.deletedAt),
+        ),
+      )
+      .orderBy(desc(updates.publishedAt)),
+    // Its owner's edit to it, which only they see here.
+    isOwner && row.status === 'published' ? lastSentSnippetEdit(row.id) : null,
+  ])
 
   return {
     id: row.id,
@@ -212,7 +218,19 @@ export async function getSnippet(
     // What a moderator wrote when asking for changes or removing it, for its
     // owner. Who wrote it is not passed on.
     reviewNote: isOwner || isStaff ? row.reviewNote : null,
-    viewer: { signedIn: viewer !== null, liked: row.liked, isOwner, isStaff },
+    // Which version this shows, for a moderator deciding on it here.
+    version: row.version,
+    viewer: {
+      signedIn: viewer !== null,
+      liked: row.liked,
+      isOwner,
+      isStaff,
+      // Whether its owner opens it in the form, and whether changes they
+      // sent to it while live are waiting.
+      canEdit:
+        isOwner && SNIPPET_EDITABLE.some((status) => status === row.status),
+      editWaiting: sentEdit?.waiting === true,
+    },
     now,
   }
 }

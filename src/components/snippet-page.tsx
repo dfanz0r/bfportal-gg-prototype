@@ -10,12 +10,13 @@ import { DateText } from './date-text'
 import { DecisionForm } from './decision-form'
 import { Fact } from './fact'
 import { Facts } from './facts'
+import { Icon } from './icon'
 import { LikeButton } from './like-button'
 import { PageLayout } from './page-layout'
 import { RepoLink } from './repo-link'
 import { Section } from './section'
 import { StatusNote } from './status-note'
-import { buttonAccent, panel } from './ui'
+import { buttonAccent, buttonGhost, panel } from './ui'
 import { UpdatePost } from './update-post'
 
 /** The head of a snippet's page, for search engines and link previews. */
@@ -48,16 +49,28 @@ export function SnippetPage(props: {
         ...(data().category ? [{ label: data().category ?? '' }] : []),
       ]}
       actions={
-        // Nothing can be liked until it is published; the server refuses it.
-        data().status === 'published' ? (
-          <LikeButton
-            kind="snippet"
-            slug={data().slug}
-            likes={data().likes}
-            liked={data().viewer.liked}
-            signedIn={data().viewer.signedIn}
-          />
-        ) : undefined
+        <>
+          <Show when={data().viewer.canEdit}>
+            <a
+              href={`/snippets/${data().slug}/edit`}
+              class={`${buttonGhost} h-[38px] px-3.5`}
+            >
+              <Icon name="pencil" class="size-4" />
+              Edit
+            </a>
+          </Show>
+          {/* Nothing can be liked until it is published; the server refuses
+              it. */}
+          <Show when={data().status === 'published'}>
+            <LikeButton
+              kind="snippet"
+              slug={data().slug}
+              likes={data().likes}
+              liked={data().viewer.liked}
+              signedIn={data().viewer.signedIn}
+            />
+          </Show>
+        </>
       }
       meta={
         <>
@@ -72,7 +85,19 @@ export function SnippetPage(props: {
         </>
       }
     >
-      <StatusNote status={data().status} note={data().reviewNote} />
+      <StatusNote
+        status={data().status}
+        note={data().reviewNote}
+        edit={
+          data().viewer.canEdit ? `/snippets/${data().slug}/edit` : undefined
+        }
+      />
+      <Show when={data().viewer.editWaiting}>
+        <p class="mb-6 border-l-2 border-steel bg-steel/8 px-4 py-3 text-sm text-fg-2">
+          <b class="font-semibold text-fg">Your changes are waiting.</b> This
+          page stays as it is until a moderator approves them.
+        </p>
+      </Show>
       <div class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_348px] min-[1100px]:gap-10">
         <div class="min-w-0">
           <div class={panel}>
@@ -110,6 +135,7 @@ export function SnippetPage(props: {
             <DecisionForm
               decide={decideOnSnippet}
               id={data().id}
+              version={data().version}
               back={`/snippets/${data().slug}`}
               problem={props.decision.problem}
               note={props.decision.note}

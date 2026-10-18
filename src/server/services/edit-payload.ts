@@ -71,13 +71,25 @@ export const preparedExperienceSchema = z.object({
 
 export type PreparedExperience = z.infer<typeof preparedExperienceSchema>
 
+/** A snippet's form, checked: what an approved edit to it writes. */
+export const preparedSnippetSchema = z.object({
+  title: z.string(),
+  descriptionMd: z.string(),
+  categoryId: z.number().int(),
+  script: z.string(),
+})
+
+export type PreparedSnippet = z.infer<typeof preparedSnippetSchema>
+
 /**
- * What a pending edit asks to change: the template switch from the page, the
- * edit form as it was last sent, or both.
+ * What a pending edit asks to change. For an experience: the template switch
+ * from the page, the edit form as it was last sent, or both. For a snippet:
+ * its form as it was last sent.
  */
 export const editPayloadSchema = z.object({
   isTemplate: z.boolean().optional(),
   form: preparedExperienceSchema.optional(),
+  snippet: preparedSnippetSchema.optional(),
 })
 
 export type EditPayload = z.infer<typeof editPayloadSchema>

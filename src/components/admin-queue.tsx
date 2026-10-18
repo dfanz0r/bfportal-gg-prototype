@@ -80,7 +80,7 @@ export function AdminQueue(props: { data: Queue }) {
                 <div class="min-w-0 flex-1 basis-64">
                   <p class="truncate text-[15px] font-semibold">{item.title}</p>
                   <p class="text-[13.5px] text-fg-2">
-                    Live. {item.changes.join('. ')}.
+                    Live {item.kind}. {item.changes.join('. ')}.
                   </p>
                 </div>
                 <span class="inline-flex items-center gap-2 text-[13px] text-fg-2">

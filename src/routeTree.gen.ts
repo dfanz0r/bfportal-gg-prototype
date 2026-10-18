@@ -41,6 +41,7 @@ import { Route as AdminReviewIdRouteImport } from './routes/admin/review.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files/$id'
 import { Route as ExperiencesSlugEditRouteImport } from './routes/experiences/$slug_.edit'
+import { Route as SnippetsSlugEditRouteImport } from './routes/snippets/$slug_.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -202,6 +203,11 @@ const ExperiencesSlugEditRoute = ExperiencesSlugEditRouteImport.update({
   path: '/experiences/$slug/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SnippetsSlugEditRoute = SnippetsSlugEditRouteImport.update({
+  id: '/snippets/$slug_/edit',
+  path: '/snippets/$slug/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
+  '/snippets/$slug/edit': typeof SnippetsSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug/edit': typeof ExperiencesSlugEditRoute
+  '/snippets/$slug/edit': typeof SnippetsSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/experiences/$slug_/edit': typeof ExperiencesSlugEditRoute
+  '/snippets/$slug_/edit': typeof SnippetsSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/files/$id'
     | '/experiences/$slug/edit'
+    | '/snippets/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/files/$id'
     | '/experiences/$slug/edit'
+    | '/snippets/$slug/edit'
   id:
     | '__root__'
     | '/'
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/files/$id'
     | '/experiences/$slug_/edit'
+    | '/snippets/$slug_/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiFilesIdRoute: typeof ApiFilesIdRoute
   ExperiencesSlugEditRoute: typeof ExperiencesSlugEditRoute
+  SnippetsSlugEditRoute: typeof SnippetsSlugEditRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -667,6 +680,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ExperiencesSlugEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/snippets/$slug_/edit': {
+      id: '/snippets/$slug_/edit'
+      path: '/snippets/$slug/edit'
+      fullPath: '/snippets/$slug/edit'
+      preLoaderRoute: typeof SnippetsSlugEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -716,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiFilesIdRoute: ApiFilesIdRoute,
   ExperiencesSlugEditRoute: ExperiencesSlugEditRoute,
+  SnippetsSlugEditRoute: SnippetsSlugEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { assertFromThisSite, currentActor } from '../server/auth/actor'
 import { keepDraft, readDraft } from '../server/services/drafts'
 import {
+  getSnippetEditPage,
   getSnippetOptions,
   SNIPPET_FIELDS,
   submitSnippet,
@@ -23,11 +24,26 @@ export const fetchSnippetSubmitPage = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const actor = await currentActor()
     if (!actor) return { state: 'login' as const }
-    const [options, draft] = await Promise.all([
+    const [options, kept] = await Promise.all([
       getSnippetOptions(),
       data.draft ? readDraft(actor, 'snippet') : null,
     ])
-    return { state: 'ok' as const, options, draft }
+    // A kept form from changing one of theirs is that one's page's to show.
+    const draft = kept?.fields.editing ? null : kept
+    return { state: 'ok' as const, options, draft, editing: null }
+  })
+
+/** The same form for one of the visitor's snippets, to change and send. */
+export const fetchSnippetEditPage = createServerFn({ method: 'GET' })
+  .validator(
+    z.object({
+      slug: z.string().min(1).max(200),
+      draft: z.boolean().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { slug, ...search } = data
+    return getSnippetEditPage(await currentActor(), slug, search)
   })
 
 /**
@@ -69,10 +85,15 @@ export const submitSnippetForReview = createServerFn({ method: 'POST' })
       result.errors ?? { form: 'That could not be submitted.' },
       SNIPPET_FIELDS,
     )
-    throw redirectTo('/submit/snippet?draft=true')
+    const editing = sent?.fields.editing
+    throw redirectTo(
+      typeof editing === 'string' && editing
+        ? `/snippets/${encodeURIComponent(editing)}/edit?draft=true`
+        : '/submit/snippet?draft=true',
+    )
   })
 
-export type SnippetSubmitPageData = Extract<
-  Awaited<ReturnType<typeof fetchSnippetSubmitPage>>,
-  { state: 'ok' }
->
+/** The snippet form's page: for a new snippet, or one of theirs to change. */
+export type SnippetSubmitPageData =
+  | Extract<Awaited<ReturnType<typeof fetchSnippetSubmitPage>>, { state: 'ok' }>
+  | Extract<Awaited<ReturnType<typeof fetchSnippetEditPage>>, { state: 'ok' }>

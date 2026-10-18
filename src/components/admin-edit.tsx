@@ -5,6 +5,7 @@ import { decideOnEdit, type EditReview } from '../functions/moderation'
 import type { DecisionSearch } from '../shared/decision'
 import { gameInfo } from '../shared/games'
 import { Avatar } from './avatar'
+import { CodeView } from './code-view'
 import { DateText } from './date-text'
 import { DecisionForm } from './decision-form'
 import { PageLayout } from './page-layout'
@@ -14,10 +15,72 @@ import { buttonGhost, label, panel } from './ui'
 const columns =
   'grid gap-x-6 gap-y-1 sm:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]'
 
+type Change = EditReview['edit']['changes'][number]
+
 /**
- * Reviewing an edit to a live experience: each change beside what is live,
- * and what approving it does. The page is named for the edit, not the
- * experience, so it is not taken for a new submission.
+ * One change: the field, what is live and what approving makes it. Code is
+ * too wide to sit in a column beside its old self, so it is shown whole, the
+ * live version above the new one.
+ */
+function ChangeRow(props: { change: Change }) {
+  const change = () => props.change
+  return (
+    // One column that may be narrower than a long line of code, which then
+    // scrolls in its own box rather than widening the page.
+    <div class="grid grid-cols-[minmax(0,1fr)] gap-2 px-4 py-3.5 text-sm">
+      <Show
+        when={change().code}
+        fallback={
+          <div class={columns}>
+            <span class="font-semibold">{change().field}</span>
+            <span
+              class={`text-fg-2 [overflow-wrap:anywhere] ${change().long ? 'whitespace-pre-wrap' : ''}`}
+            >
+              <span class="text-fg-3 sm:hidden">Live now: </span>
+              {change().live}
+            </span>
+            <span
+              class={`font-semibold text-steel-hi [overflow-wrap:anywhere] ${change().long ? 'whitespace-pre-wrap' : ''}`}
+            >
+              <span class="font-normal text-fg-3 sm:hidden">
+                Once approved:{' '}
+              </span>
+              {change().proposed}
+            </span>
+          </div>
+        }
+      >
+        <span class="font-semibold">{change().field}</span>
+        <span class={label}>Live now</span>
+        <div class="border border-line">
+          <CodeView
+            text={change().live}
+            language="typescript"
+            class="max-h-[360px]"
+          />
+        </div>
+        <span class={label}>Once approved</span>
+        <div class="border border-steel">
+          <CodeView
+            text={change().proposed}
+            language="typescript"
+            class="max-h-[360px]"
+          />
+        </div>
+      </Show>
+      <Show when={change().effect}>
+        <p class="border-l-2 border-steel bg-steel/8 px-3 py-2 text-[13px] text-fg-2">
+          {change().effect}
+        </p>
+      </Show>
+    </div>
+  )
+}
+
+/**
+ * Reviewing an edit to a live experience or snippet: each change beside what
+ * is live, and what approving it does. The page is named for the edit, not
+ * what it changes, so it is not taken for a new submission.
  */
 export function AdminEdit(props: {
   data: EditReview
@@ -25,7 +88,7 @@ export function AdminEdit(props: {
   decision: DecisionSearch
 }) {
   const edit = () => props.data.edit
-  const experience = () => edit().experience
+  const subject = () => edit().subject
   const count = () =>
     edit().changes.length === 1
       ? '1 change'
@@ -33,11 +96,11 @@ export function AdminEdit(props: {
 
   return (
     <PageLayout
-      title={`Edit to ${experience().title}`}
-      lead={`Its owner asks to change this live ${gameInfo(experience().game).name} experience. The live page stays as it is until you approve.`}
+      title={`Edit to ${subject().title}`}
+      lead={`Its owner asks to change this live ${gameInfo(subject().game).name} ${subject().kind}. The live page stays as it is until you approve.`}
       crumbs={[
         { label: 'Review queue', href: '/admin' },
-        { label: 'Edit to a live experience' },
+        { label: `Edit to a live ${subject().kind}` },
       ]}
       meta={
         <span class="inline-flex items-center gap-2">
@@ -53,7 +116,7 @@ export function AdminEdit(props: {
       }
       actions={
         <>
-          <a href={`/experiences/${experience().slug}`} class={buttonGhost}>
+          <a href={subject().href} class={buttonGhost}>
             See the live page
           </a>
           <Link to="/admin" class={buttonGhost}>
@@ -64,7 +127,7 @@ export function AdminEdit(props: {
     >
       <div
         class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_380px] min-[1100px]:gap-10"
-        data-game={experience().game}
+        data-game={subject().game}
       >
         <div class="grid min-w-0 gap-6">
           <section>
@@ -86,32 +149,7 @@ export function AdminEdit(props: {
                   </p>
                 }
               >
-                {(change) => (
-                  <div class="grid gap-2 px-4 py-3.5 text-sm">
-                    <div class={columns}>
-                      <span class="font-semibold">{change.field}</span>
-                      <span
-                        class={`text-fg-2 [overflow-wrap:anywhere] ${change.long ? 'whitespace-pre-wrap' : ''}`}
-                      >
-                        <span class="text-fg-3 sm:hidden">Live now: </span>
-                        {change.live}
-                      </span>
-                      <span
-                        class={`font-semibold text-steel-hi [overflow-wrap:anywhere] ${change.long ? 'whitespace-pre-wrap' : ''}`}
-                      >
-                        <span class="font-normal text-fg-3 sm:hidden">
-                          Once approved:{' '}
-                        </span>
-                        {change.proposed}
-                      </span>
-                    </div>
-                    <Show when={change.effect}>
-                      <p class="border-l-2 border-steel bg-steel/8 px-3 py-2 text-[13px] text-fg-2">
-                        {change.effect}
-                      </p>
-                    </Show>
-                  </div>
-                )}
+                {(change) => <ChangeRow change={change} />}
               </For>
             </div>
             <p class="mt-2 text-[13px] text-fg-3">
@@ -126,10 +164,10 @@ export function AdminEdit(props: {
           </section>
           <ProjectFileList
             files={edit().files}
-            isTemplate={experience().isTemplate}
+            isTemplate={subject().isTemplate}
             becomePublic={edit().offersFiles}
           />
-          <Show when={experience().filesUrl}>
+          <Show when={subject().filesUrl}>
             {(url) => (
               <p class="text-sm">
                 <span class="text-fg-3">Larger files: </span>

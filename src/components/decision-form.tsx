@@ -14,12 +14,7 @@ import { buttonAccent, buttonGhost, field, label, panel } from './ui'
 
 /** A server function that decides on one kind of submission. */
 type Decide = ((input: {
-  data: {
-    id: number
-    approve: boolean
-    note: string
-    version: number | undefined
-  }
+  data: { id: number; approve: boolean; note: string; version: number }
 }) => Promise<{ ok: true } | Refusal>) & { url: string }
 
 /**
@@ -32,10 +27,10 @@ export function DecisionForm(props: {
   decide: Decide
   id: number
   /**
-   * The version of it the page shows, for what its owner can change while it
-   * waits. A decision on a version that has moved on is refused.
+   * The version of it the page shows: its owner can change it while it
+   * waits, and a decision on a version that has moved on is refused.
    */
-  version?: number
+  version: number
   /** The page the decision is made on, to come back to if it is refused. */
   back: string
   problem?: DecisionProblem
@@ -120,9 +115,7 @@ export function DecisionForm(props: {
     >
       <h2 class={label}>Decision</h2>
       <input type="hidden" name="id" value={props.id} />
-      <Show when={props.version}>
-        {(version) => <input type="hidden" name="version" value={version()} />}
-      </Show>
+      <input type="hidden" name="version" value={props.version} />
       <input type="hidden" name="back" value={props.back} />
       <label for="note" class="text-sm font-semibold">
         Note to the creator

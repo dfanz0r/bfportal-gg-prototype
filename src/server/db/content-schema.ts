@@ -551,9 +551,13 @@ export const revisions = pgTable(
   'revisions',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    experienceId: integer('experience_id')
-      .notNull()
-      .references(() => experiences.id, { onDelete: 'cascade' }),
+    // What it changes: an experience or a snippet, exactly one.
+    experienceId: integer('experience_id').references(() => experiences.id, {
+      onDelete: 'cascade',
+    }),
+    snippetId: integer('snippet_id').references(() => snippets.id, {
+      onDelete: 'cascade',
+    }),
     kind: revisionKindEnum('kind').notNull(),
     // Only the fields the owner may edit, including tags, creators and
     // subcategories. Approving copies these and nothing else, so an admin's
@@ -573,11 +577,18 @@ export const revisions = pgTable(
     version: integer('version').notNull().default(1),
   },
   (table) => [
-    // An experience has at most one pending revision. A second edit replaces
-    // the first.
+    // An experience, or a snippet, has at most one pending revision. A second
+    // edit replaces the first.
     uniqueIndex('revisions_one_pending_per_experience')
       .on(table.experienceId)
       .where(sql`${table.status} = 'pending'`),
+    uniqueIndex('revisions_one_pending_per_snippet')
+      .on(table.snippetId)
+      .where(sql`${table.status} = 'pending'`),
+    check(
+      'revisions_one_subject_check',
+      sql`(${table.experienceId} is null) <> (${table.snippetId} is null)`,
+    ),
   ],
 )
 
@@ -620,6 +631,9 @@ export const snippets = pgTable(
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
     reviewFieldNotes: reviewFieldNotes(),
+    // As on an experience: how many times its owner has sent it in, which a
+    // moderator's decision must still be about.
+    version: integer('version').notNull().default(1),
     deletedAt: timestamptz('deleted_at'),
     metaTitle: text('meta_title'),
     metaDescription: text('meta_description'),

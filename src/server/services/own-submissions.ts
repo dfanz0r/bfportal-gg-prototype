@@ -6,6 +6,7 @@ import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { experiences, revisions, snippets } from '../db/schema'
 import { EDITABLE } from './experience-drafts'
+import { SNIPPET_EDITABLE } from './snippet-edits'
 import { MAX_WAITING } from './submission-limits'
 
 // "Your submissions": everything someone has made here and the state of each,
@@ -118,15 +119,17 @@ export async function listOwnSubmissions(actor: Actor | null) {
     of: waitingSince.length,
   })
 
-  // The latest edit of each live experience, where there is one.
-  const live = ownExperiences
-    .filter((item) => item.status === 'published')
-    .map((item) => item.id)
-  const edits =
-    live.length > 0
-      ? await db
-          .selectDistinctOn([revisions.experienceId], {
-            experienceId: revisions.experienceId,
+  // The latest edit of each live experience and snippet, where there is one.
+  const liveIds = (items: { id: number; status: ContentStatus }[]) =>
+    items.filter((item) => item.status === 'published').map((item) => item.id)
+  const latestEdits = (
+    column: typeof revisions.experienceId | typeof revisions.snippetId,
+    ids: number[],
+  ) =>
+    ids.length > 0
+      ? db
+          .selectDistinctOn([column], {
+            of: sql<number>`${column}`,
             status: revisions.status,
             submittedAt: revisions.submittedAt,
             reviewedAt: revisions.reviewedAt,
@@ -134,7 +137,7 @@ export async function listOwnSubmissions(actor: Actor | null) {
           .from(revisions)
           .where(
             and(
-              inArray(revisions.experienceId, live),
+              inArray(column, ids),
               eq(revisions.kind, 'edit'),
               or(
                 eq(revisions.status, 'pending'),
@@ -142,9 +145,26 @@ export async function listOwnSubmissions(actor: Actor | null) {
               ),
             ),
           )
-          .orderBy(revisions.experienceId, desc(revisions.submittedAt))
+          .orderBy(column, desc(revisions.submittedAt))
       : []
-  const editOf = new Map(edits.map((edit) => [edit.experienceId, edit]))
+  const [experienceEdits, snippetEdits] = await Promise.all([
+    latestEdits(revisions.experienceId, liveIds(ownExperiences)),
+    latestEdits(revisions.snippetId, liveIds(ownSnippets)),
+  ])
+  const editOf = new Map(experienceEdits.map((edit) => [edit.of, edit]))
+  const snippetEditOf = new Map(snippetEdits.map((edit) => [edit.of, edit]))
+
+  /** Where an edit to something live stands, for its row. */
+  const asEdit = (
+    edit: (typeof experienceEdits)[number],
+  ): Pick<OwnSubmission, 'request' | 'review' | 'happened'> => ({
+    request: 'Edit',
+    review: edit.status === 'pending' ? 'In review' : 'Changes requested',
+    happened:
+      edit.status === 'pending'
+        ? { what: 'submitted', at: edit.submittedAt }
+        : { what: 'reviewed', at: edit.reviewedAt },
+  })
 
   const happenedTo = (item: {
     status: ContentStatus
@@ -189,37 +209,41 @@ export async function listOwnSubmissions(actor: Actor | null) {
           : null,
         image: item.coverImgUrl,
         listing: LISTINGS[item.status],
-        request: edit ? 'Edit' : reviewOf(item.status) ? 'Submission' : null,
-        review: edit
-          ? edit.status === 'pending'
-            ? 'In review'
-            : 'Changes requested'
-          : reviewOf(item.status),
-        happened: edit
-          ? edit.status === 'pending'
-            ? { what: 'submitted', at: edit.submittedAt }
-            : { what: 'reviewed', at: edit.reviewedAt }
-          : happenedTo(item),
+        ...(edit
+          ? asEdit(edit)
+          : {
+              request: reviewOf(item.status) ? 'Submission' : null,
+              review: reviewOf(item.status),
+              happened: happenedTo(item),
+            }),
         changedAt: item.updatedAt,
       }
     }),
-    ...ownSnippets.map(
-      (item): OwnSubmission => ({
+    ...ownSnippets.map((item): OwnSubmission => {
+      const edit = snippetEditOf.get(item.id)
+      return {
         key: `snippet-${item.id}`,
         kind: 'snippet',
         // Snippets are for the one game that has them.
         game: 'bf6',
         title: item.title,
         href: `/snippets/${item.slug}`,
-        editHref: null,
+        // Snippets have no drafts; the rest are changed as experiences are.
+        editHref: SNIPPET_EDITABLE.some((status) => status === item.status)
+          ? `/snippets/${item.slug}/edit`
+          : null,
         image: null,
         listing: LISTINGS[item.status],
-        request: reviewOf(item.status) ? 'Submission' : null,
-        review: reviewOf(item.status),
-        happened: happenedTo(item),
+        ...(edit
+          ? asEdit(edit)
+          : {
+              request: reviewOf(item.status) ? 'Submission' : null,
+              review: reviewOf(item.status),
+              happened: happenedTo(item),
+            }),
         changedAt: item.updatedAt,
-      }),
-    ),
+      }
+    }),
   ].sort((one, other) => other.changedAt.getTime() - one.changedAt.getTime())
 
   return {
