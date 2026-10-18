@@ -305,4 +305,40 @@ describe('editing a live experience', () => {
     ).toEqual({ ok: true, slug: SLUG })
     expect(await pending(id)).toHaveLength(1)
   })
+
+  it('does not keep what Portal said about a code that was replaced', async () => {
+    const { id } = await live()
+    await db
+      .update(experiences)
+      .set({ playgroundId: 'old-playground', portalState: 'published' })
+      .where(eq(experiences.id, id))
+    // A new code, while Portal does not answer: nothing is known about it.
+    await submitExperience(
+      owner,
+      { ...(await formFor(owner)), code: 'zzzzz' },
+      nobody,
+    )
+    const [edit] = await pending(id)
+    await decideEdit(
+      moderator,
+      edit.id,
+      { approve: true, version: edit.version },
+      NOW,
+    )
+    const [after] = await db
+      .select({
+        code: experiences.code,
+        playgroundId: experiences.playgroundId,
+        portalState: experiences.portalState,
+        mapRotation: experiences.mapRotation,
+      })
+      .from(experiences)
+      .where(eq(experiences.id, id))
+    expect(after).toEqual({
+      code: 'zzzzz',
+      playgroundId: null,
+      portalState: 'unchecked',
+      mapRotation: null,
+    })
+  })
 })

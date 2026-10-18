@@ -138,6 +138,7 @@ export async function ownEditable(
       isTemplate: experiences.isTemplate,
       copyAllowed: experiences.copyAllowed,
       code: experiences.code,
+      playgroundId: experiences.playgroundId,
       teamSetup: experiences.teamSetup,
       types: experiences.types,
       repoUrl: experiences.repoUrl,

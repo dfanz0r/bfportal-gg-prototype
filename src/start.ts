@@ -35,6 +35,20 @@ const bodyLimit = createMiddleware().server(({ request, next }) => {
 })
 
 /**
+ * No other site may show this one's pages in a frame, where a visitor could
+ * be led to press a button they cannot see. Said here so it holds whatever
+ * the proxy in front does; the site frames nothing of its own.
+ */
+const noFraming = createMiddleware().server(async ({ next }) => {
+  const result = await next()
+  // A response's headers can be fixed once it is made, so it is copied.
+  const response = new Response(result.response.body, result.response)
+  response.headers.set('Content-Security-Policy', "frame-ancestors 'self'")
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  return { ...result, response }
+})
+
+/**
  * Server functions take requests from this site's own pages only. Start adds
  * this by itself until a start file names its own middleware, as this one
  * does; each server function that writes also checks the origin itself.
@@ -44,5 +58,5 @@ const csrf = createCsrfMiddleware({
 })
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [bodyLimit, csrf],
+  requestMiddleware: [noFraming, bodyLimit, csrf],
 }))

@@ -44,6 +44,13 @@ if (!parsed.success) {
     `Invalid environment configuration:\n${z.prettifyError(parsed.error)}`,
   )
 }
+// The default suits development, where nothing is in front of the site. In
+// production the header is the proxy's to say, so it must be said.
+if (defined.NODE_ENV === 'production' && !defined.CLIENT_IP_HEADER) {
+  throw new Error(
+    'Invalid environment configuration:\nCLIENT_IP_HEADER must be set in production: the header the proxy in front of the site puts the visitor’s address in, such as cf-connecting-ip.',
+  )
+}
 
 export const env = parsed.data
 

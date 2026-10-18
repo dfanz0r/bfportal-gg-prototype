@@ -344,12 +344,25 @@ export async function prepareExperience(
     portalCheckedAt: found ? now : null,
     portalStateSince: found ? now : null,
   }
+  // Whether it still names the same Portal experience it did: the same code,
+  // or with no code the same link, or neither when it had neither.
+  const samePortalExperience =
+    target !== null &&
+    (typed
+      ? typed === target.code
+      : linked?.playgroundId
+        ? linked.playgroundId === target.playgroundId
+        : !form.code && !form.link && !target.code)
   // Sent before, and sent again with nothing new to say what it plays: no
   // answer from Portal, and no new export. What it had stays, its maps, its
   // tags from Portal and the maps, and what Portal last said, until the
   // nightly check or the next answer says otherwise. Otherwise one edit made
-  // while gametools is down would clear them.
-  const keepPortalFacts = Boolean(target && !found && !fromExport)
+  // while gametools is down would clear them. Only while it is the same
+  // Portal experience: a new code is not described by the old one's facts,
+  // which are left out, and it is unchecked until Portal answers.
+  const keepPortalFacts = Boolean(
+    target && !found && !fromExport && samePortalExperience,
+  )
   if (keepPortalFacts) {
     for (const key of [
       'mapRotation',

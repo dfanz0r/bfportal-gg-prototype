@@ -12,13 +12,23 @@ import { allow } from '../server/rate-limit'
  */
 const SIGN_INS_PER_MINUTE = 10
 
+/**
+ * The same for every request with no address, together: the header is missing
+ * when something other than the expected proxy is in front, and that is not a
+ * way around the limit.
+ */
+const SIGN_INS_PER_MINUTE_UNKNOWN = 60
+
 export const Route = createFileRoute('/login')({
   server: {
     handlers: {
       // Straight to Discord: there is no login page.
       GET: async ({ request }) => {
         const ip = clientIp(request)
-        if (ip && !allow(`login:${ip}`, SIGN_INS_PER_MINUTE, 60 * 1000)) {
+        const allowed = ip
+          ? allow(`login:${ip}`, SIGN_INS_PER_MINUTE, 60 * 1000)
+          : allow('login:unknown', SIGN_INS_PER_MINUTE_UNKNOWN, 60 * 1000)
+        if (!allowed) {
           return new Response(
             'Too many sign-in attempts from here. Try again in a minute.',
             { status: 429, headers: { 'Retry-After': '60' } },

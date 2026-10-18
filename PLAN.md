@@ -243,10 +243,10 @@ listing, the old address redirects.
 | `/category/<name>/` | Old category listing; `_` stands for a space. Redirects to `/library/` with that category selected |
 | `/submit/` | Submit form for an experience (login required). The game is the first question; `?draft=true` draws a refused form again |
 | `/submit/snippet/` | New. Submit form for a snippet, Battlefield 6 only (login required). `?draft=true` draws a refused form again |
-| `/submissions/` | New. The signed-in visitor's own experiences and snippets, with the state of each. Not built |
+| `/submissions/` | New. The signed-in visitor's own experiences and snippets, with the state of each. Built 2026-10-16; see "Submission states" |
 | `/users/<discord_id>/`, `…/experiences/`, `…/liked/` | Profile and its two lists |
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
-| `/snippets/`, `/snippets/<slug>/` | BF6 snippets section, renamed from Scripts 2026-10-17. The old `/scripts/` and `/scripts/<slug>/` redirect with a 301 |
+| `/snippets/`, `/snippets/<slug>/`, `/snippets/<slug>/edit/` | BF6 snippets section, renamed from Scripts 2026-10-17. The old `/scripts/` and `/scripts/<slug>/` redirect with a 301. The edit form is its owner's, from 2026-10-18 |
 | `/updates/` | New. Recent update posts across the site, with filters; `/updates/feed.xml` is the Atom feed |
 | `/experiences/<slug>/updates/<id>/` | New. One update post; the experience page lists them |
 | `/events/` | New. Upcoming and past events |
@@ -1846,7 +1846,11 @@ The same shape as today, so nothing about hosting has to change at once:
   defaults to the sign-in address. One module validates them, and the server refuses
   to start if any is missing. `CLIENT_IP_HEADER` names the header the proxy in front
   sets to the visitor's address: `cf-connecting-ip` behind Cloudflare, set in
-  `compose.prod.yml`. Better Auth and the per-address limits read only that one.
+  `compose.prod.yml`. Better Auth and the per-address limits read only that one. In
+  production it must be set, changed 2026-10-18; requests that arrive without it
+  share one sign-in limit rather than skipping it.
+- Every response says no other site may frame it (`frame-ancestors 'self'` and
+  `X-Frame-Options: SAMEORIGIN`), from `src/start.ts`, added 2026-10-18.
 - Added 2026-10-17, after a review: starting a sign-in is limited to 10 a minute per
   address. A request body over 32 MB is refused before it is read, and so is a body
   with no `Content-Length`, which browsers and Cloudflare always send.
@@ -2326,24 +2330,27 @@ was settled first, so the screens are built against seed data and the import fol
       "Your submissions" opens, so the rest hangs from it. For something published
       it makes a revision; for anything else it changes the row. It needs mocking up
       first: only the submit form stands in for it. Built for drafts 2026-10-16, as
-      the submit form at `/experiences/<slug>/edit`; something in review, sent back
-      or live cannot be opened there yet.
+      the submit form at `/experiences/<slug>/edit`; for something sent back, in
+      review or live 2026-10-17; and for snippets, at `/snippets/<slug>/edit`, on
+      2026-10-18. See "Submission states". Still not mocked up.
    2. **Drafts.** Save without submitting, as `draft`; submit a draft. The submit
       form gets a second button. Built for experiences 2026-10-16.
    3. **Fix and resubmit.** The edit page for something with changes requested shows
       the notes at their fields and sends it back to `pending`. The same for an edit
-      that was sent back, from its revision. Built for an experience 2026-10-17, with
-      the note at the top rather than at its fields; not yet for an edit or a
-      snippet.
+      that was sent back, from its revision. Built for an experience and an edit to
+      one 2026-10-17, and for a snippet and an edit to one 2026-10-18, with the note
+      at the top rather than at its fields.
    4. **"Your submissions"** at `/submissions/`: the list, its three columns and the
       one button. Linked from the profile, the submit forms and the header menu.
-      Built 2026-10-16, linked from the header menu and the experience form; not
-      yet from the profile or the snippet form, and without its filters.
+      Built 2026-10-16, linked from the header menu, the experience form and, when
+      it edits one, the snippet form; not yet from the profile or a new snippet's
+      form, and without its filters.
    5. **Submitting a snippet** at `/submit/snippet/`, with "what are you sharing?"
       added to the experience form, and `snippets` on the games registry. Built
-      2026-10-13, ahead of 1 to 4, so a snippet can be sent in and reviewed but not
-      yet saved as a draft, edited or sent again. The size limit is still a
-      placeholder and the production categories are still to be read.
+      2026-10-13, ahead of 1 to 4. Since 2026-10-18 one can be changed and sent
+      again in review, after changes are requested, and when live, as an edit; it
+      still cannot be saved as a draft. The size limit is still a placeholder and
+      the production categories are still to be read.
    6. **Playtests:** starting one for a draft, the "Playtest" button that copies a
       live experience, completing one, and discarding a copy. Depends on the
       playtest screens, which are read-only so far.
@@ -2365,8 +2372,10 @@ was settled first, so the screens are built against seed data and the import fol
 
    These screens are drawn in the browser (`ssr: 'data-only'`), with the guard and
    the data on the server. The list of familiar picture hosts is a constant in
-   `src/server/services/moderation.ts` until settings exist. Not yet: the queue's
-   other kinds (edits, update posts, playtests, flag clears), the featured and
+   `src/server/services/moderation.ts` until settings exist. Edits to live
+   experiences and snippets are in the queue, decided at `/admin/edits/<id>`, since
+   2026-10-17 and 2026-10-18. Not yet: the queue's other kinds (update posts,
+   playtests, flag clears), the featured and
    trending switches, the Discord announcement on approval, a count beside the
    header's Review link, and a record of decisions.
 

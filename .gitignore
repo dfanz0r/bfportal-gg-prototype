@@ -3,7 +3,11 @@ node_modules
 dist
 dist-ssr
 *.local
+# Real configuration, whatever it is named. Only the examples are kept.
 .env
+.env.*
+!.env.example
+!.env.production.example
 .nitro
 .tanstack
 .wrangler
