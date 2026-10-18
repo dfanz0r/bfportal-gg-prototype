@@ -1,7 +1,12 @@
 import { useNavigate } from '@tanstack/solid-router'
 import { createEffect, createSignal, For, Show } from 'solid-js'
 
-import { MAX_NOTE, NOTE_NEEDED } from '../shared/decision'
+import {
+  CHANGED_SINCE_OPENED,
+  type DecisionProblem,
+  MAX_NOTE,
+  NOTE_NEEDED,
+} from '../shared/decision'
 import type { Refusal } from '../shared/results'
 import { FieldError } from './field-error'
 import { Icon } from './icon'
@@ -9,7 +14,12 @@ import { buttonAccent, buttonGhost, field, label, panel } from './ui'
 
 /** A server function that decides on one kind of submission. */
 type Decide = ((input: {
-  data: { id: number; approve: boolean; note: string }
+  data: {
+    id: number
+    approve: boolean
+    note: string
+    version: number | undefined
+  }
 }) => Promise<{ ok: true } | Refusal>) & { url: string }
 
 /**
@@ -21,9 +31,14 @@ type Decide = ((input: {
 export function DecisionForm(props: {
   decide: Decide
   id: number
+  /**
+   * The version of it the page shows, for what its owner can change while it
+   * waits. A decision on a version that has moved on is refused.
+   */
+  version?: number
   /** The page the decision is made on, to come back to if it is refused. */
   back: string
-  problem?: 'note'
+  problem?: DecisionProblem
   note?: string
   /** Notes written often, to start one from. */
   quickNotes?: readonly string[]
@@ -36,7 +51,13 @@ export function DecisionForm(props: {
   // What a refused decision posted with no script brought back.
   createEffect(() => {
     setNote(props.note ?? '')
-    setError(props.problem ? NOTE_NEEDED : undefined)
+    setError(
+      props.problem === 'changed'
+        ? CHANGED_SINCE_OPENED
+        : props.problem
+          ? NOTE_NEEDED
+          : undefined,
+    )
   })
   const [sending, setSending] = createSignal(false)
 
@@ -48,7 +69,12 @@ export function DecisionForm(props: {
     let result: Awaited<ReturnType<Decide>>
     try {
       result = await props.decide({
-        data: { id: props.id, approve: button?.value === 'true', note: note() },
+        data: {
+          id: props.id,
+          approve: button?.value === 'true',
+          note: note(),
+          version: props.version,
+        },
       })
     } catch {
       // No answer came back, which does not say the request never arrived.
@@ -71,7 +97,11 @@ export function DecisionForm(props: {
     if (result.reason === 'signed-out') {
       window.location.assign('/login')
     } else if (result.reason === 'invalid') {
-      setError(result.errors?.note ?? 'That could not be decided.')
+      setError(
+        result.errors?.note ??
+          result.errors?.form ??
+          'That could not be decided.',
+      )
     } else if (result.reason === 'forbidden') {
       setError('Your account may no longer decide submissions.')
     } else {
@@ -90,6 +120,9 @@ export function DecisionForm(props: {
     >
       <h2 class={label}>Decision</h2>
       <input type="hidden" name="id" value={props.id} />
+      <Show when={props.version}>
+        {(version) => <input type="hidden" name="version" value={version()} />}
+      </Show>
       <input type="hidden" name="back" value={props.back} />
       <label for="note" class="text-sm font-semibold">
         Note to the creator

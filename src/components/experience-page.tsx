@@ -10,6 +10,7 @@ import { ExperienceCard } from './experience-card'
 import { ExperienceManage } from './experience-manage'
 import { ExperienceSide } from './experience-side'
 import { Gallery } from './gallery'
+import { Icon } from './icon'
 import { LibraryLink } from './library-link'
 import { LikeButton } from './like-button'
 import { PersonLink } from './person-link'
@@ -139,6 +140,15 @@ export function ExperiencePage(props: { data: Experience }) {
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <Show when={data().viewer.canEdit}>
+                <a
+                  href={`/experiences/${data().slug}/edit`}
+                  class={`${buttonGhost} h-[38px] px-3.5`}
+                >
+                  <Icon name="pencil" class="size-4" />
+                  Edit
+                </a>
+              </Show>
               {/* Nothing can be liked or reported until it is published; the
                   server refuses both. */}
               <Show when={data().status === 'published'}>
@@ -170,12 +180,17 @@ export function ExperiencePage(props: { data: Experience }) {
           status={data().status}
           note={data().reviewNote}
           edit={
-            data().viewer.isOwner &&
-            (data().status === 'draft' || data().status === 'changes_requested')
+            data().viewer.canEdit
               ? `/experiences/${data().slug}/edit`
               : undefined
           }
         />
+        <Show when={data().viewer.editWaiting}>
+          <p class="mb-6 border-l-2 border-steel bg-steel/8 px-4 py-3 text-sm text-fg-2">
+            <b class="font-semibold text-fg">Your changes are waiting.</b> This
+            page stays as it is until a moderator approves them.
+          </p>
+        </Show>
         <Show when={data().unavailable || data().bugged || data().xpFarm}>
           <div class="mb-6 grid gap-1 border-l-2 border-warn bg-warn/8 px-4 py-3 text-sm text-fg-2">
             <Show when={data().unavailable}>
@@ -287,7 +302,6 @@ export function ExperiencePage(props: { data: Experience }) {
                     slug={data().slug}
                     isTemplate={data().isTemplate}
                     published={data().status === 'published'}
-                    inReview={data().status === 'pending'}
                     request={data().viewer.templateRequest}
                   />
                 </Show>

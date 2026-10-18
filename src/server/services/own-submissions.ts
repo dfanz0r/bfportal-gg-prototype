@@ -5,6 +5,7 @@ import { refuse } from '../../shared/results'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { experiences, revisions, snippets } from '../db/schema'
+import { EDITABLE } from './experience-drafts'
 import { MAX_WAITING } from './submission-limits'
 
 // "Your submissions": everything someone has made here and the state of each,
@@ -181,12 +182,11 @@ export async function listOwnSubmissions(actor: Actor | null) {
         game: item.game,
         title: item.title,
         href: `/experiences/${item.slug}`,
-        // A draft, and one a moderator sent back, are edited in the form.
-        // Editing what is live is not built yet.
-        editHref:
-          item.status === 'draft' || item.status === 'changes_requested'
-            ? `/experiences/${item.slug}/edit`
-            : null,
+        // Edited in the form: a draft, one sent back, one in review, which
+        // is then reviewed again, and one that is live, by an edit.
+        editHref: EDITABLE.some((status) => status === item.status)
+          ? `/experiences/${item.slug}/edit`
+          : null,
         image: item.coverImgUrl,
         listing: LISTINGS[item.status],
         request: edit ? 'Edit' : reviewOf(item.status) ? 'Submission' : null,

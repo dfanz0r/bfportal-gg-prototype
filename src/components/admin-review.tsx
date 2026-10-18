@@ -213,6 +213,7 @@ export function AdminReview(props: {
           <DecisionForm
             decide={decide}
             id={submission().id}
+            version={submission().version}
             back={`/admin/review/${submission().id}`}
             problem={props.decision.problem}
             note={props.decision.note}

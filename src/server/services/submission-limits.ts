@@ -5,6 +5,7 @@ import { isStaff } from '../../shared/roles'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { experiences, snippets } from '../db/schema'
+import { allow } from '../rate-limit'
 import type { Executor } from './shared'
 
 // How much one account may send in for a moderator to look at. Experiences
@@ -17,6 +18,23 @@ export const MAX_WAITING = 5
 export const MAX_PER_DAY = 10
 
 const DAY = 24 * 60 * 60 * 1000
+
+/**
+ * How many times one account may send changes in an hour: to one waiting
+ * for review, or to something live. Each asks Portal about its code again,
+ * which is someone else's service, so it is counted in memory as other calls
+ * to it are.
+ */
+export const RESENDS_PER_HOUR = 20
+
+/** Refused when an account has sent changes too often, or null. */
+export function resendLimit(actor: Actor): Refusal | null {
+  return allow(`resend:${actor.id}`, RESENDS_PER_HOUR, 60 * 60 * 1000)
+    ? null
+    : refuse('invalid', {
+        form: `You can send changes ${RESENDS_PER_HOUR} times an hour. Try again later.`,
+      })
+}
 
 /**
  * Why whoever is acting may not send in another submission just now, or null
@@ -68,12 +86,14 @@ export async function submissionLimit(
  * Writes a submission for whoever is acting, if they may send one now: the
  * count and the write are one transaction. Two from one account at once, of
  * either kind, go one after the other, so both cannot take the same last
- * place.
+ * place. With `counted: false`, for one already waiting that is sent again,
+ * it is written under the same lock and not counted.
  */
 export async function withinLimit<T>(
   actor: Actor,
   now: Date,
   write: (tx: Executor) => Promise<T>,
+  options: { counted?: boolean } = {},
 ): Promise<T | Refusal> {
   return db.transaction(async (tx) => {
     // Held until the transaction ends. The account's next submission waits
@@ -81,6 +101,8 @@ export async function withinLimit<T>(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`submission:${actor.id}`}, 0))`,
     )
-    return (await submissionLimit(actor, now, tx)) ?? write(tx)
+    const limited =
+      options.counted === false ? null : await submissionLimit(actor, now, tx)
+    return limited ?? write(tx)
   })
 }

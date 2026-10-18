@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, or } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm'
 
 import { type Game, games } from '../../shared/content'
 import { defaultGame, normalizeCode, parsePortalLink } from '../../shared/games'
@@ -19,7 +19,9 @@ import {
 import { lookupExperience } from '../integrations/gametools'
 import { allow } from '../rate-limit'
 import { type Draft, readDraft } from './drafts'
-import { ownEditable } from './experience-drafts'
+import type { PreparedExperience } from './edit-payload'
+import { type Editable, isLive, ownEditable } from './experience-drafts'
+import { lastSentEdit } from './experience-edits'
 import { heldFilesFor, heldIdsIn } from './held-files'
 import { ownSubmissionTally } from './own-submissions'
 import { peopleByDiscordId } from './people'
@@ -58,10 +60,11 @@ export async function getSubmitPage(
 }
 
 /**
- * The form for one of theirs to go on with: a draft, or one a moderator sent
- * back. As it was last saved, or as it was last sent and refused when
- * `search.draft` says so, or else as it was submitted. `not-found` for one
- * that is not theirs, or not theirs to edit now.
+ * The form for one of theirs to go on with: a draft, one a moderator sent
+ * back, one waiting for review, or one that is live. As it was last sent and
+ * refused when `search.draft` says so, or as it was last saved, or else as
+ * it was last sent: for something live, its waiting or sent-back edit, and
+ * otherwise its row. `not-found` for one that is not theirs.
  */
 export async function getDraftEditPage(
   actor: Actor | null,
@@ -72,15 +75,73 @@ export async function getDraftEditPage(
   if (!actor) return { state: 'login' as const }
   const saved = await ownEditable(actor, slug)
   if (!saved) return { state: 'not-found' as const }
+  const sentEdit = isLive(saved.status) ? await lastSentEdit(saved.id) : null
   const kept = search.draft ? await readDraft(actor, 'experience') : null
   const draft =
     kept?.fields.editing === slug
       ? kept
-      : (saved.draftForm ?? { fields: await formFromRow(saved), errors: {} })
-  return pageFor(actor, search, draft, saved, options)
+      : (saved.draftForm ?? {
+          fields: sentEdit
+            ? await formFromPrepared(saved, sentEdit.form)
+            : await formFromRow(saved),
+          errors: {},
+        })
+  return pageFor(actor, search, draft, saved, options, sentEdit)
 }
 
-type Editable = NonNullable<Awaited<ReturnType<typeof ownEditable>>>
+/**
+ * The form as an edit sent from it says it was filled in. What was checked
+ * is stored by id; the form names things as it offers them.
+ */
+async function formFromPrepared(saved: Editable, form: PreparedExperience) {
+  const chosen = form.tagged
+    .filter((tag) => tag.source === 'creator')
+    .map((tag) => tag.tagId)
+  const [[category], tagRows, accounts] = await Promise.all([
+    db
+      .select({ slug: categories.slug })
+      .from(categories)
+      .where(eq(categories.id, form.values.categoryId)),
+    chosen.length > 0
+      ? db
+          .select({ id: tags.id, slug: tags.slug })
+          .from(tags)
+          .where(inArray(tags.id, chosen))
+      : [],
+    form.credited.length > 0
+      ? db
+          .select({ id: user.id, discordId: user.discordId })
+          .from(user)
+          .where(inArray(user.id, form.credited))
+      : [],
+  ])
+  const { values } = form
+  const fields: Record<string, string | string[]> = {
+    game: saved.game,
+    title: values.title,
+    description: values.descriptionMd,
+    category: category?.slug ?? saved.category,
+    code: values.code ?? '',
+    coverImgUrl: values.coverImgUrl ?? '',
+    repoUrl: values.repoUrl ?? '',
+    filesUrl: values.filesUrl ?? '',
+    built: values.types,
+    tags: chosen.flatMap(
+      (id) => tagRows.find((row) => row.id === id)?.slug ?? [],
+    ),
+    media: form.media,
+    credits: form.credits,
+    creditAccounts: form.credited.flatMap(
+      (id) => accounts.find((row) => row.id === id)?.discordId ?? [],
+    ),
+    files: form.files,
+    teamPlayers: values.teamSetup.map((team) => String(team.players)),
+    teamBots: values.teamSetup.map((team) => String(team.bots)),
+  }
+  if (saved.isTemplate) fields.isTemplate = 'true'
+  if (values.copyAllowed) fields.copyAllowed = 'true'
+  return fields
+}
 
 /**
  * The form as its row says it was filled in: for one sent back, everything
@@ -147,6 +208,7 @@ async function pageFor(
   draft: Draft | null,
   editing: Editable | null,
   options: { lookup?: typeof lookupExperience },
+  sentEdit: Awaited<ReturnType<typeof lastSentEdit>> = null,
 ) {
   // A kept form says what it was for, where the address does not.
   const kept = (name: string) => {
@@ -229,12 +291,23 @@ async function pageFor(
     editing: editing && {
       slug: editing.slug,
       title: editing.title,
-      savedAt: editing.updatedAt,
+      // When its form was last saved: for a draft or one sent back, its
+      // row; for one already sent, only when a form is kept.
+      savedAt:
+        editing.status === 'draft' ||
+        editing.status === 'changes_requested' ||
+        editing.draftForm
+          ? editing.updatedAt
+          : null,
       status: editing.status,
-      // What a moderator wrote when sending it back. Who wrote it is not
-      // passed on.
+      // What a moderator wrote when sending it, or its last edit, back. Who
+      // wrote it is not passed on.
       reviewNote:
-        editing.status === 'changes_requested' ? editing.reviewNote : null,
+        editing.status === 'changes_requested'
+          ? editing.reviewNote
+          : (sentEdit?.note ?? null),
+      // For something live: whether an edit sent from here is waiting.
+      editWaiting: sentEdit?.waiting === true,
       // The export and files it was submitted with, which stay unless new
       // ones are chosen.
       submittedFiles: editing

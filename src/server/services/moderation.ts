@@ -1,6 +1,6 @@
 import { and, asc, count, eq, isNull, ne, notInArray, sql } from 'drizzle-orm'
 
-import { NOTE_NEEDED } from '../../shared/decision'
+import { CHANGED_SINCE_OPENED, NOTE_NEEDED } from '../../shared/decision'
 import { shownMedia } from '../../shared/media'
 import { type Refusal, refuse } from '../../shared/results'
 import { isStaff } from '../../shared/roles'
@@ -18,11 +18,9 @@ import {
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
-import {
-  type EditPayload,
-  editPayloadSchema,
-  lockEdits,
-} from './template-offers'
+import { type EditPayload, editPayloadSchema } from './edit-payload'
+import { applyEdit, describeEdit, type EditChange } from './experience-edits'
+import { lockEdits } from './template-offers'
 
 // What the moderators do: look at what is waiting, and decide. Every function
 // here refuses anyone who is not a moderator or an admin.
@@ -149,18 +147,22 @@ export async function listQueue(actor: Actor | null) {
 
 /** What a pending edit asks for, a few words each, for the queue. */
 function changesIn(payload: EditPayload) {
-  return payload.isTemplate === undefined
-    ? []
-    : [
-        payload.isTemplate
-          ? 'Offer its files as a template'
-          : 'Stop offering its files as a template',
-      ]
+  return [
+    ...(payload.form ? ['Changes to its page'] : []),
+    ...(payload.isTemplate === undefined
+      ? []
+      : [
+          payload.isTemplate
+            ? 'Offer its files as a template'
+            : 'Stop offering its files as a template',
+        ]),
+  ]
 }
 
-/** The name each field an edit can change goes by. */
+/** What each part of an edit's payload is called. */
 const EDIT_FIELDS: Record<keyof EditPayload, string> = {
   isTemplate: 'Template',
+  form: 'Its page',
 }
 
 /**
@@ -187,6 +189,7 @@ export async function getEditReview(actor: Actor | null, id: number) {
   const [found] = await db
     .select({
       id: revisions.id,
+      version: revisions.version,
       payload: revisions.payload,
       submittedAt: revisions.submittedAt,
       experience: {
@@ -220,28 +223,34 @@ export async function getEditReview(actor: Actor | null, id: number) {
     .orderBy(asc(projectFiles.id))
   const yesNo = (value: boolean) => (value ? 'Yes' : 'No')
   const offered = files.length === 1 ? 'its file' : `its ${files.length} files`
+  const described = await describeEdit(found.experience.id, payload)
+  const template: EditChange[] =
+    payload.isTemplate === undefined ||
+    payload.isTemplate === found.experience.isTemplate
+      ? []
+      : [
+          {
+            field: EDIT_FIELDS.isTemplate,
+            live: yesNo(found.experience.isTemplate),
+            proposed: yesNo(payload.isTemplate),
+            effect: payload.isTemplate
+              ? `Once approved, anyone can download ${offered}${found.experience.filesUrl ? ' and open the link to its larger files' : ''}.`
+              : 'Once approved, only its owner and the moderators can download its files.',
+          },
+        ]
   return {
     ok: true as const,
     edit: {
       id: found.id,
+      // Which version this screen shows. The decision says it back.
+      version: found.version,
       submittedAt: found.submittedAt,
       submitter: found.submitter,
       experience: found.experience,
       // Each change as its field, what is live, what is asked for, and what
-      // approving it does.
-      changes:
-        payload.isTemplate === undefined
-          ? []
-          : [
-              {
-                field: EDIT_FIELDS.isTemplate,
-                live: yesNo(found.experience.isTemplate),
-                proposed: yesNo(payload.isTemplate),
-                effect: payload.isTemplate
-                  ? `Once approved, anyone can download ${offered}${found.experience.filesUrl ? ' and open the link to its larger files' : ''}.`
-                  : 'Once approved, only its owner and the moderators can download its files.',
-              },
-            ],
+      // approving it does. Then what it leaves as it is.
+      changes: [...described.changes, ...template],
+      unchanged: described.unchanged,
       // Whether approving makes its files public, which the files below say.
       offersFiles: payload.isTemplate === true,
       files,
@@ -257,7 +266,7 @@ export async function getEditReview(actor: Actor | null, id: number) {
 export async function decideEdit(
   actor: Actor | null,
   id: number,
-  decision: { approve: boolean; note?: string },
+  decision: { approve: boolean; note?: string; version: number },
   now = new Date(),
 ): Promise<
   { ok: true; slug: string; status: 'approved' | 'changes_requested' } | Refusal
@@ -276,17 +285,17 @@ export async function decideEdit(
       .where(eq(revisions.id, id))
     if (!asked) return refuse('not-found')
     // The experience before the revision, as its owner changing the same
-    // edit takes them.
+    // edit takes them. Its owner sending it again waits until this is done,
+    // or has finished, and then its version says so.
     await lockEdits(tx, asked.experienceId)
-    // The condition is in the update, so two moderators cannot both decide.
-    const [decided] = await tx
-      .update(revisions)
-      .set({
-        status,
-        reviewedBy: actor.id,
-        reviewedAt: now,
-        reviewNote: note || null,
+    const [current] = await tx
+      .select({
+        experienceId: revisions.experienceId,
+        payload: revisions.payload,
+        version: revisions.version,
+        submittedBy: revisions.submittedBy,
       })
+      .from(revisions)
       .where(
         and(
           eq(revisions.id, id),
@@ -295,23 +304,35 @@ export async function decideEdit(
           appliable,
         ),
       )
-      .returning({
-        experienceId: revisions.experienceId,
-        payload: revisions.payload,
-      })
-    if (!decided) return refuse('not-found')
-    // Only the fields an edit may change, as the schema reads them.
-    const payload = editPayloadSchema.catch({}).parse(decided.payload)
-    if (decision.approve && Object.keys(payload).length > 0) {
-      await tx
-        .update(experiences)
-        .set(payload)
-        .where(eq(experiences.id, decided.experienceId))
+    // Decided already, or never there.
+    if (!current) return refuse('not-found')
+    if (current.version !== decision.version) {
+      return refuse('invalid', { form: CHANGED_SINCE_OPENED })
     }
+    if (decision.approve) {
+      // Only what an edit may change, as the schema reads it.
+      const applied = await applyEdit(
+        tx,
+        current.experienceId,
+        current.submittedBy,
+        editPayloadSchema.catch({}).parse(current.payload),
+        now,
+      )
+      if (!applied.ok) return applied
+    }
+    await tx
+      .update(revisions)
+      .set({
+        status,
+        reviewedBy: actor.id,
+        reviewedAt: now,
+        reviewNote: note || null,
+      })
+      .where(eq(revisions.id, id))
     const [experience] = await tx
       .select({ slug: experiences.slug })
       .from(experiences)
-      .where(eq(experiences.id, decided.experienceId))
+      .where(eq(experiences.id, current.experienceId))
     return { ok: true as const, slug: experience.slug, status }
   })
 }
@@ -465,6 +486,8 @@ export async function getSubmissionReview(
     ok: true as const,
     submission: {
       id: experience.id,
+      // Which version this screen shows. The decision says it back.
+      version: experience.version,
       slug: experience.slug,
       game: experience.game,
       title: experience.title,
@@ -533,7 +556,7 @@ export async function getSubmissionReview(
 export async function decideSubmission(
   actor: Actor | null,
   id: number,
-  decision: { approve: boolean; note?: string },
+  decision: { approve: boolean; note?: string; version: number },
   now = new Date(),
 ): Promise<
   | { ok: true; slug: string; status: 'published' | 'changes_requested' }
@@ -547,8 +570,9 @@ export async function decideSubmission(
   }
 
   const status = decision.approve ? 'published' : 'changes_requested'
-  // The condition is in the update itself, so two moderators deciding at
-  // once cannot both succeed.
+  // The conditions are in the update itself, so two moderators deciding at
+  // once cannot both succeed, and a version its owner has replaced since the
+  // moderator was shown it is not what gets decided.
   const [decided] = await db
     .update(experiences)
     .set({
@@ -560,9 +584,21 @@ export async function decideSubmission(
         ? { firstPublishedAt: now, lastPublishedAt: now }
         : {}),
     })
-    .where(and(eq(experiences.id, id), waiting))
+    .where(
+      and(
+        eq(experiences.id, id),
+        waiting,
+        eq(experiences.version, decision.version),
+      ),
+    )
     .returning({ slug: experiences.slug })
-  return decided
-    ? { ok: true, slug: decided.slug, status }
+  if (decided) return { ok: true, slug: decided.slug, status }
+  const [still] = await db
+    .select({ id: experiences.id })
+    .from(experiences)
+    .where(and(eq(experiences.id, id), waiting))
+    .limit(1)
+  return still
+    ? refuse('invalid', { form: CHANGED_SINCE_OPENED })
     : refuse('not-found')
 }

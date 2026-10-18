@@ -38,6 +38,14 @@ const decisionSchema = z.object({
 })
 
 /**
+ * The same, for what its owner can change while it waits: with the version
+ * the moderator was shown, which the decision must still be about.
+ */
+const versionedDecisionSchema = decisionSchema.extend({
+  version: z.coerce.number().int().positive(),
+})
+
+/**
  * Where a decision posted with no script goes. Decided: the queue. Refused
  * for its note: back to the page it was made on, `back`, with what was wrong
  * and the note as written, for the page to say so and fill it in again.
@@ -50,14 +58,16 @@ function decisionAnswer(
   if (result.ok) return redirectTo('/admin')
   if (result.reason === 'signed-out') return redirectTo('/login')
   if (result.reason !== 'invalid') return redirectTo('/admin')
-  const search = new URLSearchParams({ problem: 'note' })
+  const search = new URLSearchParams({
+    problem: result.errors?.note ? 'note' : 'changed',
+  })
   if (note) search.set('note', note)
   return redirectTo(`${back.split('?')[0]}?${search}`)
 }
 
 /** Approves a waiting submission, or sends it back with changes requested. */
 export const decide = createServerFn({ method: 'POST' })
-  .validator(formOr(decisionSchema))
+  .validator(formOr(versionedDecisionSchema))
   .handler(async ({ data }) => {
     assertFromThisSite()
     const { input } = data
@@ -88,7 +98,7 @@ export const fetchEditReview = createServerFn({ method: 'GET' })
 
 /** Approves a pending edit, or sends it back with changes requested. */
 export const decideOnEdit = createServerFn({ method: 'POST' })
-  .validator(formOr(decisionSchema))
+  .validator(formOr(versionedDecisionSchema))
   .handler(async ({ data }) => {
     assertFromThisSite()
     const { input } = data

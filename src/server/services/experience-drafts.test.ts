@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
 import { portalExport } from '../../../tests/portal-export'
+import { CHANGED_SINCE_OPENED } from '../../shared/decision'
 import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
 import { experiences, heldFiles, projectFiles } from '../db/schema'
@@ -205,14 +206,95 @@ describe('drafts', () => {
     expect(
       await db.select().from(heldFiles).where(eq(heldFiles.experienceId, id)),
     ).toEqual([])
-    // It is not a draft any more, to save or to submit as one.
+
+    // In review, saving keeps the form and leaves what was sent, which is
+    // what the moderator is looking at.
+    const sent = async () =>
+      (
+        await db
+          .select({
+            title: experiences.title,
+            descriptionMd: experiences.descriptionMd,
+            submittedAt: experiences.submittedAt,
+            version: experiences.version,
+          })
+          .from(experiences)
+          .where(eq(experiences.id, id))
+      )[0]
+    const before = await sent()
+    expect(
+      await saveExperienceDraft(
+        owner,
+        form({ editing: 'with-files', title: 'Saved Only' }),
+        later,
+      ),
+    ).toEqual({ ok: true, slug: 'with-files' })
+    expect(await sent()).toEqual(before)
+    expect(await row('with-files')).toMatchObject({
+      status: 'pending',
+      draftForm: { fields: { title: 'Saved Only' } },
+    })
+
+    // Sent again: the new version takes the old one's place in the queue,
+    // with the files it had.
     expect(
       await submitExperience(
         owner,
-        form({ editing: 'with-files', teamPlayers: ['16', '16'] }),
-        { ...nobody, now: later },
+        form({
+          editing: 'with-files',
+          title: 'With Files',
+          description: 'Now with rules.',
+          isTemplate: 'true',
+          teamPlayers: ['16', '16'],
+        }),
+        { ...nobody, now: new Date(later.getTime() + 60_000) },
       ),
-    ).toEqual({ ok: false, reason: 'not-found' })
+    ).toEqual({ ok: true, slug: 'with-files' })
+    const after = await sent()
+    expect(after).toEqual({
+      title: 'With Files',
+      descriptionMd: 'Now with rules.',
+      submittedAt: before.submittedAt,
+      version: before.version + 1,
+    })
+    expect(await row('with-files')).toMatchObject({
+      status: 'pending',
+      draftForm: null,
+    })
+    expect(
+      await db
+        .select({ kind: projectFiles.kind })
+        .from(projectFiles)
+        .where(
+          and(
+            eq(projectFiles.experienceId, id),
+            eq(projectFiles.kind, 'export'),
+          ),
+        ),
+    ).toHaveLength(1)
+
+    // A moderator who opened the version before cannot decide on it.
+    expect(
+      await decideSubmission(
+        moderator,
+        id,
+        { approve: true, version: before.version },
+        later,
+      ),
+    ).toEqual({
+      ok: false,
+      reason: 'invalid',
+      errors: { form: CHANGED_SINCE_OPENED },
+    })
+    expect(await row('with-files')).toMatchObject({ status: 'pending' })
+    expect(
+      await decideSubmission(
+        moderator,
+        id,
+        { approve: true, version: after.version },
+        later,
+      ),
+    ).toMatchObject({ ok: true, status: 'published' })
   })
 
   it(`keeps up to ${MAX_DRAFTS} drafts an account`, async () => {
@@ -358,7 +440,7 @@ describe('drafts', () => {
     const decided = await decideSubmission(
       moderator,
       id,
-      { approve: false, note: 'Say how a round is won.' },
+      { approve: false, note: 'Say how a round is won.', version: 1 },
       NOW,
     )
     expect(decided.ok).toBe(true)
@@ -433,9 +515,16 @@ describe('drafts', () => {
           ),
         ),
     ).toHaveLength(1)
-    // In review now, so not opened in the form until it is decided.
-    expect((await getDraftEditPage(owner, 'sent-back', {}, nobody)).state).toBe(
-      'not-found',
+    // In review now, and opened in the form as it was sent, to change and
+    // send again.
+    const reopened = await getDraftEditPage(owner, 'sent-back', {}, nobody)
+    if (reopened.state !== 'ok') throw new Error('expected the edit page')
+    expect(reopened.editing).toMatchObject({
+      status: 'pending',
+      reviewNote: null,
+    })
+    expect(reopened.draft?.fields.description).toBe(
+      'First to three captures wins the round.',
     )
   })
 
@@ -468,7 +557,8 @@ describe('drafts', () => {
       listing: 'Draft',
       request: 'Submission',
       review: 'In review',
-      editHref: null,
+      // Changed and sent again from the form while it waits.
+      editHref: '/experiences/listed-template/edit',
       happened: {
         what: 'submitted',
         place: { at: expect.any(Number), of: expect.any(Number) },

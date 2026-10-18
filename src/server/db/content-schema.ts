@@ -369,6 +369,10 @@ export const experiences = pgTable(
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
     reviewFieldNotes: reviewFieldNotes(),
+    // How many times its owner has sent it in. A moderator's decision says
+    // which version they were shown, and is refused if it has moved since,
+    // so nothing unseen is approved.
+    version: integer('version').notNull().default(1),
     // Set on the copy made to playtest something that is already live: the
     // experience it was copied from. A playtest never runs on the live row.
     copiedFromId: integer('copied_from_id').references(
@@ -381,10 +385,11 @@ export const experiences = pgTable(
     metaDescription: text('meta_description'),
     metaImage: text('meta_image'),
     includeInSitemap: boolean('include_in_sitemap').notNull().default(true),
-    // While it is a draft: its form as its owner last saved it, every field as
-    // typed, so the form opens as it was left. Its title, description and
-    // cover are copied into their columns as well, for its page. Submitting
-    // checks the whole form and clears this.
+    // Its form as its owner last saved or sent it, every field as typed, so
+    // the form opens as it was left. For a draft, its title, description and
+    // cover are copied into their columns as well, for its page. For one in
+    // review or live, only this changes until it is sent: what a moderator
+    // reviews is the row, or the pending edit. Submitting a draft clears it.
     draftForm: jsonb('draft_form').$type<{
       fields: Record<string, string | string[]>
       errors: Record<string, string>
@@ -563,6 +568,9 @@ export const revisions = pgTable(
     reviewedAt: timestamptz('reviewed_at'),
     reviewNote: text('review_note'),
     reviewFieldNotes: reviewFieldNotes(),
+    // How many times its owner has changed it while it waited, as on an
+    // experience: a decision on another version is refused.
+    version: integer('version').notNull().default(1),
   },
   (table) => [
     // An experience has at most one pending revision. A second edit replaces

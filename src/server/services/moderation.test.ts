@@ -72,9 +72,9 @@ describe('moderation', () => {
       const refused = { ok: false, reason }
       expect(await listQueue(actor)).toEqual(refused)
       expect(await getSubmissionReview(actor, id, unavailable)).toEqual(refused)
-      expect(await decideSubmission(actor, id, { approve: true })).toEqual(
-        refused,
-      )
+      expect(
+        await decideSubmission(actor, id, { approve: true, version: 1 }),
+      ).toEqual(refused)
     }
     // Still waiting: nobody above could decide it.
     expect(await getExperience('bridge-parkour-trials', NOW)).toBeNull()
@@ -195,7 +195,7 @@ describe('moderation', () => {
     const id = await submit('Approve me')
 
     expect(
-      await decideSubmission(moderator, id, { approve: true }, NOW),
+      await decideSubmission(moderator, id, { approve: true, version: 1 }, NOW),
     ).toEqual({
       ok: true,
       slug: 'approve-me',
@@ -211,6 +211,7 @@ describe('moderation', () => {
       await decideSubmission(admin, id, {
         approve: false,
         note: 'changed my mind',
+        version: 1,
       }),
     ).toEqual({ ok: false, reason: 'not-found' })
     expect(await getSubmissionReview(moderator, id, unavailable)).toEqual({
@@ -273,7 +274,11 @@ describe('moderation', () => {
     const id = await submit('Turn me down')
 
     expect(
-      await decideSubmission(moderator, id, { approve: false, note: ' ' }),
+      await decideSubmission(moderator, id, {
+        approve: false,
+        note: ' ',
+        version: 1,
+      }),
     ).toMatchObject({
       ok: false,
       reason: 'invalid',
@@ -283,6 +288,7 @@ describe('moderation', () => {
       await decideSubmission(moderator, id, {
         approve: false,
         note: 'The code does not load.',
+        version: 1,
       }),
     ).toMatchObject({ ok: true, status: 'changes_requested' })
 

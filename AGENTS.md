@@ -130,9 +130,9 @@ Reach for what exists before writing markup:
 | The owner's switch for offering files as a template | `TemplateOffer` |
 | Deleting an experience, or a moderator removing it | `ExperienceManage`, at the foot of its page |
 | A button that ends something, such as Delete | `buttonDanger` from `ui.ts` |
-| The experience form for a draft | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which draft |
+| The experience form for one of the owner's: a draft, one sent back, one in review, or one live | `SubmitPage` with `editing` in its data, from `getDraftEditPage`; the form's `editing` field says which. Checking the form and writing it are `prepareExperience` and `writeAround` in `src/server/services/prepare-experience.ts`, shared by a submission and an edit |
 | Everything someone has made, and where each stands | `YourSubmissions`, from `listOwnSubmissions` |
-| A moderator's screen for a pending edit, each change beside what is live | `AdminEdit`; what an edit may change is `editPayloadSchema` in `src/server/services/template-offers.ts` |
+| A moderator's screen for a pending edit, each change beside what is live | `AdminEdit`, from `describeEdit` in `src/server/services/experience-edits.ts`; what an edit may change is `editPayloadSchema` in `src/server/services/edit-payload.ts` |
 | An item's status and the moderator's note, for its owner | `StatusNote` |
 | A moderator's decision: a note, approve or request changes | `DecisionForm` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |
@@ -261,6 +261,15 @@ Anything that changes something follows `src/functions/likes.ts` and
   repeats the conditions, `deleted_at is null` included. Rows are locked in one
   order everywhere: an experience before its revisions, through `lockEdits` in
   `src/server/services/template-offers.ts`.
+- **A moderator decides on the version they were shown.** Nobody is locked out
+  while a review is open. Whatever its owner can change while it waits has a
+  `version` that every change they send moves on; the review screen passes it to
+  `DecisionForm`, and the decision is refused if it no longer matches, in the same
+  statement or transaction that decides. A new thing owners can change while it
+  waits gets the same.
+- **What a moderator reviews is what was sent.** Saving the form of something in
+  review or live keeps the form (`draft_form`) and nothing else; only sending it
+  changes what the moderator sees.
 - **A visitor may have the same form open twice.** A write lets go only of what
   this request names, never everything an account holds: `shownFiles` on the
   submit form is the example.

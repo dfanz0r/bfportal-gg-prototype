@@ -31,6 +31,8 @@ import {
   listCards,
   visible,
 } from './experience-cards'
+import { EDITABLE, isLive } from './experience-drafts'
+import { lastSentEdit } from './experience-edits'
 import { excerpt, personColumns, publicPerson } from './shared'
 import { templateRequestOf } from './template-offers'
 
@@ -111,6 +113,7 @@ export async function getExperience(
     [ownLike],
     ownReports,
     templateRequest,
+    sentEdit,
   ] = await Promise.all([
     db
       .select({ url: experienceMedia.url })
@@ -243,6 +246,8 @@ export async function getExperience(
       : [],
     // Its owner's request to offer it as a template, which only they see.
     isOwner ? templateRequestOf(experience.id) : null,
+    // And their edit to it, which only they see here.
+    isOwner && isLive(experience.status) ? lastSentEdit(experience.id) : null,
   ])
 
   const mapOf = new Map(mapRows.map((map) => [map.levelId, map]))
@@ -302,6 +307,11 @@ export async function getExperience(
       // Where its owner may offer its files, and how their request stands.
       templateRequest,
       canOfferTemplate: isOwner && gameInfo(experience.game).hasExport,
+      // Whether its owner opens it in the form, and whether changes they sent
+      // to it while live are waiting.
+      canEdit:
+        isOwner && EDITABLE.some((status) => status === experience.status),
+      editWaiting: sentEdit?.waiting === true,
     },
     owner: publicPerson(found.owner),
     // An invitation not yet accepted shows nowhere.

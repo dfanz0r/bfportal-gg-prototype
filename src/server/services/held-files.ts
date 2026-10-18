@@ -152,7 +152,8 @@ export async function takeHeldFiles(
 /**
  * Saves the form's files with its draft: those it names are held with it
  * from now on, and any the draft had that the form no longer names are let
- * go.
+ * go. With `letGo: false`, for one already sent, whose waiting version may
+ * still name files the saved form does not, none are let go.
  */
 export async function keepFilesWithDraft(
   executor: Executor,
@@ -160,18 +161,21 @@ export async function keepFilesWithDraft(
   draft: number,
   ids: string[],
   now = new Date(),
+  options: { letGo?: boolean } = {},
 ) {
   const wanted = (await heldFilesFor(actor, ids, { now, draft, executor })).map(
     (file) => file.id,
   )
-  await executor
-    .delete(heldFiles)
-    .where(
-      and(
-        eq(heldFiles.experienceId, draft),
-        wanted.length > 0 ? notInArray(heldFiles.id, wanted) : undefined,
-      ),
-    )
+  if (options.letGo !== false) {
+    await executor
+      .delete(heldFiles)
+      .where(
+        and(
+          eq(heldFiles.experienceId, draft),
+          wanted.length > 0 ? notInArray(heldFiles.id, wanted) : undefined,
+        ),
+      )
+  }
   if (wanted.length > 0) {
     await executor
       .update(heldFiles)

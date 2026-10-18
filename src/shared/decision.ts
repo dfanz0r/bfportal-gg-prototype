@@ -11,8 +11,19 @@ export const NOTE_NEEDED =
 export const REMOVE_NOTE_NEEDED =
   'Removing needs a note, so its creator knows why.'
 
+/**
+ * What is said when its owner sent it again after the moderator opened it:
+ * the decision was about a version that is no longer the one waiting.
+ */
+export const CHANGED_SINCE_OPENED =
+  'It changed while you were reviewing. Reload to see what changed.'
+
 /** The longest note a moderator may write. */
 export const MAX_NOTE = 1000
+
+/** What was wrong with a decision posted with no script. */
+export const decisionProblems = ['note', 'changed'] as const
+export type DecisionProblem = (typeof decisionProblems)[number]
 
 /**
  * What a page a decision is made on takes in its address. A decision posted
@@ -20,7 +31,7 @@ export const MAX_NOTE = 1000
  * the note as it was written.
  */
 export const decisionSearchSchema = z.object({
-  problem: z.literal('note').optional().catch(undefined),
+  problem: z.enum(decisionProblems).optional().catch(undefined),
   note: z.string().max(MAX_NOTE).optional().catch(undefined),
 })
 

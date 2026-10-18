@@ -1,11 +1,11 @@
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
-import { z } from 'zod'
 
 import { gameInfo } from '../../shared/games'
 import { type Refusal, refuse } from '../../shared/results'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import { experiences, projectFiles, revisions } from '../db/schema'
+import { editPayloadSchema } from './edit-payload'
 import type { Executor } from './shared'
 
 // Offering an experience's files as a template, or no longer offering them,
@@ -13,16 +13,6 @@ import type { Executor } from './shared'
 // download them. Taking the offer back is immediate. Making it on something
 // published waits for a moderator, as an edit: anyone could download the
 // files from then on.
-
-/**
- * What a pending edit asks to change. Only what is written here is ever
- * applied, so nothing else a payload holds can reach the page.
- */
-export const editPayloadSchema = z.object({
-  isTemplate: z.boolean().optional(),
-})
-
-export type EditPayload = z.infer<typeof editPayloadSchema>
 
 /**
  * Holds an experience and its edits still until the transaction ends: its
@@ -41,7 +31,8 @@ export async function lockEdits(tx: Executor, experienceId: number) {
     .for('update')
 }
 
-const pendingEdit = (experienceId: number) =>
+/** An experience's one pending edit. */
+export const pendingEdit = (experienceId: number) =>
   and(
     eq(revisions.experienceId, experienceId),
     eq(revisions.kind, 'edit'),
@@ -103,10 +94,12 @@ export async function offerAsTemplate(
       .limit(1)
     const asked = editPayloadSchema.catch({}).parse(pending?.payload)
 
+    // Every change here moves a version on: a moderator deciding on what
+    // they were shown before it is refused, and reloads.
     if (!offer) {
       await tx
         .update(experiences)
-        .set({ isTemplate: false })
+        .set({ isTemplate: false, version: sql`${experiences.version} + 1` })
         .where(eq(experiences.id, found.id))
       if (pending && asked.isTemplate !== undefined) {
         const { isTemplate: _, ...rest } = asked
@@ -115,7 +108,7 @@ export async function offerAsTemplate(
         } else {
           await tx
             .update(revisions)
-            .set({ payload: rest })
+            .set({ payload: rest, version: sql`${revisions.version} + 1` })
             .where(eq(revisions.id, pending.id))
         }
       }
@@ -132,19 +125,13 @@ export async function offerAsTemplate(
     if (current.isTemplate) {
       return { ok: true as const, state: 'offered' as const }
     }
-    // In review: the moderator is deciding on it as they see it, with its
-    // files private. Offering them is for after that decision.
-    if (current.status === 'pending') {
-      return refuse('invalid', {
-        form: 'It is in review. Offer its files once it has been decided.',
-      })
-    }
-    // Not sent in, or sent back: a moderator reviews it, files and all,
-    // before anyone else sees it, so there is nothing to ask.
+    // Not published: a moderator reviews it, files and all, before anyone
+    // else sees it, so there is nothing to ask. One already in review is
+    // reviewed again as it is now.
     if (current.status !== 'published') {
       await tx
         .update(experiences)
-        .set({ isTemplate: true })
+        .set({ isTemplate: true, version: sql`${experiences.version} + 1` })
         .where(eq(experiences.id, found.id))
       return { ok: true as const, state: 'offered' as const }
     }
@@ -152,7 +139,10 @@ export async function offerAsTemplate(
     if (pending) {
       await tx
         .update(revisions)
-        .set({ payload: { ...asked, isTemplate: true } })
+        .set({
+          payload: { ...asked, isTemplate: true },
+          version: sql`${revisions.version} + 1`,
+        })
         .where(eq(revisions.id, pending.id))
     } else {
       await tx.insert(revisions).values({

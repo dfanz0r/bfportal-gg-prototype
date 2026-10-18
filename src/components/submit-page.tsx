@@ -552,17 +552,29 @@ export function SubmitPage(props: { data: SubmitPageData }) {
   const savedNow = () => data().now
   /** Sent back by a moderator, to fix and send again. */
   const sentBack = () => data().editing?.status === 'changes_requested'
+  /** Waiting for review: changing it sends a new version to review. */
+  const inReview = () => data().editing?.status === 'pending'
+  /** Live: what is sent waits beside the page as an edit. */
+  const live = () => data().editing?.status === 'published'
+  const lead = () => {
+    if (sentBack()) {
+      return 'Changes were requested. Fix what the note says and resubmit it.'
+    }
+    if (inReview()) {
+      return 'In review. Resubmit it and the moderator reviews the new version.'
+    }
+    if (live()) {
+      return data().editing?.editWaiting
+        ? 'Live. Your changes are waiting for a moderator. Send more and they are reviewed together.'
+        : 'Live. Changes you send are reviewed before they show on its page.'
+    }
+    return data().editing ? 'A draft. Only you can see it.' : submitLead
+  }
 
   return (
     <PageLayout
       title={data().editing?.title ?? 'Submit'}
-      lead={
-        sentBack()
-          ? 'Changes were requested. Fix what the note says and resubmit it.'
-          : data().editing
-            ? 'A draft. Only you can see it.'
-            : submitLead
-      }
+      lead={lead()}
       crumbs={
         data().editing
           ? [
@@ -721,14 +733,26 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                     placeholder="https://..."
                   />
                 </FormField>
-                <Check
-                  name="isTemplate"
-                  value="true"
-                  checked={ticked('isTemplate', 'true')}
+                {/* Once it is live, offering its files is a switch on its
+                    page, apart from the rest of an edit. */}
+                <Show
+                  when={!live()}
+                  fallback={
+                    <p class="text-[13.5px] text-fg-3">
+                      Whether these are offered as a template is changed on its
+                      page, above its files.
+                    </p>
+                  }
                 >
-                  Offer it as a template: others may download these files and
-                  publish their own version
-                </Check>
+                  <Check
+                    name="isTemplate"
+                    value="true"
+                    checked={ticked('isTemplate', 'true')}
+                  >
+                    Offer it as a template: others may download these files and
+                    publish their own version
+                  </Check>
+                </Show>
               </FormSection>
             </Show>
 
@@ -980,9 +1004,11 @@ export function SubmitPage(props: { data: SubmitPageData }) {
               >
                 {sending() === 'submit'
                   ? 'Submitting'
-                  : sentBack()
+                  : sentBack() || inReview()
                     ? 'Resubmit'
-                    : 'Submit'}
+                    : live()
+                      ? 'Submit changes'
+                      : 'Submit'}
                 <Icon name="arrow-right" />
               </button>
               {/* The same form, kept as a draft for now. Only a title is
@@ -1011,15 +1037,16 @@ export function SubmitPage(props: { data: SubmitPageData }) {
                 </button>
               </Show>
               <p class="max-w-[34em] text-[13.5px] text-fg-3">
-                <Show when={data().editing}>
-                  {(draft) => (
+                <Show when={data().editing?.savedAt}>
+                  {(savedAt) => (
                     <>
-                      Saved{' '}
-                      <DateText value={draft().savedAt} now={savedNow()} />.{' '}
+                      Saved <DateText value={savedAt()} now={savedNow()} />.{' '}
                     </>
                   )}
                 </Show>
-                Nothing is public until a moderator approves it.
+                {live()
+                  ? 'Its page stays as it is until a moderator approves the changes.'
+                  : 'Nothing is public until a moderator approves it.'}
                 {/* Not asked for: a game only runs its latest release. */}
                 <Show when={data().options.currentSdk}>
                   {(sdk) => (

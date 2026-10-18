@@ -78,6 +78,8 @@ describe('experience', () => {
       isStaff: false,
       templateRequest: null,
       canOfferTemplate: false,
+      canEdit: false,
+      editWaiting: false,
     })
     const [liker] = await db
       .select({ userId: experienceLikes.userId })

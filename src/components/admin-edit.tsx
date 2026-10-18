@@ -78,31 +78,50 @@ export function AdminEdit(props: {
                 <span class={label}>Live now</span>
                 <span class={label}>Once approved</span>
               </div>
-              <For each={edit().changes}>
+              <For
+                each={edit().changes}
+                fallback={
+                  <p class="px-4 py-3.5 text-sm text-fg-2">
+                    It asks for nothing that differs from the live page.
+                  </p>
+                }
+              >
                 {(change) => (
                   <div class="grid gap-2 px-4 py-3.5 text-sm">
                     <div class={columns}>
                       <span class="font-semibold">{change.field}</span>
-                      <span class="text-fg-2">
+                      <span
+                        class={`text-fg-2 [overflow-wrap:anywhere] ${change.long ? 'whitespace-pre-wrap' : ''}`}
+                      >
                         <span class="text-fg-3 sm:hidden">Live now: </span>
                         {change.live}
                       </span>
-                      <span class="font-semibold text-steel-hi">
+                      <span
+                        class={`font-semibold text-steel-hi [overflow-wrap:anywhere] ${change.long ? 'whitespace-pre-wrap' : ''}`}
+                      >
                         <span class="font-normal text-fg-3 sm:hidden">
                           Once approved:{' '}
                         </span>
                         {change.proposed}
                       </span>
                     </div>
-                    <p class="border-l-2 border-steel bg-steel/8 px-3 py-2 text-[13px] text-fg-2">
-                      {change.effect}
-                    </p>
+                    <Show when={change.effect}>
+                      <p class="border-l-2 border-steel bg-steel/8 px-3 py-2 text-[13px] text-fg-2">
+                        {change.effect}
+                      </p>
+                    </Show>
                   </div>
                 )}
               </For>
             </div>
             <p class="mt-2 text-[13px] text-fg-3">
-              Nothing else on its page changes.
+              <Show
+                when={edit().unchanged.length > 0}
+                fallback="Nothing else on its page changes."
+              >
+                Unchanged: {edit().unchanged.join(', ')}. Nothing else on its
+                page changes.
+              </Show>
             </p>
           </section>
           <ProjectFileList
@@ -130,6 +149,7 @@ export function AdminEdit(props: {
           <DecisionForm
             decide={decideOnEdit}
             id={edit().id}
+            version={edit().version}
             back={`/admin/edits/${edit().id}`}
             problem={props.decision.problem}
             note={props.decision.note}

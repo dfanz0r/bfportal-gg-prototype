@@ -100,15 +100,26 @@ const draftSchema = experienceFormSchema.pick({
 })
 
 /**
- * What its owner edits in the form before it is sent: a draft, and one a
- * moderator sent back with changes requested. One in review waits for its
- * review; one that is live is changed by an edit a moderator approves.
+ * What its owner opens in the form: a draft, one sent back with changes
+ * requested, one waiting for review, which they may change and send again,
+ * and one that is live, which they change by an edit a moderator approves.
  */
-const EDITABLE = ['draft', 'changes_requested'] as const
+export const EDITABLE = [
+  'draft',
+  'changes_requested',
+  'pending',
+  'published',
+] as const
+
+/** Those whose row is not what a moderator reviews, so saving writes to it. */
+const UNSENT = ['draft', 'changes_requested'] as const
+
+/** Live: changed by an edit beside the page, not on the row itself. */
+export const isLive = (status: string) => status === 'published'
 
 /**
  * One of theirs to go on with in the form, by its address, or null: a draft,
- * or one sent back with changes requested.
+ * one sent back, one waiting for review, or one that is live.
  */
 export async function ownEditable(
   actor: Actor,
@@ -149,6 +160,8 @@ export async function ownEditable(
     .limit(1)
   return found ?? null
 }
+
+export type Editable = NonNullable<Awaited<ReturnType<typeof ownEditable>>>
 
 /** A form's own fields, as text: what a draft keeps of what was sent. */
 function keptFields(given: Record<string, unknown>) {
@@ -220,16 +233,19 @@ export async function saveExperienceDraft(
   const files = heldIdsIn(fields.files)
 
   if (draft) {
+    // One waiting for review, or live, keeps what was sent: the moderator
+    // reviews that. Only the form is saved, for its owner to send later.
+    const sent = !UNSENT.some((status) => status === draft.status)
     return db.transaction(async (tx) => {
       // Saved as it is: a draft stays a draft, and one sent back stays sent
       // back until it is submitted again.
       const [saved] = await tx
         .update(experiences)
-        .set(values)
+        .set(sent ? { draftForm: values.draftForm } : values)
         .where(
           and(
             eq(experiences.id, draft.id),
-            inArray(experiences.status, EDITABLE),
+            eq(experiences.status, draft.status),
             // Still there: deleted in another tab since it was read, it is
             // not saved into.
             isNull(experiences.deletedAt),
@@ -237,7 +253,9 @@ export async function saveExperienceDraft(
         )
         .returning({ id: experiences.id })
       if (!saved) return refuse('not-found')
-      await keepFilesWithDraft(tx, actor, draft.id, files, now)
+      await keepFilesWithDraft(tx, actor, draft.id, files, now, {
+        letGo: !sent,
+      })
       await discardDraft(tx, actor)
       return { ok: true as const, slug: draft.slug }
     })

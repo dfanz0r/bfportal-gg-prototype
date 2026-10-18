@@ -2,10 +2,16 @@ import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seed } from '../../../seed/seed'
+import { CHANGED_SINCE_OPENED } from '../../shared/decision'
 import type { Actor } from '../auth/actor'
 import { db, sql } from '../db'
 import { experiences, projectFiles, revisions } from '../db/schema'
-import { decideEdit, getEditReview, listQueue } from './moderation'
+import {
+  decideEdit,
+  decideSubmission,
+  getEditReview,
+  listQueue,
+} from './moderation'
 import { offerAsTemplate, templateRequestOf } from './template-offers'
 
 const NOW = new Date('2026-10-16T12:00:00Z')
@@ -130,29 +136,42 @@ describe('offering files as a template after submitting', () => {
     expect(await templateRequestOf(id)).toBeNull()
   })
 
-  it('does not offer them while it is in review, but stops offering them', async () => {
+  it('offers them at once while it is in review, and a decision on what came before is refused', async () => {
     const { id, slug, owner } = await liveExperience('bf6', true)
     await db
       .update(experiences)
       .set({ status: 'pending' })
       .where(eq(experiences.id, id))
-    // The moderator decides on it with its files private.
-    expect(await offerAsTemplate(owner, slug, true, NOW)).toMatchObject({
-      ok: false,
-      reason: 'invalid',
+    const version = async () =>
+      (
+        await db
+          .select({ value: experiences.version })
+          .from(experiences)
+          .where(eq(experiences.id, id))
+      )[0].value
+    const shown = await version()
+    expect(await offerAsTemplate(owner, slug, true, NOW)).toEqual({
+      ok: true,
+      state: 'offered',
     })
-    expect(await isTemplate(id)).toBe(false)
+    expect(await isTemplate(id)).toBe(true)
     expect(await pendingEdits(id)).toEqual([])
+    // The moderator was shown it with its files private.
+    expect(
+      await decideSubmission(
+        moderator,
+        id,
+        { approve: true, version: shown },
+        NOW,
+      ),
+    ).toMatchObject({ ok: false, errors: { form: CHANGED_SINCE_OPENED } })
 
-    await db
-      .update(experiences)
-      .set({ isTemplate: true })
-      .where(eq(experiences.id, id))
     expect(await offerAsTemplate(owner, slug, false, NOW)).toEqual({
       ok: true,
       state: 'withdrawn',
     })
     expect(await isTemplate(id)).toBe(false)
+    expect(await version()).toBe(shown + 2)
     await db
       .update(experiences)
       .set({ status: 'published' })
@@ -174,7 +193,12 @@ describe('offering files as a template after submitting', () => {
         .from(experiences)
         .where(eq(experiences.id, id))
         .for('update')
-      deciding = decideEdit(moderator, edit.id, { approve: true }, NOW)
+      deciding = decideEdit(
+        moderator,
+        edit.id,
+        { approve: true, version: 1 },
+        NOW,
+      )
       await new Promise((waited) => setTimeout(waited, 300))
       await tx.delete(revisions).where(eq(revisions.id, edit.id))
     })
@@ -207,7 +231,8 @@ describe('offering files as a template after submitting', () => {
     for (const actor of [null, owner]) {
       expect((await getEditReview(actor, edit.id)).ok).toBe(false)
       expect(
-        (await decideEdit(actor, edit.id, { approve: true }, NOW)).ok,
+        (await decideEdit(actor, edit.id, { approve: true, version: 1 }, NOW))
+          .ok,
       ).toBe(false)
     }
 
@@ -233,13 +258,17 @@ describe('offering files as a template after submitting', () => {
 
     // Sent back: it needs a note, and the owner sees it.
     expect(
-      await decideEdit(moderator, edit.id, { approve: false }, NOW),
+      await decideEdit(moderator, edit.id, { approve: false, version: 1 }, NOW),
     ).toMatchObject({ ok: false, errors: { note: expect.any(String) } })
     expect(
       await decideEdit(
         moderator,
         edit.id,
-        { approve: false, note: 'The export has someone else’s map in it.' },
+        {
+          approve: false,
+          note: 'The export has someone else’s map in it.',
+          version: 1,
+        },
         NOW,
       ),
     ).toEqual({ ok: true, slug, status: 'changes_requested' })
@@ -253,12 +282,19 @@ describe('offering files as a template after submitting', () => {
     await offerAsTemplate(owner, slug, true, NOW)
     const [again] = await pendingEdits(id)
     expect(
-      await decideEdit(moderator, again.id, { approve: true }, NOW),
+      await decideEdit(moderator, again.id, { approve: true, version: 1 }, NOW),
     ).toEqual({ ok: true, slug, status: 'approved' })
     expect(await isTemplate(id)).toBe(true)
     expect(await templateRequestOf(id)).toBeNull()
     expect(
-      (await decideEdit(moderator, again.id, { approve: true }, NOW)).ok,
+      (
+        await decideEdit(
+          moderator,
+          again.id,
+          { approve: true, version: 1 },
+          NOW,
+        )
+      ).ok,
     ).toBe(false)
 
     // An edit asking for what this site cannot apply yet waits for the edit
@@ -278,7 +314,14 @@ describe('offering files as a template after submitting', () => {
     )
     expect((await getEditReview(moderator, other.id)).ok).toBe(false)
     expect(
-      (await decideEdit(moderator, other.id, { approve: true }, NOW)).ok,
+      (
+        await decideEdit(
+          moderator,
+          other.id,
+          { approve: true, version: 1 },
+          NOW,
+        )
+      ).ok,
     ).toBe(false)
     await db.delete(revisions).where(eq(revisions.id, other.id))
 
