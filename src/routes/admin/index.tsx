@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/solid-router'
 
-import { AdminQueue } from '../../components/admin/admin-queue'
+import { AdminQueue } from '../../components/admin-queue'
 import { fetchQueue } from '../../functions/moderation'
 import { pageTitle } from '../../shared/page-title'
 

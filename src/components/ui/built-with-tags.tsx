@@ -5,9 +5,9 @@ import {
   experienceTypeLabels,
   type Game,
 } from '../../shared/content'
-import { LibraryLink } from '../library/library-link'
-import { Icon, type IconName } from '../ui/icon'
-import { tag } from '../ui/ui'
+import { Icon, type IconName } from './icon'
+import { LibraryLink } from './library-link'
+import { tag } from './ui'
 
 const TYPE_ICONS: Partial<Record<ExperienceType, IconName>> = {
   script: 'code',

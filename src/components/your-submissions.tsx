@@ -1,10 +1,10 @@
 import { For, Match, Show, Switch } from 'solid-js'
 
-import type { OwnSubmissions } from '../../functions/submissions'
-import { gameInfo } from '../../shared/games'
-import { PageLayout } from '../layout/page-layout'
-import { DateText } from '../ui/date-text'
-import { buttonGhost, fileGlyph, label, panel, tag } from '../ui/ui'
+import type { OwnSubmissions } from '../functions/submissions'
+import { gameInfo } from '../shared/games'
+import { PageLayout } from './layout/page-layout'
+import { DateText } from './ui/date-text'
+import { buttonGhost, fileGlyph, label, panel, tag } from './ui/ui'
 
 type Item = OwnSubmissions['items'][number]
 

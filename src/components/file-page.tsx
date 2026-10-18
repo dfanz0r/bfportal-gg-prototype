@@ -1,14 +1,14 @@
 import { Show } from 'solid-js'
 
-import type { FileView } from '../../functions/files'
-import { formatBytes } from '../../shared/dates'
-import { fileGlyphs, fileLanguages } from '../../shared/project-files'
-import { safeBackPath } from '../../shared/results'
-import { PageLayout } from '../layout/page-layout'
-import { CodeView } from '../ui/code-view'
-import { CopyText } from '../ui/copy-text'
-import { Icon } from '../ui/icon'
-import { buttonGhost, panel } from '../ui/ui'
+import type { FileView } from '../functions/files'
+import { formatBytes } from '../shared/dates'
+import { fileGlyphs, fileLanguages } from '../shared/project-files'
+import { safeBackPath } from '../shared/results'
+import { PageLayout } from './layout/page-layout'
+import { CodeView } from './ui/code-view'
+import { CopyText } from './ui/copy-text'
+import { Icon } from './ui/icon'
+import { buttonGhost, panel } from './ui/ui'
 
 const count = (value: number) => value.toLocaleString('en-US')
 

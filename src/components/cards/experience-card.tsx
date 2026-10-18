@@ -2,14 +2,14 @@ import { For, Show } from 'solid-js'
 
 import type { Library } from '../../functions/library'
 import { gameInfo } from '../../shared/games'
-import { LibraryLink } from '../library/library-link'
 import { Avatar } from '../ui/avatar'
+import { BuiltWithTags } from '../ui/built-with-tags'
 import { CopyCode } from '../ui/copy-code'
 import { Icon } from '../ui/icon'
+import { LibraryLink } from '../ui/library-link'
 import { LikeButton } from '../ui/like-button'
 import { PersonLink } from '../ui/person-link'
 import { tag } from '../ui/ui'
-import { BuiltWithTags } from './built-with-tags'
 
 const chip =
   'inline-flex h-[22px] items-center gap-1.5 border-l-2 bg-base/80 px-2 font-mono text-[10.5px] font-medium tracking-[0.1em] uppercase backdrop-blur-sm'

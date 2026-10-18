@@ -8,9 +8,9 @@ import {
   NOTE_NEEDED,
 } from '../../shared/decision'
 import type { Refusal } from '../../shared/results'
-import { FieldError } from '../forms/field-error'
 import { Icon } from '../ui/icon'
 import { buttonAccent, buttonGhost, field, label, panel } from '../ui/ui'
+import { FieldError } from './field-error'
 
 /** A server function that decides on one kind of submission. */
 type Decide = ((input: {

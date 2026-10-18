@@ -1,36 +1,40 @@
 import { useNavigate, useRouter } from '@tanstack/solid-router'
 import { createEffect, createMemo, createSignal, For, on, Show } from 'solid-js'
 
-import type { Library } from '../../functions/library'
-import type { SubmitPageData } from '../../functions/submit'
+import type { Library } from '../functions/library'
+import type { SubmitPageData } from '../functions/submit'
 import {
   deleteDraft,
   readProjectFiles,
   saveDraft,
   startFromCode,
   submitForReview,
-} from '../../functions/submit'
-import { experienceTypeLabels } from '../../shared/content'
+} from '../functions/submit'
+import { experienceTypeLabels } from '../shared/content'
+import { MAX_CREDITS, MAX_MEDIA, REPO_HOSTS } from '../shared/experience-form'
+import { formFields } from '../shared/form-input'
+import { defaultGame, gameInfo } from '../shared/games'
+import { MAX_EXPORT_BYTES, MAX_FILE_BYTES } from '../shared/project-files'
+import { submitLead } from '../shared/submit'
+import { type TeamSetup, teamTotals } from '../shared/teams'
+import { ExperienceCard } from './cards/experience-card'
+import { Check } from './forms/check'
+import { Choice } from './forms/choice'
+import { ChoiceGroup } from './forms/choice-group'
+import { FormField } from './forms/form-field'
+import { FormSection } from './forms/form-section'
+import { ImagePreview } from './forms/image-preview'
+import { SubmitStart } from './forms/submit-start'
+import { PageLayout } from './layout/page-layout'
+import { CreditsInput } from './submit-page/credits-input'
+import { MediaListInput } from './submit-page/media-list-input'
 import {
-  MAX_CREDITS,
-  MAX_MEDIA,
-  REPO_HOSTS,
-} from '../../shared/experience-form'
-import { formFields } from '../../shared/form-input'
-import { defaultGame, gameInfo } from '../../shared/games'
-import { MAX_EXPORT_BYTES, MAX_FILE_BYTES } from '../../shared/project-files'
-import { submitLead } from '../../shared/submit'
-import { type TeamSetup, teamTotals } from '../../shared/teams'
-import { ExperienceCard } from '../experiences/experience-card'
-import { Check } from '../forms/check'
-import { Choice } from '../forms/choice'
-import { ChoiceGroup } from '../forms/choice-group'
-import { FormField } from '../forms/form-field'
-import { FormSection } from '../forms/form-section'
-import { ImagePreview } from '../forms/image-preview'
-import { PageLayout } from '../layout/page-layout'
-import { DateText } from '../ui/date-text'
-import { Icon, type IconName } from '../ui/icon'
+  type FileSlot,
+  ProjectFilesInput,
+} from './submit-page/project-files-input'
+import { TeamSetupInput } from './submit-page/team-setup-input'
+import { DateText } from './ui/date-text'
+import { Icon, type IconName } from './ui/icon'
 import {
   buttonAccent,
   buttonDanger,
@@ -38,12 +42,7 @@ import {
   field,
   label,
   panel,
-} from '../ui/ui'
-import { CreditsInput } from './credits-input'
-import { MediaListInput } from './media-list-input'
-import { type FileSlot, ProjectFilesInput } from './project-files-input'
-import { SubmitStart } from './submit-start'
-import { TeamSetupInput } from './team-setup-input'
+} from './ui/ui'
 
 type Card = Library['items'][number]
 

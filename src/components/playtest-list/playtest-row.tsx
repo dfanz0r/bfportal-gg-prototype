@@ -4,8 +4,8 @@ import { Show } from 'solid-js'
 import type { PlaytestItem } from '../../functions/playtests'
 import { CopyCode } from '../ui/copy-code'
 import { DateText } from '../ui/date-text'
+import { Regions } from '../ui/regions'
 import { buttonGhost } from '../ui/ui'
-import { Regions } from './regions'
 
 /**
  * A call for testers, as a row of the playtests list: what it is and what is

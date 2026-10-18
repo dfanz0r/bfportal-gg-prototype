@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/solid-router'
 import { z } from 'zod'
 
-import { SnippetSubmitPage } from '../components/snippets/snippet-submit-page'
+import { SnippetSubmitPage } from '../components/snippet-submit-page'
 import { fetchSnippetSubmitPage } from '../functions/submit-snippet'
 import { pageTitle } from '../shared/page-title'
 

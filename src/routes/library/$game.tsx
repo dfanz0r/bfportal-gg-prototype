@@ -1,6 +1,6 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/solid-router'
 
-import { LibraryPage, libraryHead } from '../../components/library/library-page'
+import { LibraryPage, libraryHead } from '../../components/library-page'
 import { fetchLibrary } from '../../functions/library'
 import { defaultGame, gameFromSlug } from '../../shared/games'
 import { readLibraryAddress } from '../../shared/library-search'

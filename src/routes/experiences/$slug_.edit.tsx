@@ -1,7 +1,7 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/solid-router'
 import { z } from 'zod'
 
-import { SubmitPage } from '../../components/submit/submit-page'
+import { SubmitPage } from '../../components/submit-page'
 import { fetchDraftEditPage } from '../../functions/submit'
 import { pageTitle } from '../../shared/page-title'
 

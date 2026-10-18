@@ -4,7 +4,7 @@ import { For, Show } from 'solid-js'
 import type { FileKind } from '../../shared/content'
 import { formatBytes } from '../../shared/dates'
 import { fileGlyphs } from '../../shared/project-files'
-import { fileGlyph, label, panel } from '../ui/ui'
+import { fileGlyph, label, panel } from './ui'
 
 /**
  * A project's files for a moderator: who may download them, then each with

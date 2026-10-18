@@ -4,8 +4,8 @@ import { Show } from 'solid-js'
 import type { PlaytestItem } from '../../functions/playtests'
 import { CopyCode } from '../ui/copy-code'
 import { DateText } from '../ui/date-text'
+import { Regions } from '../ui/regions'
 import { display, panel } from '../ui/ui'
-import { Regions } from './regions'
 
 /** A call for testers, in a listing. */
 export function PlaytestCard(props: { playtest: PlaytestItem }) {

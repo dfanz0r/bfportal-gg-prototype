@@ -12,8 +12,8 @@ import {
 import { createDismiss } from '../ui/dismiss'
 import { createHydrated } from '../ui/hydrated'
 import { Icon } from '../ui/icon'
+import { LibraryLink, useLibraryNavigate } from '../ui/library-link'
 import { buttonSteel } from '../ui/ui'
-import { LibraryLink, useLibraryNavigate } from './library-link'
 
 const SORT_LABELS = {
   trending: 'Trending this week',

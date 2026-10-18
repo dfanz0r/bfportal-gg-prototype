@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/solid-router'
 import { z } from 'zod'
 
-import { SubmitPage } from '../components/submit/submit-page'
+import { SubmitPage } from '../components/submit-page'
 import { fetchSubmitPage } from '../functions/submit'
 import { games } from '../shared/content'
 import { pageTitle } from '../shared/page-title'

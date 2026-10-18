@@ -50,7 +50,7 @@ and before type-checking. The route tree is committed; never edit it by hand.
 | Path | Contents |
 |---|---|
 | `src/routes` | One file per page or HTTP endpoint. Thin: a route wires data to components |
-| `src/components` | Solid components, in folders: `ui/` for the building blocks used anywhere (with `ui.ts`, the shared class lists), `layout/` for the frame of every page, `forms/` for form controls, and a folder for each part of the site (`experiences/`, `snippets/`, `submit/`, `admin/` and the rest) for what belongs to it |
+| `src/components` | Solid components. Every page at the top, `experience-page.tsx`, `snippet-list.tsx`, with a folder of the same name beside it for the pieces only it uses (`experience-page/`). Shared pieces in `ui/` (with `ui.ts`, the shared class lists), `forms/`, `layout/` and `cards/` |
 | `src/functions` | Server functions: the only way client code reaches `src/server` |
 | `src/server` | Database, auth, configuration, and `services`, which hold the queries and rules. Never imported by client code, types included: take a type from the server function instead |
 | `src/shared` | Constants, types and text used on both sides |
@@ -143,15 +143,18 @@ How we write them:
 - **A file exports one component,** named in kebab case, with its props typed inline.
   A small helper only that component uses stays private in the same file. No barrel
   files.
-- **A component lives with what it belongs to.** One part of the site's goes in that
-  part's folder, page and pieces together: `experiences/experience-page.tsx` beside
-  `experiences/gallery.tsx`. One that two parts use, or that any page could, goes in
-  `ui/`, or `forms/` if it is a control, or `layout/` if it frames the page.
-  Something that starts in one part and is then wanted in another moves to `ui/`, as
-  `like-button.tsx` and `content-manage.tsx` did. No folder within a folder, and
-  none for one file but a part of the site of its own (`home/`, `profiles/`).
-- **A route file is thin.** It wires the address and the loader to a page component
-  in `src/components`; the page itself is not written there.
+- **Pages sit at the top of `src/components`, so every page can be seen at once.**
+  A whole page is `<what>-page.tsx` for one thing (`snippet-page.tsx`) and
+  `<what>-list.tsx` for many (`snippet-list.tsx`). A piece only one page uses goes
+  in a folder named after that page: `experience-page/gallery.tsx`. A piece two
+  pages use goes in a shared folder: `cards/` for what a listing shows (a card or
+  a row), `forms/` for a control, `layout/` for the frame around every page, and
+  `ui/` for any other building block. A piece that one page used and a second now
+  wants moves to the shared folder, as `like-button.tsx` and `content-manage.tsx`
+  did. No folder within a folder.
+- **A route file is thin.** It wires the address, the search and the loader to a
+  page component, and its head to that page's `<name>Head()`. The page itself,
+  its text and its markup are not written there.
 - **Extract on the second use.** Markup or a long class list that appears twice becomes
   a component or a constant in `ui.ts`. Do not copy it a second time, and do not
   extract something used once.

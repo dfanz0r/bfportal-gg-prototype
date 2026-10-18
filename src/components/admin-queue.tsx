@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
-import type { Queue } from '../../functions/moderation'
-import { experienceTypeLabels } from '../../shared/content'
-import { gameInfo } from '../../shared/games'
-import { PageLayout } from '../layout/page-layout'
-import { Avatar } from '../ui/avatar'
-import { DateText } from '../ui/date-text'
-import { buttonGhost, panel, tag } from '../ui/ui'
+import type { Queue } from '../functions/moderation'
+import { experienceTypeLabels } from '../shared/content'
+import { gameInfo } from '../shared/games'
+import { PageLayout } from './layout/page-layout'
+import { Avatar } from './ui/avatar'
+import { DateText } from './ui/date-text'
+import { buttonGhost, panel, tag } from './ui/ui'
 
 /** The moderators' queue: everything waiting, the longest wait first. */
 export function AdminQueue(props: { data: Queue }) {

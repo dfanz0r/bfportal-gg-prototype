@@ -1,9 +1,6 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/solid-router'
 
-import {
-  ProfilePage,
-  profileHead,
-} from '../../components/profiles/profile-page'
+import { ProfilePage, profileHead } from '../../components/profile-page'
 import { fetchProfile } from '../../functions/profile'
 import { profileSearchSchema } from '../../shared/feed-search'
 

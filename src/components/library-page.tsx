@@ -1,19 +1,19 @@
 import { For, Show } from 'solid-js'
 
-import type { Library } from '../../functions/library'
-import { gameInfo } from '../../shared/games'
+import type { Library } from '../functions/library'
+import { gameInfo } from '../shared/games'
 import {
   type LibrarySearch,
   MAX_PAGES,
   PAGE_SIZE,
-} from '../../shared/library-search'
-import { ExperienceCard } from '../experiences/experience-card'
-import { SearchForm } from '../layout/search-form'
-import { DateText } from '../ui/date-text'
-import { ShowMore } from '../ui/show-more'
-import { buttonGhost } from '../ui/ui'
-import { LibraryFilters } from './library-filters'
-import { LibraryLink } from './library-link'
+} from '../shared/library-search'
+import { ExperienceCard } from './cards/experience-card'
+import { SearchForm } from './layout/search-form'
+import { LibraryFilters } from './library-page/library-filters'
+import { DateText } from './ui/date-text'
+import { LibraryLink } from './ui/library-link'
+import { ShowMore } from './ui/show-more'
+import { buttonGhost } from './ui/ui'
 
 /** What the address needs to say: the search without what is the default. */
 function addressOf(data: Library): LibrarySearch {

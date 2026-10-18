@@ -1,9 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/solid-router'
 
-import {
-  PlaytestPage,
-  playtestHead,
-} from '../../components/playtests/playtest-page'
+import { PlaytestPage, playtestHead } from '../../components/playtest-page'
 import { fetchPlaytest } from '../../functions/playtests'
 
 export const Route = createFileRoute('/playtests/$id')({

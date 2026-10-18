@@ -3,9 +3,9 @@ import { For, type JSX, Show } from 'solid-js'
 
 import type { Game } from '../../shared/content'
 import { defaultGame, gameInfo, gameList } from '../../shared/games'
-import { FormSection } from '../forms/form-section'
 import { Icon } from '../ui/icon'
 import { choiceCard, choiceCardOff } from '../ui/ui'
+import { FormSection } from './form-section'
 
 type Kind = 'experience' | 'snippet'
 

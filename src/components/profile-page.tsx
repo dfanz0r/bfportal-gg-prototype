@@ -1,19 +1,19 @@
 import { Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
-import type { Profile } from '../../functions/profile'
+import type { Profile } from '../functions/profile'
 import {
   FEED_MAX_PAGES,
   type ProfileTab,
   profileTabs,
-} from '../../shared/feed-search'
-import { ExperienceCard } from '../experiences/experience-card'
-import { SnippetRow } from '../snippets/snippet-row'
-import { Avatar } from '../ui/avatar'
-import { DateText } from '../ui/date-text'
-import { ShowMore } from '../ui/show-more'
-import { Tabs } from '../ui/tabs'
-import { buttonGhost } from '../ui/ui'
+} from '../shared/feed-search'
+import { ExperienceCard } from './cards/experience-card'
+import { SnippetRow } from './cards/snippet-row'
+import { Avatar } from './ui/avatar'
+import { DateText } from './ui/date-text'
+import { ShowMore } from './ui/show-more'
+import { Tabs } from './ui/tabs'
+import { buttonGhost } from './ui/ui'
 
 const TAB_LABELS: Record<ProfileTab, string> = {
   experiences: 'Experiences',

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 
-import { HomePage } from '../components/home/home-page'
+import { HomePage } from '../components/home-page'
 import { fetchHome } from '../functions/home'
 
 const DESCRIPTION =
