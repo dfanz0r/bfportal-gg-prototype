@@ -10,14 +10,14 @@ import {
 import { Avatar } from './avatar'
 import { DateText } from './date-text'
 import { ExperienceCard } from './experience-card'
-import { ScriptRow } from './script-row'
 import { ShowMore } from './show-more'
+import { SnippetRow } from './snippet-row'
 import { Tabs } from './tabs'
 import { buttonGhost } from './ui'
 
 const TAB_LABELS: Record<ProfileTab, string> = {
   experiences: 'Experiences',
-  scripts: 'Scripts',
+  snippets: 'Snippets',
   liked: 'Liked',
 }
 
@@ -46,13 +46,13 @@ export function profileHead(data: Profile | undefined) {
 export function ProfilePage(props: { data: Profile }) {
   const data = () => props.data
   const name = () => data().name ?? 'A creator'
-  const shown = () => data().cards.length + data().scripts.length
+  const shown = () => data().cards.length + data().snippets.length
   // The first tab is what the bare address shows.
   const tabInAddress = (tab: ProfileTab) =>
     tab === profileTabs[0] ? undefined : tab
   const stats = (): [number, string][] => [
     [data().counts.experiences, 'experiences'],
-    [data().counts.scripts, 'scripts'],
+    [data().counts.snippets, 'snippets'],
     [data().counts.likesReceived, 'likes received'],
     [data().counts.updates, 'updates posted'],
   ]
@@ -127,10 +127,10 @@ export function ProfilePage(props: { data: Profile }) {
               </For>
             </div>
           </Show>
-          <Show when={data().scripts.length > 0}>
+          <Show when={data().snippets.length > 0}>
             <ul class="mt-6 divide-y divide-line border border-line bg-surface-1">
-              <For each={data().scripts}>
-                {(script) => <ScriptRow script={script} />}
+              <For each={data().snippets}>
+                {(snippet) => <SnippetRow snippet={snippet} />}
               </For>
             </ul>
           </Show>

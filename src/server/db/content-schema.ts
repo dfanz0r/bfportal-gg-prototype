@@ -74,7 +74,7 @@ export const portalStateEnum = pgEnum('portal_state', portalStates)
 
 /**
  * Main categories for experiences, and main categories and subcategories for
- * scripts, in one table. A foreign key cannot say "a category of kind
+ * snippets, in one table. A foreign key cannot say "a category of kind
  * experience_main", so the services check the kind when they assign one.
  *
  * What the old site called an experience's subcategories, and the form calls

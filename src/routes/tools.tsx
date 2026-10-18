@@ -15,7 +15,7 @@ function ToolsPage() {
       lead="Editor plugins, command-line tools and add-ons that make building for Portal easier."
       planned={[
         'A page per tool with install steps and a link to its repository.',
-        'Update posts, the same as experiences and scripts have.',
+        'Update posts, the same as experiences and snippets have.',
         'A label for tools that are still in progress.',
       ]}
     />

@@ -8,9 +8,9 @@ import { ExperienceCard } from './experience-card'
 import { Icon } from './icon'
 import { LibraryLink } from './library-link'
 import { PlaytestCard } from './playtest-card'
-import { ScriptRow } from './script-row'
 import { SearchForm } from './search-form'
 import { Section } from './section'
+import { SnippetRow } from './snippet-row'
 import { buttonGhost, display, panel } from './ui'
 import { UpdateCard } from './update-card'
 
@@ -77,7 +77,7 @@ export function HomePage(props: { data: Home }) {
             The Portal creator hub
           </h1>
           <p class="mt-3 max-w-[34em] text-base text-fg-2">
-            Experiences, scripts, maps and tools made by the community. Find
+            Experiences, snippets, maps and tools made by the community. Find
             something to play tonight, or share what you have built.
           </p>
           <SearchForm
@@ -88,7 +88,7 @@ export function HomePage(props: { data: Home }) {
           />
           <p class="mt-7 flex flex-wrap gap-x-9 gap-y-1.5 border-t border-steel/15 py-3 text-[13.5px] text-fg-2">
             <Stat value={data().stats.experiences} label="experiences" />
-            <Stat value={data().stats.scripts} label="scripts" />
+            <Stat value={data().stats.snippets} label="snippets" />
             <Stat value={data().stats.creators} label="creators" />
           </p>
         </div>
@@ -158,22 +158,22 @@ export function HomePage(props: { data: Home }) {
           </Section>
         </Show>
 
-        <Show when={data().scripts.length > 0}>
+        <Show when={data().snippets.length > 0}>
           <Section
             large
             title="Trending"
-            accent="scripts"
+            accent="snippets"
             note="Rules, logic and interface snippets to build on."
             action={
-              <Link to="/scripts" class={more}>
-                All scripts
+              <Link to="/snippets" class={more}>
+                All snippets
                 <Icon name="arrow-right" class="size-3.5" />
               </Link>
             }
           >
             <ul class={`${panel} divide-y divide-line`}>
-              <For each={data().scripts}>
-                {(script) => <ScriptRow script={script} />}
+              <For each={data().snippets}>
+                {(snippet) => <SnippetRow snippet={snippet} />}
               </For>
             </ul>
           </Section>

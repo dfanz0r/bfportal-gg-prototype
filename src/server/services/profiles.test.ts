@@ -49,13 +49,13 @@ describe('profile', () => {
     )
   })
 
-  it('lists scripts and likes on their own tabs', async () => {
+  it('lists snippets and likes on their own tabs', async () => {
     const id = await discordIdOf('Matavatar')
-    const scripts = await getProfile(id, 'scripts')
-    expect(scripts?.scripts.map((script) => script.title)).toEqual([
+    const shared = await getProfile(id, 'snippets')
+    expect(shared?.snippets.map((snippet) => snippet.title)).toEqual([
       'AI wave spawner',
     ])
-    expect(scripts?.cards).toEqual([])
+    expect(shared?.cards).toEqual([])
 
     const liked = await getProfile(id, 'liked')
     // The first page of them.

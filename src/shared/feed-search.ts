@@ -18,7 +18,7 @@ const page = z.coerce
   .catch(undefined)
 
 export const updatesSearchSchema = z.object({
-  kind: z.enum(['experience', 'script']).optional().catch(undefined),
+  kind: z.enum(['experience', 'snippet']).optional().catch(undefined),
   game: z.enum(games).optional().catch(undefined),
   page,
 })
@@ -28,7 +28,7 @@ export const eventsSearchSchema = z.object({
   when: z.enum(['past']).optional().catch(undefined),
 })
 
-export const scriptsSearchSchema = z.object({
+export const snippetsSearchSchema = z.object({
   category: z
     .preprocess((value) => String(value ?? ''), z.string().max(80))
     .optional()
@@ -36,10 +36,10 @@ export const scriptsSearchSchema = z.object({
   sort: z.enum(['newest']).optional().catch(undefined),
   page,
 })
-export type ScriptsSearch = z.infer<typeof scriptsSearchSchema>
+export type SnippetsSearch = z.infer<typeof snippetsSearchSchema>
 
 /** The lists on a profile. The first is what its bare address shows. */
-export const profileTabs = ['experiences', 'scripts', 'liked'] as const
+export const profileTabs = ['experiences', 'snippets', 'liked'] as const
 export type ProfileTab = (typeof profileTabs)[number]
 
 export const profileSearchSchema = z.object({

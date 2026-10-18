@@ -91,7 +91,7 @@ export async function getProfile(
     ),
   )
 
-  const [[made], [scripts], [received], [posted], [likedCount]] =
+  const [[made], [shared], [received], [posted], [likedCount]] =
     await Promise.all([
       db.select({ value: count() }).from(experiences).where(theirs),
       db
@@ -126,7 +126,7 @@ export async function getProfile(
   // "Show more" grows the page: page two holds the first two pages.
   const limit = page * FEED_PAGE_SIZE
   const cards =
-    tab === 'scripts'
+    tab === 'snippets'
       ? []
       : await listCards({
           where: tab === 'liked' ? liked : theirs,
@@ -134,9 +134,9 @@ export async function getProfile(
           limit,
           viewer,
         })
-  const scriptItems =
-    tab === 'scripts'
-      ? (await listSnippets({ ownerId: person.id, limit })).items
+  const snippetItems =
+    tab === 'snippets'
+      ? (await listSnippets({ ownerId: person.id, limit, viewer })).items
       : []
 
   return {
@@ -148,7 +148,7 @@ export async function getProfile(
     joinedAt: person.joinedAt,
     counts: {
       experiences: made.value,
-      scripts: scripts.value,
+      snippets: shared.value,
       liked: likedCount.value,
       likesReceived: received.value,
       updates: posted.value,
@@ -156,6 +156,6 @@ export async function getProfile(
     tab,
     page,
     cards,
-    scripts: scriptItems,
+    snippets: snippetItems,
   }
 }

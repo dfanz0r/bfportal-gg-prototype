@@ -8,9 +8,9 @@ import { excerpt, personColumns, publicPerson } from './shared'
 import { snippetVisible } from './snippets'
 
 // Update posts across the site: release notes, status reports and calls for
-// testers, on experiences and scripts.
+// testers, on experiences and snippets.
 
-export const updateKinds = ['experience', 'script'] as const
+export const updateKinds = ['experience', 'snippet'] as const
 export type UpdateKind = (typeof updateKinds)[number]
 
 /** Published posts whose project anyone may see, newest first. */
@@ -24,8 +24,8 @@ export async function listUpdates(options: {
     isNull(updates.deletedAt),
     or(visible, snippetVisible),
     options.kind === 'experience' ? isNotNull(updates.experienceId) : undefined,
-    options.kind === 'script' ? isNotNull(updates.snippetId) : undefined,
-    // Scripts belong to no game, so a game leaves them out.
+    options.kind === 'snippet' ? isNotNull(updates.snippetId) : undefined,
+    // Snippets belong to no game, so a game leaves them out.
     options.game ? eq(experiences.game, options.game) : undefined,
   )
   const [rows, [matching]] = await Promise.all([
@@ -75,7 +75,7 @@ export async function listUpdates(options: {
             game: update.experienceGame,
           }
         : {
-            kind: 'script' as const,
+            kind: 'snippet' as const,
             slug: update.snippetSlug ?? '',
             title: update.snippetTitle ?? '',
             coverImgUrl: null,

@@ -1,7 +1,7 @@
 import { useLocation } from '@tanstack/solid-router'
 import { createEffect, createSignal } from 'solid-js'
 
-import { likeExperience } from '../functions/likes'
+import { likeExperience, likeSnippet } from '../functions/likes'
 import { Icon } from './icon'
 
 const looks = {
@@ -16,7 +16,16 @@ const looks = {
       'inline-flex h-[38px] items-center gap-2 bg-base/80 px-3 font-mono text-[15px] text-fg tabular-nums backdrop-blur-sm transition-colors hover:bg-base hover:text-accent aria-pressed:text-accent',
     icon: 'size-[18px]',
   },
+  // At the end of a row in a list.
+  row: {
+    button:
+      'inline-flex h-[34px] items-center gap-1.5 border border-transparent px-2.5 font-mono text-[13px] text-fg-2 tabular-nums transition-colors hover:border-line hover:text-accent aria-pressed:text-accent',
+    icon: 'size-4',
+  },
 }
+
+/** What can be liked, and the function that likes each. */
+const likes = { experience: likeExperience, snippet: likeSnippet }
 
 /**
  * The like count, which is also the button to like or unlike. It is a form
@@ -28,6 +37,8 @@ const looks = {
  * signed in goes to sign in.
  */
 export function LikeButton(props: {
+  /** What `slug` is the address of. An experience unless it says. */
+  kind?: keyof typeof likes
   slug: string
   likes: number
   liked: boolean
@@ -35,6 +46,7 @@ export function LikeButton(props: {
   look?: keyof typeof looks
   class?: string
 }) {
+  const like = () => likes[props.kind ?? 'experience']
   const location = useLocation()
   // What the page was loaded with, until the visitor presses the button.
   const [state, setState] = createSignal({
@@ -65,7 +77,7 @@ export function LikeButton(props: {
     // Show it at once, and put it back if the server says otherwise.
     setState({ liked, likes: before.likes + (liked ? 1 : -1) })
     try {
-      const result = await likeExperience({ data: { slug, liked } })
+      const result = await like()({ data: { slug, liked } })
       if (props.slug !== slug) return
       if (result.ok) {
         setState({ liked: result.liked, likes: result.likes })
@@ -83,7 +95,7 @@ export function LikeButton(props: {
   return (
     <form
       method="post"
-      action={likeExperience.url}
+      action={like().url}
       onSubmit={submit}
       class={props.class}
     >

@@ -80,7 +80,7 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
     }
     if (result.ok) {
       // It is in. Whatever happens now, it must not read as a failure.
-      const page = `/scripts/${result.slug}`
+      const page = `/snippets/${result.slug}`
       try {
         await navigate({ href: page })
       } catch {
@@ -216,7 +216,7 @@ export function SnippetSubmitPage(props: { data: SnippetSubmitPageData }) {
                 {sending() ? 'Submitting' : 'Submit for review'}
                 <Icon name="arrow-right" />
               </button>
-              <a href="/scripts" class={`${buttonGhost} h-11 px-6`}>
+              <a href="/snippets" class={`${buttonGhost} h-11 px-6`}>
                 Cancel
               </a>
               <p class="max-w-[34em] text-[13.5px] text-fg-3">

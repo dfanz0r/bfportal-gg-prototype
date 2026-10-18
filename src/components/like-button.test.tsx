@@ -8,7 +8,10 @@ import { LikeButton } from './like-button'
 const likeExperience = vi.hoisted(() =>
   Object.assign(vi.fn(), { url: '/like' }),
 )
-vi.mock('../functions/likes', () => ({ likeExperience }))
+const likeSnippet = vi.hoisted(() =>
+  Object.assign(vi.fn(), { url: '/like-snippet' }),
+)
+vi.mock('../functions/likes', () => ({ likeExperience, likeSnippet }))
 // The page it is pressed on, which a form with no script returns to.
 vi.mock('@tanstack/solid-router', () => ({
   useLocation: () => () => ({ href: '/library?sort=new' }),
@@ -156,5 +159,31 @@ describe('LikeButton', () => {
     await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/login'))
     expect(shown(host)).toBe(4)
     vi.unstubAllGlobals()
+  })
+
+  it('likes a snippet through its own function, with or without script', async () => {
+    likeSnippet.mockResolvedValueOnce({ ok: true, liked: true, likes: 3 })
+    const host = document.body.appendChild(document.createElement('div'))
+    render(
+      () => (
+        <LikeButton
+          kind="snippet"
+          slug="ai-wave-spawner"
+          likes={2}
+          liked={false}
+          look="row"
+        />
+      ),
+      host,
+    )
+    expect(host.querySelector('form')?.getAttribute('action')).toBe(
+      '/like-snippet',
+    )
+    press(host)
+    expect(likeSnippet).toHaveBeenCalledWith({
+      data: { slug: 'ai-wave-spawner', liked: true },
+    })
+    expect(likeExperience).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(shown(host)).toBe(3))
   })
 })

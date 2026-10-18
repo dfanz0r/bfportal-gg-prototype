@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/solid-start'
 import { listUpdates } from '../server/services/updates'
 import { FEED_PAGE_SIZE, updatesSearchSchema } from '../shared/feed-search'
 
-/** The updates feed: posts on experiences and scripts, newest first. */
+/** The updates feed: posts on experiences and snippets, newest first. */
 export const fetchUpdates = createServerFn({ method: 'GET' })
   .validator(updatesSearchSchema)
   .handler(async ({ data }) => ({

@@ -20,7 +20,7 @@ export function UpdateCard(props: {
   const href = () =>
     update().project.kind === 'experience'
       ? `/experiences/${update().project.slug}`
-      : `/scripts/${update().project.slug}`
+      : `/snippets/${update().project.slug}`
 
   return (
     <article
@@ -30,8 +30,8 @@ export function UpdateCard(props: {
           : `${panel} flex gap-3.5 p-4`
       }
     >
-      {/* Decoration: the project's name beside it is the link. A script has
-          no picture; it shows what it is. */}
+      {/* Decoration: the project's name beside it is the link. A snippet has
+          no picture; it shows what it is made of. */}
       <div
         aria-hidden="true"
         class={`grid shrink-0 place-items-center overflow-hidden bg-surface-3 font-mono text-xs font-semibold text-steel ${props.row ? 'h-[81px] w-36 max-sm:hidden' : 'h-10 w-16'}`}
@@ -55,7 +55,7 @@ export function UpdateCard(props: {
             {update().project.title}
           </a>
           <span class={`${tag} border-line text-fg-2`}>
-            {update().project.kind === 'experience' ? 'Experience' : 'Script'}
+            {update().project.kind === 'experience' ? 'Experience' : 'Snippet'}
           </span>
           <Show when={update().project.game}>
             {(game) => (

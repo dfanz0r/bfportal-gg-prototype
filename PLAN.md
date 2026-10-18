@@ -246,7 +246,7 @@ listing, the old address redirects.
 | `/submissions/` | New. The signed-in visitor's own experiences and snippets, with the state of each. Not built |
 | `/users/<discord_id>/`, `…/experiences/`, `…/liked/` | Profile and its two lists |
 | `/users/admin/` | Profile of the legacy admin-owned experiences |
-| `/scripts/`, `/scripts/snippets/`, `/scripts/experiences/`, `/scripts/featured/`, `/scripts/<slug>/` | BF6 scripts section |
+| `/snippets/`, `/snippets/<slug>/` | BF6 snippets section, renamed from Scripts 2026-10-17. The old `/scripts/` and `/scripts/<slug>/` redirect with a 301 |
 | `/updates/` | New. Recent update posts across the site, with filters; `/updates/feed.xml` is the Atom feed |
 | `/experiences/<slug>/updates/<id>/` | New. One update post; the experience page lists them |
 | `/events/` | New. Upcoming and past events |
@@ -955,9 +955,16 @@ is a "coming soon" page (`bf6/models/scripts_page/snippets.py:154`).
 
 What a snippet is, agreed 2026-10-13:
 
-- **A small, reusable piece of script to copy into your own.** Not a whole
+- **A small, reusable piece to copy into your own.** Not a whole
   experience: that is submitted as an experience, where its files can be offered as
   a template.
+- **"Snippet" is the item; "script" is what one is made of.** Decided 2026-10-17:
+  every snippet is TypeScript for now, but one made of blocks may come later, so
+  "script" only ever means TypeScript, as in what an experience is built with. The
+  section is Snippets, at `/snippets/`; it was Scripts, and `/scripts/` and
+  `/scripts/<slug>/` redirect for good. The mockups still say Scripts.
+- **Liked as an experience is,** from its row in a list and from its page, once it
+  is published. Built 2026-10-17 on `snippet_likes`.
 - **Battlefield 6 only.** 2042's Portal had no TypeScript. Whether a game has
   snippets is a field of its entry in `src/shared/games.ts`, not a test of its name.
 - **Anyone signed in can submit one,** at `/submit/snippet/`. It is pasted in or
@@ -978,7 +985,7 @@ Built 2026-10-13, in `src/server/services/snippet-submissions.ts`:
   snippets together (`submissionLimit`).
 - With no script, a `.ts` file is read on the server: up to 500,000 bytes, and only
   when the box is empty. With script, the file is read into the box in the browser.
-- A snippet that is not published is shown at `/scripts/<slug>/` to its owner and to
+- A snippet that is not published is shown at `/snippets/<slug>/` to its owner and to
   moderators, with its status and any note; anyone else gets "not found".
 
 Still to read from production: which `script_main` categories exist. The form offers
@@ -1529,7 +1536,7 @@ What "feature complete" means, by area.
 
 - Discord login only. No email is sent anywhere.
 - Profile page: avatar, name, join date, role and owner badges, counts of experiences,
-  scripts, likes received and updates posted, and four tabs: experiences, scripts,
+  snippets, likes received and updates posted, and four tabs: experiences, snippets,
   liked and updates.
 - An account settings page, linked from the profile and the header menu, for
   `hide_username`.
@@ -1579,15 +1586,16 @@ What "feature complete" means, by area.
 
 **BF6**
 
-- Scripts section with Snippets and Experiences tabs, featured listing, snippet pages.
-  The list is rows, not cards: language, title, category, one line, author, when it
-  was updated, the experience it comes from and its likes.
-- A script page: the code with line numbers and a copy button, the description, its
+- Snippets section, featured listing, snippet pages. The mockup's Experiences tab,
+  for experiences built with script, is the Library's "built with" filter instead.
+  The list is rows, not cards: what it is made of, title, category, one line, author,
+  when it was updated, the experience it comes from and its likes.
+- A snippet page: the code with line numbers and a copy button, the description, its
   update posts, a download of the export, the repository link, and the experiences
   that use it. The export download is for snippets from the old site only: a snippet
   submitted here is its script alone. The mockups of the scripts list and the script
   page still show the old site's export details and have not been brought in line.
-- Navigation with eight sections: Scripts, Maps, Tools & Plugins, Guides & Docs, Library,
+- Navigation with eight sections: Snippets, Maps, Tools & Plugins, Guides & Docs, Library,
   Updates, Events and Forum. Maps, Tools, Guides and Forum are placeholders. Below
   1280px the bar collapses into a menu that works without JavaScript.
 

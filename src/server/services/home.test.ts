@@ -23,7 +23,7 @@ describe('home', () => {
   })
 
   it('counts what anyone can see', () => {
-    expect(home.stats).toMatchObject({ experiences: 48, scripts: 2 })
+    expect(home.stats).toMatchObject({ experiences: 48, snippets: 2 })
     expect(home.games).toEqual([
       { id: 'bf6', name: 'Battlefield 6', count: 41 },
       { id: 'bf2042', name: 'Battlefield 2042', count: 7 },
@@ -36,12 +36,12 @@ describe('home', () => {
     expect(home.trending.some((card) => card.unavailable)).toBe(false)
   })
 
-  it('lists the newest published updates, on experiences and scripts', () => {
+  it('lists the newest published updates, on experiences and snippets', () => {
     expect(
       home.updates.map((update) => [update.project.kind, update.title]),
     ).toEqual([
       ['experience', 'Version 1.3: sudden death and a third map'],
-      ['script', 'Boss waves are now configurable'],
+      ['snippet', 'Boss waves are now configurable'],
       ['experience', 'Looking for testers: four-player hard mode'],
     ])
   })
@@ -53,8 +53,8 @@ describe('home', () => {
     ])
   })
 
-  it('lists scripts by likes', () => {
-    expect(home.scripts.map((script) => script.title)).toEqual([
+  it('lists snippets by likes', () => {
+    expect(home.snippets.map((snippet) => snippet.title)).toEqual([
       'Round-based economy',
       'AI wave spawner',
     ])

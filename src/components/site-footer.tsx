@@ -27,7 +27,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     title: 'Browse',
     links: [
       page('/library'),
-      page('/scripts'),
+      page('/snippets'),
       page('/maps'),
       page('/tools'),
       // Each other game's library, by its short name: "2042 archive".

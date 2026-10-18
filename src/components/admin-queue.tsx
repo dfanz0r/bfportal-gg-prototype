@@ -59,7 +59,7 @@ export function AdminQueue(props: { data: Queue }) {
                   <DateText value={item.submittedAt} now={data().now} />
                 </span>
                 <a
-                  href={`/scripts/${item.slug}`}
+                  href={`/snippets/${item.slug}`}
                   class={`${buttonGhost} h-[34px] px-3.5`}
                 >
                   Review

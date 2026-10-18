@@ -11,7 +11,7 @@ import { listUpdates } from './updates'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 
-describe('updates, playtests, events and scripts', () => {
+describe('updates, playtests, events and snippets', () => {
   beforeAll(async () => {
     await seed(db, NOW)
   })
@@ -26,8 +26,8 @@ describe('updates, playtests, events and scripts', () => {
     expect(all.total).toBe(5)
     expect(all.items[0].title).toBe('Version 1.3: sudden death and a third map')
 
-    const scripts = await listUpdates({ kind: 'script', limit: 50 })
-    expect(scripts.items.map((update) => update.project.title)).toEqual([
+    const onSnippets = await listUpdates({ kind: 'snippet', limit: 50 })
+    expect(onSnippets.items.map((update) => update.project.title)).toEqual([
       'AI wave spawner',
     ])
     expect((await listUpdates({ game: 'bf6', limit: 50 })).total).toBe(4)
@@ -91,7 +91,7 @@ describe('updates, playtests, events and scripts', () => {
     expect(past.items[0].interested).toBe(44)
   })
 
-  it('lists scripts, by category, and shows one', async () => {
+  it('lists snippets, by category, and shows one', async () => {
     const all = await listSnippets({ limit: 50 })
     expect(all.items.map((script) => script.title)).toEqual([
       'Round-based economy',
@@ -121,6 +121,6 @@ describe('updates, playtests, events and scripts', () => {
     expect(page?.updates.map((update) => update.title)).toEqual([
       'Boss waves are now configurable',
     ])
-    expect(await getSnippet('no-such-script', NOW)).toBeNull()
+    expect(await getSnippet('no-such-snippet', NOW)).toBeNull()
   })
 })

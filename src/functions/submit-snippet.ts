@@ -58,7 +58,7 @@ export const submitSnippetForReview = createServerFn({ method: 'POST' })
         ? refuse('invalid', { script: 'That file is larger than a snippet.' })
         : await submitSnippet(actor, sent.fields)
     if (!data.viaForm) return result
-    if (result.ok) throw redirectTo(`/scripts/${result.slug}`)
+    if (result.ok) throw redirectTo(`/snippets/${result.slug}`)
     if (!actor || result.reason === 'signed-out') throw redirectTo('/login')
     // With no script the page that was filled in is gone by now. What was
     // sent is kept, and the form is shown again with it and what was wrong.

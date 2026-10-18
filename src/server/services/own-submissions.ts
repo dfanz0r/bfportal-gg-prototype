@@ -210,7 +210,7 @@ export async function listOwnSubmissions(actor: Actor | null) {
         // Snippets are for the one game that has them.
         game: 'bf6',
         title: item.title,
-        href: `/scripts/${item.slug}`,
+        href: `/snippets/${item.slug}`,
         editHref: null,
         image: null,
         listing: LISTINGS[item.status],

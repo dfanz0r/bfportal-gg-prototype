@@ -14,8 +14,12 @@ documentation, commit messages and the site's own text. `color`, `behavior`, `ce
 
 Use the community's words. An experience offered for others to build on is a
 "template", never a "prefab". A playtest is a brief that testers play in their own
-time, not a scheduled session. A "snippet" is a small, reusable piece of script for
-Battlefield 6, not a whole experience.
+time, not a scheduled session. A "snippet" is a small, reusable piece for
+Battlefield 6 that others copy into their own, not a whole experience. "Script"
+means TypeScript, what a snippet or an experience is made of, and never the snippet
+itself: it is a snippet in the site's text and in code (`SnippetRow`,
+`fetchSnippets`), in the Snippets section at `/snippets`. Each snippet is TypeScript
+for now; do not build in that it must be, since one of blocks may come.
 
 Write the site's own text short and plain: one fact a line, said the ordinary way.
 No asides, no reassurance, nothing clipped or clever. "Submitted 5 hours ago. 4th of
@@ -98,7 +102,8 @@ Reach for what exists before writing markup:
 | An experience in a listing | `ExperienceCard` |
 | What an experience is built with | `BuiltWithTags` |
 | An update post | `UpdateCard` in a listing, `UpdatePost` in full |
-| A playtest, an event, a script in a listing | `PlaytestCard`, `EventCard`, `ScriptRow` |
+| A playtest, an event, a snippet in a listing | `PlaytestCard`, `EventCard`, `SnippetRow` |
+| A like count that is also the button to like | `LikeButton`, with `kind="snippet"` for a snippet |
 | "Name: value" rows | `Facts` with `Fact`s inside |
 | A source repository | `RepoLink` |
 | A share code that copies itself | `CopyCode`; any other text is `CopyText` |

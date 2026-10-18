@@ -1,7 +1,7 @@
 import { For, Show } from 'solid-js'
 
 import { decideOnSnippet } from '../functions/moderation'
-import type { Script } from '../functions/scripts'
+import type { Snippet } from '../functions/snippets'
 import type { DecisionSearch } from '../shared/decision'
 import { Byline } from './byline'
 import { CodeView } from './code-view'
@@ -10,7 +10,7 @@ import { DateText } from './date-text'
 import { DecisionForm } from './decision-form'
 import { Fact } from './fact'
 import { Facts } from './facts'
-import { Icon } from './icon'
+import { LikeButton } from './like-button'
 import { PageLayout } from './page-layout'
 import { RepoLink } from './repo-link'
 import { Section } from './section'
@@ -18,8 +18,8 @@ import { StatusNote } from './status-note'
 import { buttonAccent, panel } from './ui'
 import { UpdatePost } from './update-post'
 
-/** The head of a script's page, for search engines and link previews. */
-export function scriptHead(data: Script | undefined) {
+/** The head of a snippet's page, for search engines and link previews. */
+export function snippetHead(data: Snippet | undefined) {
   if (!data) return {}
   return {
     meta: [
@@ -32,9 +32,9 @@ export function scriptHead(data: Script | undefined) {
   }
 }
 
-/** A script's own page: its code, what it does and what has changed. */
-export function ScriptPage(props: {
-  data: Script
+/** A snippet's own page: its code, what it does and what has changed. */
+export function SnippetPage(props: {
+  data: Snippet
   /** What a decision posted with no script and refused brought back. */
   decision: DecisionSearch
 }) {
@@ -44,9 +44,21 @@ export function ScriptPage(props: {
     <PageLayout
       title={data().title}
       crumbs={[
-        { label: 'Scripts', href: '/scripts' },
+        { label: 'Snippets', href: '/snippets' },
         ...(data().category ? [{ label: data().category ?? '' }] : []),
       ]}
+      actions={
+        // Nothing can be liked until it is published; the server refuses it.
+        data().status === 'published' ? (
+          <LikeButton
+            kind="snippet"
+            slug={data().slug}
+            likes={data().likes}
+            liked={data().viewer.liked}
+            signedIn={data().viewer.signedIn}
+          />
+        ) : undefined
+      }
       meta={
         <>
           <Byline person={data().owner} class="text-[13.5px]" />
@@ -65,7 +77,7 @@ export function ScriptPage(props: {
         <div class="min-w-0">
           <div class={panel}>
             <p class="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 font-mono text-xs text-fg-3">
-              <span>Script.ts, {data().lines} lines</span>
+              <span>TypeScript, {data().lines} lines</span>
               <CopyText text={data().script} label="Copy" />
             </p>
             <CodeView
@@ -98,7 +110,7 @@ export function ScriptPage(props: {
             <DecisionForm
               decide={decideOnSnippet}
               id={data().id}
-              back={`/scripts/${data().slug}`}
+              back={`/snippets/${data().slug}`}
               problem={props.decision.problem}
               note={props.decision.note}
               hint="Approving publishes the page. Requesting changes needs a note."
@@ -108,7 +120,7 @@ export function ScriptPage(props: {
           <div class={`${panel} grid gap-2.5 p-5`}>
             <CopyText
               text={data().script}
-              label="Copy script"
+              label="Copy snippet"
               class={buttonAccent}
             />
             <p class="text-[13px] text-fg-3">
@@ -119,12 +131,6 @@ export function ScriptPage(props: {
             <Show when={data().category}>
               {(category) => <Fact name="Category">{category()}</Fact>}
             </Show>
-            <Fact name="Likes">
-              <span class="inline-flex items-center gap-1.5">
-                <Icon name="heart" class="size-3.5" />
-                {data().likes}
-              </span>
-            </Fact>
             <Show when={data().sdk}>
               {(sdk) => (
                 <Fact name="SDK">

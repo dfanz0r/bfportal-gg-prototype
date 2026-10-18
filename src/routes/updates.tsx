@@ -62,15 +62,15 @@ function Page() {
           </Link>
           <Link
             to="/updates"
-            search={withFilter({ kind: 'script', game: undefined })}
+            search={withFilter({ kind: 'snippet', game: undefined })}
             class={pill}
-            aria-current={search().kind === 'script' ? 'true' : undefined}
+            aria-current={search().kind === 'snippet' ? 'true' : undefined}
           >
-            Scripts
+            Snippets
           </Link>
         </Pills>
-        {/* Scripts belong to no game, so there is nothing to choose. */}
-        <Show when={search().kind !== 'script'}>
+        {/* Snippets belong to no game, so there is nothing to choose. */}
+        <Show when={search().kind !== 'snippet'}>
           <Pills label="Game">
             <Link
               to="/updates"

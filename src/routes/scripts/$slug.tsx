@@ -1,26 +1,13 @@
-import { createFileRoute, notFound } from '@tanstack/solid-router'
+import { createFileRoute, redirect } from '@tanstack/solid-router'
 
-import { ScriptPage, scriptHead } from '../../components/script-page'
-import { fetchScript } from '../../functions/scripts'
-import { decisionSearchSchema } from '../../shared/decision'
-
+// A snippet's old address, from before the section was named for what it
+// lists.
 export const Route = createFileRoute('/scripts/$slug')({
-  // A waiting snippet is decided on its own page. Set when a decision posted
-  // with no script was refused.
-  validateSearch: decisionSearchSchema,
-  loader: async ({ params }) => {
-    const script = await fetchScript({ data: { slug: params.slug } })
-    if (!script) {
-      throw notFound()
-    }
-    return script
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/snippets/$slug',
+      params: { slug: params.slug },
+      statusCode: 301,
+    })
   },
-  head: ({ loaderData }) => scriptHead(loaderData),
-  component: Page,
 })
-
-function Page() {
-  const data = Route.useLoaderData()
-  const search = Route.useSearch()
-  return <ScriptPage data={data()} decision={search()} />
-}

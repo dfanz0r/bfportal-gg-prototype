@@ -13,8 +13,8 @@ import {
 } from '../db/schema'
 import { excerpt, personColumns, publicPerson } from './shared'
 
-// Scripts: Battlefield 6 snippets that others copy into their own
-// experiences.
+// Snippets: small, reusable pieces others copy into their own experiences.
+// For now each is TypeScript, kept in `snippets.script`.
 
 /** What anyone may see: published, and not deleted by its owner. */
 export const snippetVisible = and(
@@ -24,15 +24,23 @@ export const snippetVisible = and(
 
 const likeCount = sql<number>`(select count(*)::int from ${snippetLikes} where ${snippetLikes.snippetId} = ${snippets.id})`
 
+/** Whether `viewer` likes the snippet in the row, false for nobody. */
+const likedBy = (viewer: string | null | undefined) =>
+  viewer
+    ? sql<boolean>`exists (select 1 from ${snippetLikes} where ${snippetLikes.snippetId} = ${snippets.id} and ${snippetLikes.userId} = ${viewer})`
+    : sql<boolean>`false`
+
 export const snippetSorts = ['likes', 'newest'] as const
 export type SnippetSort = (typeof snippetSorts)[number]
 
 export async function listSnippets(options: {
   category?: string
   sort?: SnippetSort
-  /** Only one person's scripts, for their profile. */
+  /** Only one person's snippets, for their profile. */
   ownerId?: string
   limit: number
+  /** Who is looking, if anyone, for whether they like each one. */
+  viewer?: string | null
 }) {
   const categoryRows = await db
     .select({
@@ -70,6 +78,7 @@ export async function listSnippets(options: {
         updatedAt: snippets.lastPublishedAt,
         owner: personColumns,
         likes: likeCount,
+        liked: likedBy(options.viewer),
       })
       .from(snippets)
       .innerJoin(user, eq(user.id, snippets.ownerId))
@@ -94,15 +103,16 @@ export async function listSnippets(options: {
       slug: row.slug,
       count: row.count,
     })),
-    items: rows.map((script) => ({
-      slug: script.slug,
-      title: script.title,
-      excerpt: excerpt(script.descriptionMd),
-      category: script.category,
-      featured: script.featured,
-      updatedAt: script.updatedAt,
-      owner: publicPerson(script.owner),
-      likes: script.likes,
+    items: rows.map((snippet) => ({
+      slug: snippet.slug,
+      title: snippet.title,
+      excerpt: excerpt(snippet.descriptionMd),
+      category: snippet.category,
+      featured: snippet.featured,
+      updatedAt: snippet.updatedAt,
+      owner: publicPerson(snippet.owner),
+      likes: snippet.likes,
+      liked: snippet.liked,
     })),
   }
 }
@@ -112,7 +122,7 @@ export type SnippetItem = Awaited<
 >['items'][number]
 
 /**
- * A script's own page, or null if whoever is looking may not see it. The
+ * A snippet's own page, or null if whoever is looking may not see it. The
  * public sees what is published. Its owner and the moderators also see it in
  * any other status. Nobody sees one its owner deleted.
  */
@@ -141,6 +151,7 @@ export async function getSnippet(
       sdkVersion: sdkVersions.version,
       sdkSeason: sdkVersions.season,
       likes: likeCount,
+      liked: likedBy(viewer?.id),
     })
     .from(snippets)
     .innerJoin(user, eq(user.id, snippets.ownerId))
@@ -201,7 +212,7 @@ export async function getSnippet(
     // What a moderator wrote when asking for changes or removing it, for its
     // owner. Who wrote it is not passed on.
     reviewNote: isOwner || isStaff ? row.reviewNote : null,
-    viewer: { isOwner, isStaff },
+    viewer: { signedIn: viewer !== null, liked: row.liked, isOwner, isStaff },
     now,
   }
 }

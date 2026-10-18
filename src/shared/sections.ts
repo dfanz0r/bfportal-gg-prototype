@@ -7,9 +7,9 @@
  */
 export const sections = [
   {
-    to: '/scripts',
-    nav: 'Scripts',
-    title: 'Scripts',
+    to: '/snippets',
+    nav: 'Snippets',
+    title: 'Snippets',
     text: 'Rules, logic and interface snippets for the Portal editor.',
   },
   {

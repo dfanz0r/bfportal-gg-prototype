@@ -31,7 +31,7 @@ export async function getHome(
     trending,
     updates,
     playtests,
-    scripts,
+    snippets,
     events,
   ] = await Promise.all([
     // The notice showing now, if there is one.
@@ -70,7 +70,7 @@ export async function getHome(
     }),
     listUpdates({ limit: 3 }),
     listPlaytests({ state: 'open', limit: 3 }, now),
-    listSnippets({ limit: 4 }),
+    listSnippets({ limit: 4, viewer }),
     listEvents({ when: 'upcoming', limit: 3 }, now),
   ])
 
@@ -78,7 +78,7 @@ export async function getHome(
     banner: banner ?? null,
     stats: {
       experiences: experienceStats.experiences,
-      scripts: scripts.all,
+      snippets: snippets.all,
       creators: experienceStats.creators,
     },
     games: gameList.map((game) => ({
@@ -89,7 +89,7 @@ export async function getHome(
     trending,
     updates: updates.items,
     playtests: playtests.items,
-    scripts: scripts.items,
+    snippets: snippets.items,
     events: events.items,
     now,
   }

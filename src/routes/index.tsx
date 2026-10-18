@@ -4,7 +4,7 @@ import { HomePage } from '../components/home-page'
 import { fetchHome } from '../functions/home'
 
 const DESCRIPTION =
-  'Experiences, scripts, maps and tools made by the Battlefield Portal community. Find something to play tonight, or share what you have built.'
+  'Experiences, snippets, maps and tools made by the Battlefield Portal community. Find something to play tonight, or share what you have built.'
 
 export const Route = createFileRoute('/')({
   loader: () => fetchHome(),
