@@ -1,6 +1,6 @@
 import { createRouter as createTanStackRouter } from '@tanstack/solid-router'
 
-import { NotFound, RouteError } from './components/route-fallbacks'
+import { NotFound, RouteError } from './components/layout/route-fallbacks'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {

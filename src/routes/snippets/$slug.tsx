@@ -1,6 +1,9 @@
 import { createFileRoute, notFound } from '@tanstack/solid-router'
 
-import { SnippetPage, snippetHead } from '../../components/snippet-page'
+import {
+  SnippetPage,
+  snippetHead,
+} from '../../components/snippets/snippet-page'
 import { fetchSnippet } from '../../functions/snippets'
 import { decisionSearchSchema } from '../../shared/decision'
 

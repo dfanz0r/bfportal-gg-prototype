@@ -127,8 +127,9 @@ src/
     admin/           overview, review queue, reports, experiences, snippets, update posts,
                      playtests, events and banners, categories, tags, users, settings
     api/             public JSON API, sitemap.xml, robots.txt, auth callback
-  components/        shared Solid components (header, footer, page layout, search, avatar,
-                     icons, cards, filters, markdown view)
+  components/        Solid components: ui/, layout/ and forms/ for what any page uses,
+                     and a folder for each part of the site (experiences/, snippets/,
+                     submit/, admin/, ...) for its pages and pieces. See AGENTS.md
   functions/         server functions: the only way client code calls into server/
   server/            never imported by client code; the build fails if it is
     services/        experiences, snippets, moderation, likes, reports, users, categories

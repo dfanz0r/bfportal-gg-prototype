@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/solid-router'
 
-import { YourSubmissions } from '../components/your-submissions'
+import { YourSubmissions } from '../components/submit/your-submissions'
 import { fetchOwnSubmissions } from '../functions/submissions'
 import { pageTitle } from '../shared/page-title'
 

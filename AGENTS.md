@@ -50,7 +50,7 @@ and before type-checking. The route tree is committed; never edit it by hand.
 | Path | Contents |
 |---|---|
 | `src/routes` | One file per page or HTTP endpoint. Thin: a route wires data to components |
-| `src/components` | Shared Solid components and `ui.ts`, the shared class lists |
+| `src/components` | Solid components, in folders: `ui/` for the building blocks used anywhere (with `ui.ts`, the shared class lists), `layout/` for the frame of every page, `forms/` for form controls, and a folder for each part of the site (`experiences/`, `snippets/`, `submit/`, `admin/` and the rest) for what belongs to it |
 | `src/functions` | Server functions: the only way client code reaches `src/server` |
 | `src/server` | Database, auth, configuration, and `services`, which hold the queries and rules. Never imported by client code, types included: take a type from the server function instead |
 | `src/shared` | Constants, types and text used on both sides |
@@ -143,6 +143,13 @@ How we write them:
 - **A file exports one component,** named in kebab case, with its props typed inline.
   A small helper only that component uses stays private in the same file. No barrel
   files.
+- **A component lives with what it belongs to.** One part of the site's goes in that
+  part's folder, page and pieces together: `experiences/experience-page.tsx` beside
+  `experiences/gallery.tsx`. One that two parts use, or that any page could, goes in
+  `ui/`, or `forms/` if it is a control, or `layout/` if it frames the page.
+  Something that starts in one part and is then wanted in another moves to `ui/`, as
+  `like-button.tsx` and `content-manage.tsx` did. No folder within a folder, and
+  none for one file but a part of the site of its own (`home/`, `profiles/`).
 - **A route file is thin.** It wires the address and the loader to a page component
   in `src/components`; the page itself is not written there.
 - **Extract on the second use.** Markup or a long class list that appears twice becomes

@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
-import { PageLayout } from '../components/page-layout'
-import { Pills } from '../components/pills'
-import { ShowMore } from '../components/show-more'
-import { buttonGhost, label, panel, pill } from '../components/ui'
-import { UpdateCard } from '../components/update-card'
+import { PageLayout } from '../components/layout/page-layout'
+import { Pills } from '../components/ui/pills'
+import { ShowMore } from '../components/ui/show-more'
+import { buttonGhost, label, panel, pill } from '../components/ui/ui'
+import { UpdateCard } from '../components/updates/update-card'
 import { fetchUpdates } from '../functions/updates'
 import {
   FEED_MAX_PAGES,

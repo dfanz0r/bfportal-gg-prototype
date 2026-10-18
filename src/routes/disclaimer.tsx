@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { For } from 'solid-js'
 
-import { PageLayout } from '../components/page-layout'
-import { body } from '../components/ui'
+import { PageLayout } from '../components/layout/page-layout'
+import { body } from '../components/ui/ui'
 import { disclaimer, eaContentPolicyUrl } from '../shared/legal'
 import { pageTitle } from '../shared/page-title'
 

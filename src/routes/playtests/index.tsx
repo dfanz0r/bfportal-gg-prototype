@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
-import { DateText } from '../../components/date-text'
-import { Icon } from '../../components/icon'
-import { PageLayout } from '../../components/page-layout'
-import { PlaytestRow } from '../../components/playtest-row'
-import { Tabs } from '../../components/tabs'
-import { buttonGhost, label, panel } from '../../components/ui'
+import { PageLayout } from '../../components/layout/page-layout'
+import { PlaytestRow } from '../../components/playtests/playtest-row'
+import { DateText } from '../../components/ui/date-text'
+import { Icon } from '../../components/ui/icon'
+import { Tabs } from '../../components/ui/tabs'
+import { buttonGhost, label, panel } from '../../components/ui/ui'
 import { fetchPlaytests } from '../../functions/playtests'
 import { links } from '../../shared/links'
 

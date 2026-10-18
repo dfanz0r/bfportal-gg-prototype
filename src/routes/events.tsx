@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 
-import { EventCard } from '../components/event-card'
-import { PageLayout } from '../components/page-layout'
-import { Pills } from '../components/pills'
-import { Tabs } from '../components/tabs'
-import { pill } from '../components/ui'
+import { EventCard } from '../components/events/event-card'
+import { PageLayout } from '../components/layout/page-layout'
+import { Pills } from '../components/ui/pills'
+import { Tabs } from '../components/ui/tabs'
+import { pill } from '../components/ui/ui'
 import { fetchEvents } from '../functions/events'
 import { eventsSearchSchema } from '../shared/feed-search'
 

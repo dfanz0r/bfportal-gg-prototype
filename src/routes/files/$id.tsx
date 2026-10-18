@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/solid-router'
 import { z } from 'zod'
 
-import { FilePage } from '../../components/file-page'
+import { FilePage } from '../../components/experiences/file-page'
 import { fetchFileView } from '../../functions/files'
 import { pageTitle } from '../../shared/page-title'
 import { FILE_ID } from '../../shared/project-files'

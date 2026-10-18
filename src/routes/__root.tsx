@@ -8,8 +8,8 @@ import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
 import { type JSX, Suspense } from 'solid-js'
 import { HydrationScript } from 'solid-js/web'
 
-import { SiteFooter } from '../components/site-footer'
-import { SiteHeader } from '../components/site-header'
+import { SiteFooter } from '../components/layout/site-footer'
+import { SiteHeader } from '../components/layout/site-header'
 import { getSessionUser } from '../functions/session'
 import styleCss from '../styles.css?url'
 

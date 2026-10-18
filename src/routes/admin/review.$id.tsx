@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/solid-router'
 
-import { AdminReview } from '../../components/admin-review'
+import { AdminReview } from '../../components/admin/admin-review'
 import { fetchSubmissionReview } from '../../functions/moderation'
 import { decisionSearchSchema } from '../../shared/decision'
 import { pageTitle } from '../../shared/page-title'

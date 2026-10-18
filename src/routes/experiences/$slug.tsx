@@ -3,7 +3,7 @@ import { createFileRoute, notFound } from '@tanstack/solid-router'
 import {
   ExperiencePage,
   experienceHead,
-} from '../../components/experience-page'
+} from '../../components/experiences/experience-page'
 import { fetchExperience } from '../../functions/experience'
 
 export const Route = createFileRoute('/experiences/$slug')({
