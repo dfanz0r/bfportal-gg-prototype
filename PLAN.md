@@ -368,7 +368,11 @@ Join tables:
 - `experience_likes` (experience, user, created_at). One store, replacing the two
   that exist today (`core/models/users.py:41`, `core/models/experience.py:157`).
 - `experience_reports` (experience, user, type, created_at), where type is `bugged`,
-  `broken` or `xp_farm`. Replaces three separate join tables.
+  `broken` or `xp_farm`. Replaces three separate join tables. Since 2026-10-18 a
+  report also has `resolved_at` and `resolved_by`: a moderator deals with an
+  experience's open reports by setting its flags or dismissing them, and the same
+  person reporting the same thing again opens their report once more. The report
+  menu offers again what is no longer open.
 
 ### Creators and collaborators
 
@@ -1467,8 +1471,10 @@ statuses are defined under "Submission states".
 | Delete | Owner | A soft delete. Collaborators cannot. Built for experiences 2026-10-17, in any state, under "Manage" at the foot of its page with a box to tick; a draft also has Delete on its form. An edit waiting on it goes with it. Built for snippets 2026-10-18, the same way (`ContentManage`) |
 | Ask to clear bugged and broken | Owner, collaborator | Goes to moderation |
 | Report bugged, broken or XP farm | Any other logged-in user | A report row; no flag changes |
-| Set featured, trending or any health flag | Admin | Immediate |
-| Unpublish | Moderator, admin | `unpublished` |
+| Set featured or trending | Admin | Immediate |
+| Set a health flag, or dismiss reports | Moderator, admin | Immediate. Changed 2026-10-18 from admins only: moderators act on reports, as the schema and the mockup had it. Either deals with the experience's open reports |
+| Unpublish | Moderator, admin | `unpublished`. Built 2026-10-18 for experiences and snippets as "Delist", with "List again" |
+| Give someone a role | Admin | New, 2026-10-18. Immediate. Never to oneself, and never leaving the site with no admin |
 | Post an update | Owner, collaborator | New. On a published project only. Held for approval, like a submission |
 | Start a playtest | The owner of a draft; any user for something with no page | New. Held for approval; approving it posts it to Discord. A brief can be sent back with changes requested, like a submission |
 | Playtest something live | Owner | New, 2026-10-13. "Playtest" on the live page clones it as a draft, which goes to playtest; the live page is not touched. Not built |
@@ -1653,8 +1659,14 @@ What "feature complete" means, by area.
 **Admin**
 
 - A side menu in three groups. Moderation: overview, review queue, reports. Content:
-  experiences, scripts, update posts, playtests. Site: events and banners, and for
-  admins only, categories and tags, users and roles, and settings.
+  experiences, snippets, update posts, playtests. Site: events and banners, and for
+  admins only, categories and tags, users and roles, and settings. Built 2026-10-18
+  from `src/shared/admin-menu.ts`, without the overview: a moderator sees the
+  admins' entries marked "Admins", without links, and a screen not built yet is
+  listed as "Later". Below 1024px it is a row of links above the screen. The review
+  queue and reports carry counts.
+- Built 2026-10-18: reports, experiences, snippets, users and roles, and categories
+  and tags. Each list's filters and tab are in its address.
 - An overview: how much is waiting by kind and for how long, the oldest items, reports
   to look at, site health (the nightly code check, gametools, Discord webhooks) and
   recent decisions.
@@ -1681,16 +1693,31 @@ What "feature complete" means, by area.
 - Reviewing an edit shows live against proposed, field by field, with changed text
   marked and the unchanged fields listed.
 - Reports: counts per experience by kind, the flags set now, and "set flags" or
-  "dismiss". A report never changes a flag by itself.
-- Featured and trending are switches only admins see, on the review screen and in the
-  experience list.
-- Experience list with search by title and code, filters (trending, health flags,
-  category, tag) and report counts; full edit including owner, creators,
-  admin-only flags and report lists.
+  "dismiss". A report never changes a flag by itself. Either deals with the open
+  reports, which move from "Open" to "Dealt with"; the mockup's second tab said
+  "Dismissed", but setting the flags deals with them too.
+- Featured and trending are switches an admin presses, in the experience and snippet
+  lists; a moderator sees where they stand. Not yet on the review screen.
+- Experience list with search by title, code and owner, tabs by status, filters
+  (game, health flag, featured, trending, has reports) and report counts, sorted by
+  newest, likes or reports. "Review" on what is waiting, "Delist" on what is live,
+  "List again" on what is delisted. Not built: filters by category and tag, and the
+  full edit (owner, creators, report lists); the mockup's "Edit" button waits for it.
+- Snippet list, the same without the game, flags and reports.
+- Users and roles: accounts by role, staff first, with a search of name and Discord
+  id; a name the user hides is shown here, marked. An admin's own row cannot be
+  changed. A role applies on its holder's next request: it is read from the database
+  each time.
 - Snippet authoring with `exp_json` validation errors shown per field.
 - Categories of all four kinds, per game.
 - Tags per game: groups and the tags in them, with add, rename, hide, move and merge,
   usage counts, and the tags newly arrived from Portal. See "The tag system".
+- Built 2026-10-18, one screen per game: experience categories (this game's and every
+  game's) and snippet categories, then each tag group with its settings and its tags.
+  Each row is changed in place and moved up or down; a tag moves to another of the
+  game's groups. Nothing is deleted, only hidden, and an address taken from the first
+  name stays when it is renamed. Not built: merging tags, the "script_sub" kind, and
+  marking tags newly arrived from Portal.
 - Users and roles, site settings and home content.
 
 **API, SEO, operations**

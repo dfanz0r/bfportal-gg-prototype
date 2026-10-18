@@ -4,19 +4,9 @@ import type { OwnSubmissions } from '../functions/submissions'
 import { gameInfo } from '../shared/games'
 import { PageLayout } from './layout/page-layout'
 import { DateText } from './ui/date-text'
-import { buttonGhost, fileGlyph, label, panel, tag } from './ui/ui'
+import { buttonGhost, fileGlyph, label, panel, statusChips, tag } from './ui/ui'
 
 type Item = OwnSubmissions['items'][number]
-
-/** Each word drawn in its own colors. Amber is for what needs its owner. */
-const chips: Record<string, string> = {
-  Draft: 'border-line-strong text-fg-2',
-  Live: 'border-steel/50 text-steel-hi',
-  Delisted: 'border-line text-fg-3',
-  Removed: 'border-danger/50 text-danger',
-  'In review': 'border-steel/40 text-fg-2',
-  'Changes requested': 'border-warn/50 text-warn',
-}
 
 /** 1st, 2nd, 3rd, 4th, 11th. */
 function ordinal(n: number) {
@@ -155,7 +145,7 @@ export function YourSubmissions(props: { data: OwnSubmissions }) {
                 </div>
                 <div class={`${columns} w-full lg:w-[520px]`}>
                   <span>
-                    <span class={`${tag} ${chips[item.listing]}`}>
+                    <span class={`${tag} ${statusChips[item.listing]}`}>
                       {item.listing}
                     </span>
                   </span>
@@ -165,7 +155,7 @@ export function YourSubmissions(props: { data: OwnSubmissions }) {
                   <div class="min-w-0">
                     <Show when={item.review}>
                       {(review) => (
-                        <span class={`${tag} ${chips[review()]}`}>
+                        <span class={`${tag} ${statusChips[review()]}`}>
                           {review()}
                         </span>
                       )}

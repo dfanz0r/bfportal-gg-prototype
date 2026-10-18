@@ -14,6 +14,15 @@ export const formBoolean = z.union([
 ])
 
 /**
+ * A checkbox on its own: a form sends it only when it is ticked, so nothing
+ * at all means no.
+ */
+export const formCheckbox = z.preprocess(
+  (value) => value === true || value === 'true' || value === 'on',
+  z.boolean(),
+)
+
+/**
  * The validator for a function that a form may post to. `viaForm` says which
  * way it was called; a form's `back` field is where to send the visitor
  * afterwards.

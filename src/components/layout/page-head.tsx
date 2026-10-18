@@ -1,6 +1,6 @@
 import { children, For, type JSX, Show } from 'solid-js'
 
-import { body } from '../ui/ui'
+import { body, headline } from '../ui/ui'
 
 /** One step of the trail above a page's title. The last has no address. */
 export type Crumb = { label: string; href?: string }
@@ -14,6 +14,8 @@ export function PageHead(props: {
   /** A line of facts under the title, such as who made it and when. */
   meta?: JSX.Element
   actions?: JSX.Element
+  /** In a frame of its own, as the admin's screens are: no band, no column. */
+  bare?: boolean
 }) {
   // Read once. Each read of a prop that holds markup builds that markup
   // again, and asking "is there any?" and then drawing it is two reads: the
@@ -22,8 +24,10 @@ export function PageHead(props: {
   const actions = children(() => props.actions)
   const meta = children(() => props.meta)
   return (
-    <section class="dot-grid border-b border-line bg-surface-1">
-      <div class="wrap py-6">
+    <section
+      class={props.bare ? 'mb-5' : 'dot-grid border-b border-line bg-surface-1'}
+    >
+      <div class={props.bare ? undefined : 'wrap py-6'}>
         <Show when={props.crumbs?.length}>
           <nav
             class="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-fg-2"
@@ -54,9 +58,7 @@ export function PageHead(props: {
         </Show>
         <div class="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div class="min-w-0">
-            <h1 class="font-display text-[clamp(34px,3.4vw,46px)] leading-[0.96] font-extrabold tracking-[0.005em] text-steel-hi uppercase [overflow-wrap:anywhere]">
-              {props.title}
-            </h1>
+            <h1 class={headline}>{props.title}</h1>
             <Show when={props.lead}>
               <p class={`${body} mt-2.5`}>{props.lead}</p>
             </Show>

@@ -9,11 +9,12 @@ import {
   librarySorts,
   playerRanges,
 } from '../../shared/library-search'
+import { FilterToggle } from '../forms/filter-toggle'
 import { createDismiss } from '../ui/dismiss'
 import { createHydrated } from '../ui/hydrated'
 import { Icon } from '../ui/icon'
 import { LibraryLink, useLibraryNavigate } from '../ui/library-link'
-import { buttonSteel } from '../ui/ui'
+import { buttonSteel, filterControl, filterSelect } from '../ui/ui'
 
 const SORT_LABELS = {
   trending: 'Trending this week',
@@ -21,39 +22,12 @@ const SORT_LABELS = {
   likes: 'Most liked, all time',
 } as const
 
-const control =
-  'inline-flex h-[34px] items-center gap-2 border border-line-strong px-3 text-[13.5px] font-medium text-fg hover:border-steel'
-
-/** A filter that is on or off: a real checkbox, drawn as a square. */
-function Toggle(props: {
-  name: string
-  value?: string
-  checked: boolean
-  children: JSX.Element
-}) {
-  return (
-    <label class="inline-flex h-[34px] cursor-pointer items-center gap-2 pr-1 pl-0.5 text-[13.5px] text-fg-2 has-checked:text-fg">
-      <input
-        type="checkbox"
-        name={props.name}
-        value={props.value ?? 'true'}
-        checked={props.checked}
-        class="peer sr-only"
-      />
-      <span class="grid size-4 place-items-center border border-line-strong text-transparent peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-steel">
-        <Icon name="check" class="size-3" />
-      </span>
-      {props.children}
-    </label>
-  )
-}
-
 /** A filter with several choices, opening under its button. */
 function Menu(props: { label: string; chosen: number; children: JSX.Element }) {
   const dismiss = createDismiss({ staysOpen: true })
   return (
     <details class="relative" ref={dismiss}>
-      <summary class={control}>
+      <summary class={filterControl}>
         {props.label}
         <Show when={props.chosen > 0}>
           <span class="bg-accent px-1.5 font-mono text-[11px] text-accent-ink">
@@ -151,13 +125,13 @@ export function LibraryFilters(props: { data: Library }) {
             <Menu label={group.name} chosen={chosenIn([group])}>
               <For each={group.tags}>
                 {(tag) => (
-                  <Toggle
+                  <FilterToggle
                     name="tag"
                     value={tag.slug}
                     checked={chosen(tag.slug)}
                   >
                     {tag.name}
-                  </Toggle>
+                  </FilterToggle>
                 )}
               </For>
             </Menu>
@@ -174,13 +148,13 @@ export function LibraryFilters(props: { data: Library }) {
                   <div class="grid">
                     <For each={group.tags}>
                       {(tag) => (
-                        <Toggle
+                        <FilterToggle
                           name="tag"
                           value={tag.slug}
                           checked={chosen(tag.slug)}
                         >
                           {tag.name}
-                        </Toggle>
+                        </FilterToggle>
                       )}
                     </For>
                   </div>
@@ -189,13 +163,9 @@ export function LibraryFilters(props: { data: Library }) {
             </For>
           </Menu>
         </Show>
-        <label class={control}>
+        <label class={filterControl}>
           Lobby size
-          <select
-            name="players"
-            class="bg-surface-1 text-fg-3 outline-none"
-            aria-label="Lobby size"
-          >
+          <select name="players" class={filterSelect} aria-label="Lobby size">
             <option value="" selected={!search().players}>
               Any
             </option>
@@ -211,34 +181,33 @@ export function LibraryFilters(props: { data: Library }) {
 
         <span class="mx-1 h-5 w-px bg-line max-sm:hidden" aria-hidden="true" />
 
-        <Toggle name="featured" checked={search().featured ?? false}>
+        <FilterToggle name="featured" checked={search().featured ?? false}>
           Featured
-        </Toggle>
+        </FilterToggle>
         {/* Where there is nothing to build with, templates are a category. */}
         <Show when={info().builtWith.length > 0}>
-          <Toggle name="templates" checked={search().templates ?? false}>
+          <FilterToggle name="templates" checked={search().templates ?? false}>
             Templates
-          </Toggle>
+          </FilterToggle>
         </Show>
         <Show when={info().hasFreeVersion}>
-          <Toggle name="free" checked={search().free ?? false}>
+          <FilterToggle name="free" checked={search().free ?? false}>
             Free to play
-          </Toggle>
+          </FilterToggle>
         </Show>
-        <Toggle name="xp" checked={search().xp ?? false}>
+        <FilterToggle name="xp" checked={search().xp ?? false}>
           Full XP
-        </Toggle>
-        <Toggle name="unavailable" checked={search().unavailable ?? false}>
+        </FilterToggle>
+        <FilterToggle
+          name="unavailable"
+          checked={search().unavailable ?? false}
+        >
           Show ones that no longer load
-        </Toggle>
+        </FilterToggle>
 
-        <label class={`${control} sm:ml-auto`}>
+        <label class={`${filterControl} sm:ml-auto`}>
           Sort by
-          <select
-            name="sort"
-            class="bg-surface-1 text-fg-3 outline-none"
-            aria-label="Sort by"
-          >
+          <select name="sort" class={filterSelect} aria-label="Sort by">
             <For each={librarySorts}>
               {(sort) => (
                 <option value={sort} selected={search().sort === sort}>
@@ -255,13 +224,13 @@ export function LibraryFilters(props: { data: Library }) {
           <span>Built with</span>
           <For each={info().builtWith}>
             {(type) => (
-              <Toggle
+              <FilterToggle
                 name="built"
                 value={type}
                 checked={search().built?.includes(type) ?? false}
               >
                 {experienceTypeLabels[type]}
-              </Toggle>
+              </FilterToggle>
             )}
           </For>
         </div>

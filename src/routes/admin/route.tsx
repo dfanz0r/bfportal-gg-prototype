@@ -5,6 +5,8 @@ import {
   redirect,
 } from '@tanstack/solid-router'
 
+import { AdminShell } from '../../components/layout/admin-shell'
+import { fetchAdminMenu } from '../../functions/moderation'
 import { getSessionUser } from '../../functions/session'
 import { isStaff } from '../../shared/roles'
 
@@ -24,6 +26,22 @@ export const Route = createFileRoute('/admin')({
       throw notFound()
     }
   },
+  loader: async () => {
+    const menu = await fetchAdminMenu()
+    if (!menu.ok) {
+      throw notFound()
+    }
+    return menu
+  },
   head: () => ({ meta: [{ name: 'robots', content: 'noindex' }] }),
-  component: Outlet,
+  component: Layout,
 })
+
+function Layout() {
+  const menu = Route.useLoaderData()
+  return (
+    <AdminShell menu={menu()}>
+      <Outlet />
+    </AdminShell>
+  )
+}

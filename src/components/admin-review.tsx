@@ -7,7 +7,7 @@ import type { DecisionSearch } from '../shared/decision'
 import { gameInfo } from '../shared/games'
 import { describeTeams } from '../shared/teams'
 import { DecisionForm } from './forms/decision-form'
-import { PageLayout } from './layout/page-layout'
+import { PageHead } from './layout/page-head'
 import { Avatar } from './ui/avatar'
 import { DateText } from './ui/date-text'
 import { Fact } from './ui/fact'
@@ -48,20 +48,22 @@ export function AdminReview(props: {
   const checks = () => data().checks
 
   return (
-    <PageLayout
-      title={submission().title}
-      lead={`A new ${gameInfo(submission().game).name} submission.`}
-      actions={
-        <>
-          <a href={`/experiences/${submission().slug}`} class={buttonGhost}>
-            See its page
-          </a>
-          <Link to="/admin" class={buttonGhost}>
-            Back to the queue
-          </Link>
-        </>
-      }
-    >
+    <>
+      <PageHead
+        bare
+        title={submission().title}
+        lead={`A new ${gameInfo(submission().game).name} submission.`}
+        actions={
+          <>
+            <a href={`/experiences/${submission().slug}`} class={buttonGhost}>
+              See its page
+            </a>
+            <Link to="/admin" class={buttonGhost}>
+              Back to the queue
+            </Link>
+          </>
+        }
+      />
       <div
         class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_380px] min-[1100px]:gap-10"
         data-game={submission().game}
@@ -246,6 +248,6 @@ export function AdminReview(props: {
           </div>
         </aside>
       </div>
-    </PageLayout>
+    </>
   )
 }

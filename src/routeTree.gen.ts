@@ -23,6 +23,11 @@ import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as UpdatesRouteImport } from './routes/updates'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
+import { Route as AdminExperiencesRouteImport } from './routes/admin/experiences'
+import { Route as AdminReportsRouteImport } from './routes/admin/reports'
+import { Route as AdminSnippetsRouteImport } from './routes/admin/snippets'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ExperiencesSlugRouteImport } from './routes/experiences/$slug'
 import { Route as FilesIdRouteImport } from './routes/files/$id'
@@ -111,6 +116,31 @@ const UpdatesRoute = UpdatesRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminExperiencesRoute = AdminExperiencesRouteImport.update({
+  id: '/experiences',
+  path: '/experiences',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSnippetsRoute = AdminSnippetsRouteImport.update({
+  id: '/snippets',
+  path: '/snippets',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -223,6 +253,11 @@ export interface FileRoutesByFullPath {
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/experiences': typeof AdminExperiencesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/snippets': typeof AdminSnippetsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
   '/files/$id': typeof FilesIdRoute
@@ -257,6 +292,11 @@ export interface FileRoutesByTo {
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/experiences': typeof AdminExperiencesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/snippets': typeof AdminSnippetsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
   '/files/$id': typeof FilesIdRoute
@@ -293,6 +333,11 @@ export interface FileRoutesById {
   '/submit': typeof SubmitRoute
   '/tools': typeof ToolsRoute
   '/updates': typeof UpdatesRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/experiences': typeof AdminExperiencesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/snippets': typeof AdminSnippetsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/health': typeof ApiHealthRoute
   '/experiences/$slug': typeof ExperiencesSlugRoute
   '/files/$id': typeof FilesIdRoute
@@ -330,6 +375,11 @@ export interface FileRouteTypes {
     | '/submit'
     | '/tools'
     | '/updates'
+    | '/admin/categories'
+    | '/admin/experiences'
+    | '/admin/reports'
+    | '/admin/snippets'
+    | '/admin/users'
     | '/api/health'
     | '/experiences/$slug'
     | '/files/$id'
@@ -364,6 +414,11 @@ export interface FileRouteTypes {
     | '/submit'
     | '/tools'
     | '/updates'
+    | '/admin/categories'
+    | '/admin/experiences'
+    | '/admin/reports'
+    | '/admin/snippets'
+    | '/admin/users'
     | '/api/health'
     | '/experiences/$slug'
     | '/files/$id'
@@ -399,6 +454,11 @@ export interface FileRouteTypes {
     | '/submit'
     | '/tools'
     | '/updates'
+    | '/admin/categories'
+    | '/admin/experiences'
+    | '/admin/reports'
+    | '/admin/snippets'
+    | '/admin/users'
     | '/api/health'
     | '/experiences/$slug'
     | '/files/$id'
@@ -554,6 +614,41 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/experiences': {
+      id: '/admin/experiences'
+      path: '/experiences'
+      fullPath: '/admin/experiences'
+      preLoaderRoute: typeof AdminExperiencesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/snippets': {
+      id: '/admin/snippets'
+      path: '/snippets'
+      fullPath: '/admin/snippets'
+      preLoaderRoute: typeof AdminSnippetsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -691,12 +786,22 @@ declare module '@tanstack/solid-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminExperiencesRoute: typeof AdminExperiencesRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminSnippetsRoute: typeof AdminSnippetsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminEditsIdRoute: typeof AdminEditsIdRoute
   AdminReviewIdRoute: typeof AdminReviewIdRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminExperiencesRoute: AdminExperiencesRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminSnippetsRoute: AdminSnippetsRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminEditsIdRoute: AdminEditsIdRoute,
   AdminReviewIdRoute: AdminReviewIdRoute,

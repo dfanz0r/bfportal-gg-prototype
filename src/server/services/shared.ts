@@ -1,3 +1,5 @@
+import { type Column, getTableName, sql } from 'drizzle-orm'
+
 import type { db } from '../db'
 import { user } from '../db/schema'
 
@@ -17,6 +19,14 @@ export function groupBy<T, K>(items: T[], key: (item: T) => K) {
   }
   return groups
 }
+
+/**
+ * A column of the outer query, named with its table, for a subquery inside
+ * it. Drizzle writes a column bare when its query has one table, and a bare
+ * `"id"` in a subquery means the subquery's own table's id.
+ */
+export const outer = (column: Column) =>
+  sql`${sql.identifier(getTableName(column.table))}.${sql.identifier(column.name)}`
 
 /**
  * Whether a failed write was refused by one unique constraint: the value was

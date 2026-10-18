@@ -5,13 +5,13 @@ import { CHANGED_SINCE_OPENED, NOTE_NEEDED } from '../../shared/decision'
 import { gameList } from '../../shared/games'
 import { shownMedia } from '../../shared/media'
 import { type Refusal, refuse } from '../../shared/results'
-import { isStaff } from '../../shared/roles'
 import { teamSetupSchema } from '../../shared/teams'
 import type { Actor } from '../auth/actor'
 import { db } from '../db'
 import {
   categories,
   experienceMedia,
+  experienceReports,
   experiences,
   projectFiles,
   revisions,
@@ -20,6 +20,7 @@ import {
 } from '../db/schema'
 import { lookupExperience } from '../integrations/gametools'
 import { pictureHosts } from '../markdown'
+import { needsStaff } from './access'
 import { type EditPayload, editPayloadSchema } from './edit-payload'
 import { applyEdit, describeEdit, type EditChange } from './experience-edits'
 import {
@@ -52,10 +53,7 @@ const FAMILIAR_PICTURE_HOSTS = [
 const QUEUE_PAGE = 100
 
 /** Null if the actor may moderate; otherwise why not. */
-function refusal(actor: Actor | null): Refusal | null {
-  if (!actor) return refuse('signed-out')
-  return isStaff(actor.role) ? null : refuse('forbidden')
-}
+const refusal = needsStaff
 
 const snippetWaiting = and(
   eq(snippets.status, 'pending'),
@@ -76,6 +74,59 @@ const waiting = and(
   eq(experiences.status, 'pending'),
   isNull(experiences.deletedAt),
 )
+
+/**
+ * What the admin's side menu counts, for whoever is acting: everything
+ * waiting for a moderator, and the experiences with reports nobody has dealt
+ * with. With the actor's role, which says which entries are theirs to open.
+ */
+export async function getAdminMenu(actor: Actor | null) {
+  const refused = refusal(actor)
+  if (refused || !actor) return refused ?? refuse('signed-out')
+  const [[submissions], [waitingSnippets], [edits], [reported]] =
+    await Promise.all([
+      db.select({ value: count() }).from(experiences).where(waiting),
+      db.select({ value: count() }).from(snippets).where(snippetWaiting),
+      db
+        .select({ value: count() })
+        .from(revisions)
+        .leftJoin(experiences, eq(experiences.id, revisions.experienceId))
+        .leftJoin(snippets, eq(snippets.id, revisions.snippetId))
+        .where(
+          and(
+            editWaiting,
+            isNull(experiences.deletedAt),
+            isNull(snippets.deletedAt),
+          ),
+        ),
+      db
+        .select({
+          value:
+            sql<number>`count(distinct ${experienceReports.experienceId})`.mapWith(
+              Number,
+            ),
+        })
+        .from(experienceReports)
+        .innerJoin(
+          experiences,
+          eq(experiences.id, experienceReports.experienceId),
+        )
+        .where(
+          and(
+            isNull(experienceReports.resolvedAt),
+            isNull(experiences.deletedAt),
+          ),
+        ),
+    ])
+  return {
+    ok: true as const,
+    role: actor.role,
+    counts: {
+      waiting: submissions.value + waitingSnippets.value + edits.value,
+      reports: reported.value,
+    },
+  }
+}
 
 /** Everything waiting for a moderator, the longest wait first. */
 export async function listQueue(actor: Actor | null) {

@@ -6,6 +6,7 @@ import {
   decideEdit,
   decideSnippet,
   decideSubmission,
+  getAdminMenu,
   getEditReview,
   getSubmissionReview,
   listQueue,
@@ -17,6 +18,11 @@ import { redirectTo } from './answer'
 
 // The moderators' screens. The services refuse anyone who is not a moderator
 // or an admin; nothing here decides that.
+
+/** The admin's side menu: the visitor's role, and what waits. */
+export const fetchAdminMenu = createServerFn({ method: 'GET' }).handler(
+  async () => getAdminMenu(await currentActor()),
+)
 
 /** Everything waiting for a moderator. */
 export const fetchQueue = createServerFn({ method: 'GET' }).handler(async () =>
@@ -106,6 +112,10 @@ export const decideOnEdit = createServerFn({ method: 'POST' })
     return result
   })
 
+export type AdminMenu = Extract<
+  Awaited<ReturnType<typeof fetchAdminMenu>>,
+  { ok: true }
+>
 export type EditReview = Extract<
   Awaited<ReturnType<typeof fetchEditReview>>,
   { ok: true }

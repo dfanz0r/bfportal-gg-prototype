@@ -537,9 +537,18 @@ export const experienceReports = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     type: reportTypeEnum('type').notNull(),
     createdAt: timestamptz('created_at').notNull().defaultNow(),
+    // Set when a moderator dealt with it: dismissed it, or set the flags.
+    // Null while it is open. Reported again, it is open again.
+    resolvedAt: timestamptz('resolved_at'),
+    resolvedBy: text('resolved_by').references(() => user.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.experienceId, table.userId, table.type] }),
+    index('experience_reports_open_idx')
+      .on(table.experienceId)
+      .where(sql`${table.resolvedAt} is null`),
   ],
 )
 

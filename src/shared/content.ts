@@ -120,9 +120,20 @@ export type TesterRegion = (typeof testerRegions)[number]
 export const tagGroupFilters = ['own', 'shared', 'none'] as const
 export type TagGroupFilter = (typeof tagGroupFilters)[number]
 
+export const tagGroupFilterLabels: Record<TagGroupFilter, string> = {
+  own: 'Its own filter',
+  shared: 'In the tag filter',
+  none: 'Not a filter',
+}
+
 /** Whether an experience may carry several tags from one group. */
 export const tagGroupPicks = ['any', 'one'] as const
 export type TagGroupPick = (typeof tagGroupPicks)[number]
+
+export const tagGroupPickLabels: Record<TagGroupPick, string> = {
+  any: 'Any number',
+  one: 'One at most',
+}
 
 /**
  * Where a tag on an experience came from: its creator, Portal's own tags for

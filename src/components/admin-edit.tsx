@@ -5,7 +5,7 @@ import { decideOnEdit, type EditReview } from '../functions/moderation'
 import type { DecisionSearch } from '../shared/decision'
 import { gameInfo } from '../shared/games'
 import { DecisionForm } from './forms/decision-form'
-import { PageLayout } from './layout/page-layout'
+import { PageHead } from './layout/page-head'
 import { Avatar } from './ui/avatar'
 import { CodeView } from './ui/code-view'
 import { DateText } from './ui/date-text'
@@ -95,36 +95,38 @@ export function AdminEdit(props: {
       : `${edit().changes.length} changes`
 
   return (
-    <PageLayout
-      title={`Edit to ${subject().title}`}
-      lead={`Its owner asks to change this live ${gameInfo(subject().game).name} ${subject().kind}. The live page stays as it is until you approve.`}
-      crumbs={[
-        { label: 'Review queue', href: '/admin' },
-        { label: `Edit to a live ${subject().kind}` },
-      ]}
-      meta={
-        <span class="inline-flex items-center gap-2">
-          Asked for by
-          <Avatar
-            name={edit().submitter.name}
-            image={edit().submitter.image}
-            class="size-5 text-[9px]"
-          />
-          <span class="text-fg">{edit().submitter.name}</span>
-          <DateText value={edit().submittedAt} now={props.data.now} />
-        </span>
-      }
-      actions={
-        <>
-          <a href={subject().href} class={buttonGhost}>
-            See the live page
-          </a>
-          <Link to="/admin" class={buttonGhost}>
-            Back to the queue
-          </Link>
-        </>
-      }
-    >
+    <>
+      <PageHead
+        bare
+        title={`Edit to ${subject().title}`}
+        lead={`Its owner asks to change this live ${gameInfo(subject().game).name} ${subject().kind}. The live page stays as it is until you approve.`}
+        crumbs={[
+          { label: 'Review queue', href: '/admin' },
+          { label: `Edit to a live ${subject().kind}` },
+        ]}
+        meta={
+          <span class="inline-flex items-center gap-2">
+            Asked for by
+            <Avatar
+              name={edit().submitter.name}
+              image={edit().submitter.image}
+              class="size-5 text-[9px]"
+            />
+            <span class="text-fg">{edit().submitter.name}</span>
+            <DateText value={edit().submittedAt} now={props.data.now} />
+          </span>
+        }
+        actions={
+          <>
+            <a href={subject().href} class={buttonGhost}>
+              See the live page
+            </a>
+            <Link to="/admin" class={buttonGhost}>
+              Back to the queue
+            </Link>
+          </>
+        }
+      />
       <div
         class="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_380px] min-[1100px]:gap-10"
         data-game={subject().game}
@@ -195,6 +197,6 @@ export function AdminEdit(props: {
           />
         </aside>
       </div>
-    </PageLayout>
+    </>
   )
 }

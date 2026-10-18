@@ -241,6 +241,8 @@ export async function getExperience(
             and(
               eq(experienceReports.experienceId, experience.id),
               eq(experienceReports.userId, viewer.id),
+              // One a moderator dealt with can be made again.
+              isNull(experienceReports.resolvedAt),
             ),
           )
       : [],

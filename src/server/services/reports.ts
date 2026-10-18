@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 
 import type { ReportType } from '../../shared/content'
 import { type Refusal, refuse } from '../../shared/results'
@@ -11,6 +11,8 @@ import { visible } from './experience-cards'
  * Records that whoever is acting found an experience bugged, not loading, or
  * an XP farm. A report changes no flag: a moderator looks at the reports and
  * decides. Its owner cannot report their own, and reporting twice counts once.
+ * A report a moderator has dealt with is open again if it is made again: the
+ * problem is back, or was never fixed.
  */
 export async function reportExperience(
   actor: Actor | null,
@@ -29,6 +31,15 @@ export async function reportExperience(
   await db
     .insert(experienceReports)
     .values({ experienceId: experience.id, userId: actor.id, type })
-    .onConflictDoNothing()
+    .onConflictDoUpdate({
+      target: [
+        experienceReports.experienceId,
+        experienceReports.userId,
+        experienceReports.type,
+      ],
+      set: { createdAt: sql`now()`, resolvedAt: null, resolvedBy: null },
+      // Still open: it counts once, and keeps when it was first made.
+      setWhere: isNotNull(experienceReports.resolvedAt),
+    })
   return { ok: true }
 }

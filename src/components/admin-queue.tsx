@@ -4,7 +4,7 @@ import { For, Show } from 'solid-js'
 import type { Queue } from '../functions/moderation'
 import { experienceTypeLabels } from '../shared/content'
 import { gameInfo } from '../shared/games'
-import { PageLayout } from './layout/page-layout'
+import { PageHead } from './layout/page-head'
 import { Avatar } from './ui/avatar'
 import { DateText } from './ui/date-text'
 import { buttonGhost, panel, tag } from './ui/ui'
@@ -14,10 +14,12 @@ export function AdminQueue(props: { data: Queue }) {
   const data = () => props.data
 
   return (
-    <PageLayout
-      title="Review queue"
-      lead="Nothing below is public until someone here approves it."
-    >
+    <>
+      <PageHead
+        bare
+        title="Review queue"
+        lead="Nothing below is public until someone here approves it."
+      />
       <Show
         when={
           data().items.length + data().snippets.length + data().edits.length ===
@@ -164,6 +166,6 @@ export function AdminQueue(props: { data: Queue }) {
           </Show>
         </p>
       </Show>
-    </PageLayout>
+    </>
   )
 }

@@ -136,6 +136,13 @@ Reach for what exists before writing markup:
 | A moderator's screen for a pending edit to an experience or a snippet, each change beside what is live | `AdminEdit`, from `describeEdit` in `src/server/services/experience-edits.ts` or `describeSnippetEdit` in `snippet-edits.ts`; what an edit may change is `editPayloadSchema` in `src/server/services/edit-payload.ts` |
 | An item's status and the moderator's note, for its owner | `StatusNote` |
 | A moderator's decision: a note, approve or request changes | `DecisionForm` |
+| An admin screen | Its route under `/admin`, drawn inside `AdminShell` by `routes/admin/route.tsx`; its head is `PageHead` with `bare`. A new screen is an entry in `src/shared/admin-menu.ts` |
+| A form that changes something and then shows the page again | `PostForm`, which posts to the function's `.url` and, with the script, calls it and reloads the route's data |
+| Rows in columns, as the admin lists them | `DataTable`, with `cell` on each `<td>` |
+| A row of filters that writes the address | `FilterForm` with the route's search schema; inside it `FilterSearch`, `FilterToggle`, and selects in a `filterControl` label |
+| A submission's status as a tag; tabs by status | `StatusTag`; `StatusTabs` |
+| An experience's health flags as tags | `FlagTags` |
+| Featured or trending; delisting | `SpotlightSwitch`; `ListedButton` |
 | Anything that differs by game | its entry in `src/shared/games.ts` |
 
 How we write them:
@@ -230,7 +237,9 @@ Anything that changes something follows `src/functions/likes.ts` and
   returns a result: `{ ok: true, … }` or a `Refusal` with a reason. It never reads the
   request. A refusal the site expects is a value, not an error thrown.
 - **Each service has a test that everyone it should refuse is refused:** a visitor who
-  is not signed in, and every role below the one it needs.
+  is not signed in, and every role below the one it needs. A service for staff asks
+  `needsStaff(actor)` first, one for admins `needsAdmin(actor)`, from
+  `src/server/services/access.ts`.
 - **The server function is thin and POST.** It calls `assertFromThisSite()` first,
   then `currentActor()`, then the service. The session cookie alone does not show
   that the visitor meant to do it.
@@ -244,7 +253,9 @@ Anything that changes something follows `src/functions/likes.ts` and
   `keepDraft` in `src/server/services/drafts.ts`, with `submitForReview` and
   `/submit?draft=true` as the example. Keep every field that passed. A short form
   can come back in the address instead, as a refused decision does
-  (`decisionSearchSchema`).
+  (`decisionSearchSchema`). The admin's lists are the exception: their pages draw
+  only in the browser, so `PostForm`'s script says why, and the form keeps what was
+  typed.
 - **What is sent is what the visitor sees.** Never a hidden copy of a field they
   can still change. A second button that does something else with the same
   fields is a button of the same form with its own `formaction`, as "Fetch
@@ -338,6 +349,10 @@ change the mockup or the plan in the same piece of work so the two do not drift.
   who did something to the row: `submitted_by`, `reviewed_by`, `uploaded_by`.
 - **One name, one meaning.** `code` is always the Portal share code. Do not reuse a
   column name for something else in another table.
+- **In a subquery, name the outer query's column with `outer()`** from
+  `src/server/services/shared.ts`. Drizzle writes a column bare when its query has one
+  table, and a bare `"id"` inside `(select … from experiences where …)` is the
+  experiences' own id: the count runs and is wrong.
 - **Stored text is Markdown, and its HTML is written in one place.** Pages print the
   stored HTML as it is, so every `*_html` column is written only through
   `renderMarkdown` in `src/server/markdown.ts`. Never build that HTML any other way.
